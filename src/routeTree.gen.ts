@@ -9,38 +9,153 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as SearchRouteImport } from './routes/search'
+import { Route as LibraryRouteImport } from './routes/library'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as TvIdRouteImport } from './routes/tv.$id'
+import { Route as PersonIdRouteImport } from './routes/person.$id'
+import { Route as MovieIdRouteImport } from './routes/movie.$id'
+import { Route as TvIdSeasonSeasonRouteImport } from './routes/tv.$id.season.$season'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LibraryRoute = LibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const TvIdRoute = TvIdRouteImport.update({
+  id: '/tv/$id',
+  path: '/tv/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PersonIdRoute = PersonIdRouteImport.update({
+  id: '/person/$id',
+  path: '/person/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MovieIdRoute = MovieIdRouteImport.update({
+  id: '/movie/$id',
+  path: '/movie/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TvIdSeasonSeasonRoute = TvIdSeasonSeasonRouteImport.update({
+  id: '/season/$season',
+  path: '/season/$season',
+  getParentRoute: () => TvIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/library': typeof LibraryRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
+  '/tv/$id': typeof TvIdRouteWithChildren
+  '/tv/$id/season/$season': typeof TvIdSeasonSeasonRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/library': typeof LibraryRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
+  '/tv/$id': typeof TvIdRouteWithChildren
+  '/tv/$id/season/$season': typeof TvIdSeasonSeasonRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/library': typeof LibraryRoute
+  '/search': typeof SearchRoute
+  '/settings': typeof SettingsRoute
+  '/movie/$id': typeof MovieIdRoute
+  '/person/$id': typeof PersonIdRoute
+  '/tv/$id': typeof TvIdRouteWithChildren
+  '/tv/$id/season/$season': typeof TvIdSeasonSeasonRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/library'
+    | '/search'
+    | '/settings'
+    | '/movie/$id'
+    | '/person/$id'
+    | '/tv/$id'
+    | '/tv/$id/season/$season'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/library'
+    | '/search'
+    | '/settings'
+    | '/movie/$id'
+    | '/person/$id'
+    | '/tv/$id'
+    | '/tv/$id/season/$season'
+  id:
+    | '__root__'
+    | '/'
+    | '/library'
+    | '/search'
+    | '/settings'
+    | '/movie/$id'
+    | '/person/$id'
+    | '/tv/$id'
+    | '/tv/$id/season/$season'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  LibraryRoute: typeof LibraryRoute
+  SearchRoute: typeof SearchRoute
+  SettingsRoute: typeof SettingsRoute
+  MovieIdRoute: typeof MovieIdRoute
+  PersonIdRoute: typeof PersonIdRoute
+  TvIdRoute: typeof TvIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/library': {
+      id: '/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof LibraryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +163,56 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/tv/$id': {
+      id: '/tv/$id'
+      path: '/tv/$id'
+      fullPath: '/tv/$id'
+      preLoaderRoute: typeof TvIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/person/$id': {
+      id: '/person/$id'
+      path: '/person/$id'
+      fullPath: '/person/$id'
+      preLoaderRoute: typeof PersonIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/movie/$id': {
+      id: '/movie/$id'
+      path: '/movie/$id'
+      fullPath: '/movie/$id'
+      preLoaderRoute: typeof MovieIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tv/$id/season/$season': {
+      id: '/tv/$id/season/$season'
+      path: '/season/$season'
+      fullPath: '/tv/$id/season/$season'
+      preLoaderRoute: typeof TvIdSeasonSeasonRouteImport
+      parentRoute: typeof TvIdRoute
+    }
   }
 }
 
+interface TvIdRouteChildren {
+  TvIdSeasonSeasonRoute: typeof TvIdSeasonSeasonRoute
+}
+
+const TvIdRouteChildren: TvIdRouteChildren = {
+  TvIdSeasonSeasonRoute: TvIdSeasonSeasonRoute,
+}
+
+const TvIdRouteWithChildren = TvIdRoute._addFileChildren(TvIdRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  LibraryRoute: LibraryRoute,
+  SearchRoute: SearchRoute,
+  SettingsRoute: SettingsRoute,
+  MovieIdRoute: MovieIdRoute,
+  PersonIdRoute: PersonIdRoute,
+  TvIdRoute: TvIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
