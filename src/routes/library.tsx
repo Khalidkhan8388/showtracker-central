@@ -29,7 +29,7 @@ function LibraryPage() {
   const { state, hydrated } = useLibrary();
 
   const setTab = (t: string) => navigate({ search: { tab: t, filter: "all" }, replace: true });
-  const setFilter = (f: string) => navigate({ search: (prev) => ({ ...prev, filter: f }), replace: true });
+  const setFilter = (f: string) => navigate({ search: (prev: { tab: string; filter: string }) => ({ ...prev, filter: f }), replace: true });
 
   const filters = tab === "tv"
     ? ["all", "watchlist", "watching", "completed"]
