@@ -427,12 +427,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
             />
             <textarea
-              placeholder="Write your note… (optional — we'll pull tasks from the body)"
+              placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"}
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
               maxLength={20000}
               rows={6}
-              className="min-h-[140px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+              className="min-h-[140px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
             />
 
             {textImages.length > 0 && (
