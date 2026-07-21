@@ -11,7 +11,6 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { LibraryProvider } from "../lib/library";
 import { Toaster } from "../components/ui/sonner";
 
 function NotFoundComponent() {
@@ -72,10 +71,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Reel — Personal Film & TV Tracker" },
-      { name: "description", content: "Track movies, TV shows with episode progress, and follow actors. Clean, mobile-first, all in one place." },
-      { property: "og:title", content: "Reel — Personal Film & TV Tracker" },
-      { property: "og:description", content: "Track movies, TV shows with episode progress, and follow actors. Clean, mobile-first, all in one place." },
+      { title: "Braintape — Voice-first Second Brain" },
+      { name: "description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
+      { property: "og:title", content: "Braintape — Voice-first Second Brain" },
+      { property: "og:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
     ],
@@ -111,10 +110,8 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <LibraryProvider>
-        <Outlet />
-        <Toaster />
-      </LibraryProvider>
+      <Outlet />
+      <Toaster />
     </QueryClientProvider>
   );
 }
