@@ -31,8 +31,32 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [textOpen, setTextOpen] = useState(false);
+  const [textHeading, setTextHeading] = useState("");
+  const [textBody, setTextBody] = useState("");
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
+  const saveTextFn = useServerFn(saveTextNote);
+
+  async function submitText() {
+    const heading = textHeading.trim();
+    if (!heading) {
+      toast.error("Please add a title");
+      return;
+    }
+    setTextOpen(false);
+    setBusy(true);
+    try {
+      await saveTextFn({ data: { heading, body: textBody.trim() } });
+      setTextHeading("");
+      setTextBody("");
+      onNoteReady?.();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not save note");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     let lastY = typeof window !== "undefined" ? window.scrollY : 0;
