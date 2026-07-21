@@ -98,32 +98,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     insertAtCursor(`[${label}](${normalized})`);
   }
 
-  function updateTextImages(next: PendingImage[]) {
-    textImagesRef.current = next;
-    setTextImages(next);
-  }
-
-  function onPickTextImages(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
-    e.target.value = "";
-    if (files.length === 0) return;
-    const next = files.map((f) => ({ file: f, previewUrl: URL.createObjectURL(f) }));
-    updateTextImages([...textImagesRef.current, ...next]);
-  }
-
-  function removeTextImage(idx: number) {
-    const copy = [...textImagesRef.current];
-    const [rm] = copy.splice(idx, 1);
-    if (rm) URL.revokeObjectURL(rm.previewUrl);
-    updateTextImages(copy);
-  }
-
   function resetTextComposer() {
-    textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-    updateTextImages([]);
     setTextHeading("");
     setTextBody("");
-    setTextLink("");
   }
 
   async function submitText() {
@@ -132,35 +109,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       toast.error("Please add a title");
       return;
     }
-    const rawLink = textLink.trim();
-    let sourceUrl: string | null = null;
-    if (rawLink) {
-      const normalized = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
-      try {
-        new URL(normalized);
-        sourceUrl = normalized;
-      } catch {
-        toast.error("Link doesn't look valid");
-        return;
-      }
-    }
-    const attachedImages = textImagesRef.current;
     setTextOpen(false);
     setBusy(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      let imagePaths: string[] = [];
-      if (attachedImages.length > 0) {
-        imagePaths = await uploadImages(uid, attachedImages.map((p) => p.file));
-      }
       await saveTextFn({
         data: {
           heading,
           body: textBody.trim(),
-          imagePaths,
-          sourceUrl,
+          imagePaths: [],
+          sourceUrl: null,
         },
       });
       resetTextComposer();
