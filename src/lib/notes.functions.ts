@@ -72,11 +72,31 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+function parseTags(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of input) {
+    const s = String(raw ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/^#+/, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\-]/g, "")
+      .slice(0, 32);
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 async function extractStructured(
   transcript: string | null,
   images: Array<{ mime: string; base64: string }>,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userBlocks: Array<Record<string, unknown>> = [];
   const intro = transcript
     ? `Transcript from the voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
@@ -131,7 +151,8 @@ async function extractStructured(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading, summary, tasks, tags };
 }
 
 export const processVoiceNote = createServerFn({ method: "POST" })
