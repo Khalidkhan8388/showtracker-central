@@ -246,11 +246,16 @@ function ResizableImage({
   block,
   onResize,
   onRemove,
+  onDropImage,
+  blockIndex,
 }: {
   block: Extract<Block, { kind: "image" }>;
   onResize: (size: ImageSize) => void;
   onRemove: () => void;
+  onDropImage?: (fromIdx: number) => void;
+  blockIndex?: number;
 }) {
+  const [dragOver, setDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ containerW: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
