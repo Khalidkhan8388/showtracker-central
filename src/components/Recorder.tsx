@@ -303,10 +303,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
 
       <div
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1 shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all ${
+        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all ${
           recording
-            ? "bg-destructive/80 ring-destructive/20 animate-pulse"
-            : "bg-foreground/80 ring-black/10"
+            ? "bg-destructive/85 ring-destructive/20 animate-pulse"
+            : "bg-foreground/95 ring-background/10"
         }`}
       >
         <input
@@ -321,41 +321,43 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-background/90 hover:bg-background/15 disabled:opacity-50"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-background/70 transition-all duration-200 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50"
         >
-          <ImagePlus className="h-4 w-4" />
+          <ImagePlus className="h-5 w-5" strokeWidth={2} />
         </button>
         <button
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-background/90 hover:bg-background/15 disabled:opacity-50"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-background/70 transition-all duration-200 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50"
         >
-          <Link2 className="h-4 w-4" />
+          <Link2 className="h-5 w-5" strokeWidth={2} />
         </button>
+
+        <div className="mx-1 h-6 w-px bg-background/10" />
 
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-semibold text-background disabled:cursor-default"
+          className="group inline-flex items-center gap-2.5 rounded-full bg-background/10 py-2 pl-3 pr-5 text-background transition-all duration-200 hover:bg-background/15 active:scale-[0.97] disabled:cursor-default"
         >
-          <span
-            className={`flex h-6 w-6 items-center justify-center rounded-full ${
-              recording ? "bg-destructive-foreground/20" : "bg-background/15"
-            }`}
-          >
+          <span className="relative flex items-center justify-center">
+            {!recording && !showSpinner && (
+              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
+            )}
             {showSpinner ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <Loader2 className="h-5 w-5 animate-spin" />
             ) : recording ? (
-              <Square className="h-3 w-3" fill="currentColor" />
+              <Square className="h-4 w-4" fill="currentColor" />
             ) : (
-              <Mic className="h-3.5 w-3.5" />
+              <Mic className="h-5 w-5" strokeWidth={2} />
             )}
           </span>
-          <span className="tabular-nums">{label}</span>
+          <span className="text-sm font-semibold tracking-tight tabular-nums">{label}</span>
         </button>
       </div>
+
     </div>
   );
 }
