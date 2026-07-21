@@ -238,16 +238,18 @@ function Home() {
               const grid = unpinnedRest.slice(5);
               return (
                 <div className="space-y-4">
-                  <NoteCard
-                    note={latest}
-                    variant="wide"
-                    thumbUrl={thumbs[latest.id]}
-                    selected={selectedNotes.has(latest.id)}
-                    selectMode={noteSelectMode}
-                    onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
-                    onLongPress={() => toggleNoteSel(latest.id)}
-                    onToggleSel={() => toggleNoteSel(latest.id)}
-                  />
+                  {latest && (
+                    <NoteCard
+                      note={latest}
+                      variant="wide"
+                      thumbUrl={thumbs[latest.id]}
+                      selected={selectedNotes.has(latest.id)}
+                      selectMode={noteSelectMode}
+                      onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
+                      onLongPress={() => toggleNoteSel(latest.id)}
+                      onToggleSel={() => toggleNoteSel(latest.id)}
+                    />
+                  )}
 
                   {strip.length > 0 && (
                     <div className="-mx-5 overflow-x-auto pb-2">
