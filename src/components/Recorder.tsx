@@ -976,14 +976,36 @@ function BlockEditor({
             </div>
           );
         }
+        if (b.kind === "heading") {
+          const sizeClass =
+            b.level === 1
+              ? "text-2xl font-bold tracking-tight"
+              : b.level === 2
+                ? "text-xl font-semibold tracking-tight"
+                : "text-lg font-semibold";
+          return (
+            <div key={`h-${i}`} className="flex items-start gap-2">
+              <span className="mt-1 select-none rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                H{b.level}
+              </span>
+              <input
+                type="text"
+                value={b.text}
+                onChange={(e) => updateBlock(i, { text: e.target.value } as Partial<Block>)}
+                placeholder={`Heading ${b.level}`}
+                className={`w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none ${sizeClass}`}
+              />
+            </div>
+          );
+        }
         return (
           <AutoTextarea
             key={`txt-${i}`}
             value={b.value}
-            onChange={(v) => updateTextBlock(i, v)}
+            onChange={(v) => updateBlock(i, { value: v } as Partial<Block>)}
             placeholder={
               !hasMedia && i === 0
-                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
+                ? "Write in markdown…\n\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nTip: use H1/H2/H3 above for headings"
                 : ""
             }
             innerRef={i === lastTextIdx ? textAreaRef : undefined}
