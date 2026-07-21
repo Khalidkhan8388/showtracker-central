@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil, Heading1, Heading2, Heading3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
