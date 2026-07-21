@@ -534,7 +534,7 @@ function useLongPress(onLongPress: () => void, ms = 450) {
   };
 }
 
-function NoteCard({
+const NoteCard = memo(function NoteCard({
   note,
   variant,
   fullWidth,
