@@ -427,7 +427,12 @@ const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation. Prefer the page's own title if it's concise.
 - summary: 2-5 sentences capturing what the page is about and the key takeaways.
-- tasks: array of short actionable to-dos the user could act on based on the page (e.g. "Read chapter on X", "Watch related video", "Buy <item>", "Try <tool>"). Return [] if nothing useful.
+- tasks: array of HIGH-QUALITY actionable to-dos derived from the page.
+  STRICT RULES:
+    * Only include a task if the page contains a clear call-to-action, a step-by-step guide, an event with a date/RSVP, a specific purchase decision, or an explicit checklist the user should follow.
+    * DO NOT invent generic tasks like "Read the article", "Look into this", "Consider it", "Bookmark this". The note itself is the bookmark.
+    * If nothing is clearly actionable, return []. An empty list is strongly preferred over filler.
+    * Maximum 5 tasks.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
