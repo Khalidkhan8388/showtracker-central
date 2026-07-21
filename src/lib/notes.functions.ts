@@ -13,11 +13,12 @@ const SaveTextNoteInput = z.object({
 
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Reflect the actual topic — do not use "Untitled" or "Voice Note".
 - summary: 2-4 sentences capturing the key ideas. If images are attached, describe what's visible (objects, people, on-screen text, handwriting) and weave that into the summary.
 - tasks: array of clear, actionable to-dos, each in imperative voice ("Call John about the invoice", "Buy milk on Tuesday", "Reply to Priya's email").
+- tags: 3-6 short lowercase tags (one or two words each, no #, no spaces around, kebab-case ok). Categorize by topic, project, person, place, or type (e.g. "work", "grocery", "travel", "invoice", "meeting", "idea"). No duplicates.
 
 HOW TO EXTRACT TASKS — be smart, not stingy:
 1. Pull EVERY concrete action the user mentions or implies they should do. Examples that ARE tasks:
