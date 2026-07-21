@@ -100,7 +100,7 @@ export function BlockEditor({
   wikiIndex?: Map<string, string>;
 }) {
 
-  const blocks = parseBlocks(value);
+  const blocks = useMemo(() => parseBlocks(value), [value]);
   const hasMedia = blocks.some((b) => b.kind !== "text");
 
   function updateTextBlock(idx: number, next: string) {
@@ -399,12 +399,29 @@ export function LineEditor({
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
 
+  // Only resize the textarea whose content actually changed since last render,
+  // instead of looping every textarea on every keystroke (O(n) layout thrash).
+  const prevLinesRef = useRef<string[]>([]);
   useEffect(() => {
-    refs.current.forEach((el) => {
-      if (!el) return;
+    const prev = prevLinesRef.current;
+    for (let i = 0; i < lines.length; i++) {
+      if (prev[i] === lines[i]) continue;
+      const el = refs.current[i];
+      if (!el) continue;
       el.style.height = "auto";
       el.style.height = `${el.scrollHeight}px`;
-    });
+    }
+    // Also resize any newly-mounted textareas that had no previous entry.
+    if (lines.length !== prev.length) {
+      for (let i = 0; i < lines.length; i++) {
+        if (i < prev.length) continue;
+        const el = refs.current[i];
+        if (!el) continue;
+        el.style.height = "auto";
+        el.style.height = `${el.scrollHeight}px`;
+      }
+    }
+    prevLinesRef.current = lines;
     const pending = focusPending.current;
     if (pending) {
       const el = refs.current[pending.index];
