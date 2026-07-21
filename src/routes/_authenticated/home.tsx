@@ -84,42 +84,80 @@ function Home() {
             <p className="mt-1 text-xs text-muted-foreground">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <ul className="space-y-2">
-            {notes.map((n) => (
-              <li key={n.id}>
-                <Link
-                  to="/notes/$id"
-                  params={{ id: n.id }}
-                  className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-                >
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <StatusIcon status={n.status} />
-                        <h3 className="truncate text-sm font-semibold">
-                          {n.heading ?? (n.status === "failed" ? "Failed to process" : "Processing…")}
-                        </h3>
-                      </div>
-                      {n.summary && (
-                        <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{n.summary}</p>
-                      )}
-                      <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                        <span>{formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}</span>
-                        {n.duration_seconds != null && <span>{formatDur(n.duration_seconds)}</span>}
-                        {n.tasks && n.tasks.length > 0 && (
-                          <span className="flex items-center gap-1">
-                            <CheckCircle2 className="h-3 w-3" />
-                            {n.tasks.filter((t) => t.done).length}/{n.tasks.length}
-                          </span>
-                        )}
-                      </div>
+          <>
+            {(() => {
+              const [latest, ...rest] = notes;
+              return (
+                <div className="space-y-4">
+                  <Link
+                    to="/notes/$id"
+                    params={{ id: latest.id }}
+                    className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/50"
+                  >
+                    <div className="flex items-center gap-2">
+                      <StatusIcon status={latest.status} />
+                      <h3 className="truncate text-sm font-semibold">
+                        {latest.heading ?? (latest.status === "failed" ? "Failed to process" : "Processing…")}
+                      </h3>
                     </div>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
+                    {latest.summary && (
+                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{latest.summary}</p>
+                    )}
+                    <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+                      <span>{formatDistanceToNow(new Date(latest.created_at), { addSuffix: true })}</span>
+                      {latest.duration_seconds != null && <span>{formatDur(latest.duration_seconds)}</span>}
+                      {latest.tasks && latest.tasks.length > 0 && (
+                        <span className="flex items-center gap-1">
+                          <CheckCircle2 className="h-3 w-3" />
+                          {latest.tasks.filter((t) => t.done).length}/{latest.tasks.length}
+                        </span>
+                      )}
+                    </div>
+                  </Link>
+
+                  {rest.length > 0 && (
+                    <div className="grid grid-cols-2 gap-2">
+                      {rest.map((n) => (
+                        <Link
+                          key={n.id}
+                          to="/notes/$id"
+                          params={{ id: n.id }}
+                          className="flex aspect-square flex-col justify-between rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                        >
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <StatusIcon status={n.status} />
+                              <h3 className="line-clamp-2 text-xs font-semibold leading-tight">
+                                {n.heading ?? (n.status === "failed" ? "Failed" : "Processing…")}
+                              </h3>
+                            </div>
+                          </div>
+                          <div className="flex flex-col gap-1 text-[10px] text-muted-foreground">
+                            {n.tasks && n.tasks.length > 0 && (
+                              <span className="flex items-center gap-1">
+                                <CheckCircle2 className="h-3 w-3" />
+                                {n.tasks.filter((t) => t.done).length}/{n.tasks.length} tasks
+                              </span>
+                            )}
+                            <div className="flex items-center gap-2">
+                              <span className="truncate">
+                                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                              </span>
+                              {n.duration_seconds != null && (
+                                <span className="tabular-nums">{formatDur(n.duration_seconds)}</span>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </>
         )}
+
       </section>
 
       <Recorder onNoteReady={load} />
