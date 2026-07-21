@@ -522,7 +522,6 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               <BlockEditor
                 value={textBody}
                 onChange={setTextBody}
-                textAreaRef={textAreaRef}
                 fullscreen={textFullscreen}
                 onRemoveImage={removeImageFromBody}
                 onRemoveLink={removeLinkFromBody}
