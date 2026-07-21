@@ -434,7 +434,8 @@ async function fetchWebPageText(url: string): Promise<{ title: string | null; te
   const res = await fetch(url, {
     redirect: "follow",
     headers: {
-      "User-Agent": "Mozilla/5.0 (compatible; BraintapeBot/1.0)",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
       Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
     },
   });
@@ -446,6 +447,19 @@ async function fetchWebPageText(url: string): Promise<{ title: string | null; te
   }
   const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
   const title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim().slice(0, 200) : null;
+
+  const metaOf = (re: RegExp) => {
+    const m = raw.match(re);
+    return m ? m[1].replace(/\s+/g, " ").trim() : "";
+  };
+  const metas = [
+    metaOf(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i),
+    metaOf(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i),
+    metaOf(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i),
+    metaOf(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i),
+    metaOf(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i),
+  ].filter(Boolean);
+
   const stripped = raw
     .replace(/<script[\s\S]*?<\/script>/gi, " ")
     .replace(/<style[\s\S]*?<\/style>/gi, " ")
@@ -460,7 +474,9 @@ async function fetchWebPageText(url: string): Promise<{ title: string | null; te
     .replace(/&#39;/g, "'")
     .replace(/\s+/g, " ")
     .trim();
-  return { title, text: stripped.slice(0, 15000) };
+
+  const combined = [metas.join("\n"), stripped].filter(Boolean).join("\n").trim();
+  return { title, text: combined.slice(0, 15000) };
 }
 
 async function summarizeWebPage(
