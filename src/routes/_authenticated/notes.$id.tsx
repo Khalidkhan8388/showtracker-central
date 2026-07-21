@@ -505,24 +505,33 @@ function NoteDetail() {
               placeholder="Start writing… # for heading, - for list, > for quote"
             />
 
-            {allNotes.length > 0 && (
-              <div className="mt-4">
-                <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Link to a note
-                </p>
-                <div className="flex flex-wrap gap-1.5">
-                  {allNotes.slice(0, 20).map((n) => (
-                    <button
-                      key={n.id}
-                      onClick={() => insertWikiLinkForTitle(n.heading)}
-                      className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
-                    >
-                      {n.heading}
-                    </button>
-                  ))}
+{(() => {
+              const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
+              if (!m || allNotes.length === 0) return null;
+              const q = m[1].trim().toLowerCase();
+              const matches = allNotes
+                .filter((n) => !q || n.heading.toLowerCase().includes(q))
+                .slice(0, 12);
+              if (matches.length === 0) return null;
+              return (
+                <div className="mt-4">
+                  <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                    Link to a note
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {matches.map((n) => (
+                      <button
+                        key={n.id}
+                        onClick={() => insertWikiLinkForTitle(n.heading)}
+                        className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
+                      >
+                        {n.heading}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
           </section>
         ) : (
           note.transcript && (
