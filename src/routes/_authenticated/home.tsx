@@ -2,8 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useServerFn } from "@tanstack/react-start";
+import { toggleTask } from "@/lib/notes.functions";
+
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
