@@ -356,11 +356,11 @@ function NoteCard({
       {variant === "wide" ? (
         <>
           <div className="flex items-center gap-2">
-            <StatusIcon status={note.status} />
             <h3 className="truncate text-sm font-semibold">
               {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
             </h3>
           </div>
+
           {note.summary && (
             <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
           )}
@@ -378,11 +378,11 @@ function NoteCard({
       ) : (
         <>
           <div className="flex items-start gap-1.5">
-            <StatusIcon status={note.status} />
             <h3 className="text-xs font-semibold leading-tight break-words">
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
           </div>
+
           <div className="mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
