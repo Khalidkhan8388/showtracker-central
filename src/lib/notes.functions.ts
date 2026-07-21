@@ -552,3 +552,47 @@ export const saveWebLink = createServerFn({ method: "POST" })
       throw new Error(msg);
     }
   });
+
+const ReviewTasksInput = z.object({
+  tasks: z.array(z.object({ noteId: z.string().uuid(), taskId: z.string() })).min(1),
+});
+
+export const approveTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReviewTasksInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const byNote = new Map<string, Set<string>>();
+    for (const t of data.tasks) {
+      if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+      byNote.get(t.noteId)!.add(t.taskId);
+    }
+    for (const [noteId, taskIds] of byNote) {
+      const { data: note } = await supabase.from("voice_notes").select("tasks").eq("id", noteId).single();
+      if (!note) continue;
+      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<any>;
+      const next = tasks.map((t) => (taskIds.has(t.id) ? { ...t, pending: false } : t));
+      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+    }
+    return { ok: true as const };
+  });
+
+export const dismissTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReviewTasksInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const byNote = new Map<string, Set<string>>();
+    for (const t of data.tasks) {
+      if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+      byNote.get(t.noteId)!.add(t.taskId);
+    }
+    for (const [noteId, taskIds] of byNote) {
+      const { data: note } = await supabase.from("voice_notes").select("tasks").eq("id", noteId).single();
+      if (!note) continue;
+      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<any>;
+      const next = tasks.filter((t) => !taskIds.has(t.id));
+      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+    }
+    return { ok: true as const };
+  });
