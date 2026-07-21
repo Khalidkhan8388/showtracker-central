@@ -607,22 +607,85 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            {composerLinkOpen && (
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/50 p-1 pl-3">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  placeholder="Paste a link…"
+                  value={composerLinkUrl}
+                  onChange={(e) => setComposerLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      insertLinkFromComposer();
+                    }
+                    if (e.key === "Escape") {
+                      setComposerLinkOpen(false);
+                      setComposerLinkUrl("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setComposerLinkOpen(false);
+                    setComposerLinkUrl("");
+                  }}
+                  aria-label="Cancel"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={insertLinkFromComposer}
+                  disabled={!composerLinkUrl.trim()}
+                  className="inline-flex items-center rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => insertHeading(1)}
+                  aria-label="Heading 1"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading1 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => insertHeading(2)}
+                  aria-label="Heading 2"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => insertHeading(3)}
+                  aria-label="Heading 3"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading3 className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => textFileRef.current?.click()}
                   disabled={uploadingMd}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                  aria-label="Insert image"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted disabled:opacity-50"
                 >
                   {uploadingMd ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  Image
                 </button>
                 <button
-                  onClick={promptInsertLink}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                  onClick={() => setComposerLinkOpen((v) => !v)}
+                  aria-label="Insert link"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted ${composerLinkOpen ? "bg-muted" : ""}`}
                 >
                   <Link2 className="h-4 w-4" />
-                  Link
                 </button>
               </div>
               <div className="flex items-center gap-2">
