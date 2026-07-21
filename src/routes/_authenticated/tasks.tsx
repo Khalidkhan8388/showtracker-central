@@ -166,11 +166,13 @@ function TasksPage() {
   }
 
   const allTasks = (notes ?? []).flatMap((n) =>
-    (n.tasks ?? []).map((t) => ({
-      ...t,
-      noteId: n.id,
-      noteHeading: n.heading === CUSTOM_HEADING ? null : n.heading,
-    })),
+    (n.tasks ?? [])
+      .filter((t: any) => !t.pending)
+      .map((t) => ({
+        ...t,
+        noteId: n.id,
+        noteHeading: n.heading === CUSTOM_HEADING ? null : n.heading,
+      })),
   );
   const pinned = allTasks.filter((t) => t.pinned && !t.done);
   const open = allTasks.filter((t) => !t.pinned && !t.done);
