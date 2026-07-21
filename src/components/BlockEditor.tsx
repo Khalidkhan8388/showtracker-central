@@ -176,51 +176,6 @@ export function BlockEditor({
             </div>
           );
         }
-        if (b.kind === "link") {
-          const loading = /^__linking_.*__$/.test(b.label);
-          const favicon = faviconFor(b.href);
-          const host = hostnameOf(b.href);
-          return (
-            <div
-              key={`link-${i}`}
-              className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
-            >
-              {favicon ? (
-                <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
-              ) : (
-                <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-foreground">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Fetching title…
-                    </span>
-                  ) : (
-                    b.label
-                  )}
-                </div>
-                <a
-                  href={b.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate text-xs text-muted-foreground hover:underline"
-                >
-                  {host}
-                </a>
-              </div>
-              <button
-                type="button"
-                onClick={() => onRemoveLink(b.href)}
-                aria-label="Remove link"
-                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={3} />
-              </button>
-            </div>
-          );
-        }
         return (
           <LineEditor
             key={`txt-${i}`}
