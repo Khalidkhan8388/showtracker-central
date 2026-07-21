@@ -27,6 +27,7 @@ type Note = {
   created_at: string;
   pinned: boolean;
   image_paths: string[] | null;
+  source_url: string | null;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
