@@ -151,8 +151,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
   async function submitText() {
     const heading = textHeading.trim();
-    if (!heading) {
-      toast.error("Please add a title");
+    const body = textBody.trim();
+    if (!heading && !body) {
+      toast.error("Add a title or some content");
       return;
     }
     setTextOpen(false);
@@ -161,7 +162,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       await saveTextFn({
         data: {
           heading,
-          body: textBody.trim(),
+          body,
           imagePaths: [],
           sourceUrl: null,
         },
@@ -508,7 +509,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             <input
               autoFocus
               type="text"
-              placeholder="Title"
+              placeholder="Title (optional — AI will generate one)"
               value={textHeading}
               onChange={(e) => setTextHeading(e.target.value)}
               maxLength={200}
@@ -611,7 +612,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
                 <button
                   onClick={submitText}
-                  disabled={!textHeading.trim()}
+                  disabled={!textHeading.trim() && !textBody.trim()}
                   className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
                 >
                   Save note
