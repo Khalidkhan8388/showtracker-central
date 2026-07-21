@@ -186,24 +186,25 @@ function Home() {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* iOS large-title header */}
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="flex items-center justify-end px-2 pt-3 pb-1">
+        <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
+          <div className="min-w-0">
+            <h1 className="text-[22px] font-bold tracking-tight leading-none">Braintape</h1>
+            {notes && notes.length > 0 && (
+              <p className="mt-0.5 text-[11px] text-muted-foreground">
+                {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
+              </p>
+            )}
+          </div>
           <button
             onClick={signOut}
-            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[17px] text-primary active:opacity-60"
+            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[13px] text-primary active:opacity-60"
             aria-label="Sign out"
           >
             <LogOut className="h-4 w-4" />
             <span>Sign out</span>
           </button>
         </div>
-        <div className="px-4 pt-1 pb-3">
-          <h1 className="text-[34px] font-bold tracking-tight leading-tight">Braintape</h1>
-          {notes && notes.length > 0 && (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
-            </p>
-          )}
-        </div>
+
       </header>
 
       <section className="flex-1 px-4 pb-32 pt-2">
