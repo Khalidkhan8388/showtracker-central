@@ -103,9 +103,20 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     insertAtCursor(`[${label}](${normalized})`);
   }
 
+  function removeImageFromBody(src: string) {
+    setTextBody((prev) => {
+      // Remove markdown image with matching src: ![...](src) plus surrounding whitespace/newlines
+      const escaped = src.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?!\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
   function resetTextComposer() {
     setTextHeading("");
     setTextBody("");
+    setTextMode("write");
+    setTextFullscreen(false);
   }
 
   async function submitText() {
