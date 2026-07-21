@@ -5,7 +5,7 @@ import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, approveTasks, dismissTasks } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -22,7 +22,7 @@ type Note = {
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean }> | null;
+  tasks: Array<{ id: string; text: string; done: boolean; pinned?: boolean; pending?: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
@@ -41,6 +41,8 @@ function Home() {
   const delNotesFn = useServerFn(deleteNotes);
   const delTasksFn = useServerFn(deleteTasks);
   const pinNoteFn = useServerFn(pinNote);
+  const approveFn = useServerFn(approveTasks);
+  const dismissFn = useServerFn(dismissTasks);
   const navigate = useNavigate();
 
   const noteSelectMode = selectedNotes.size > 0;
@@ -273,65 +275,135 @@ function Home() {
                   )}
 
                   {(() => {
-                    const allTasks = notes.flatMap((n) =>
+                    const allTasksRaw = notes.flatMap((n) =>
                       (n.tasks ?? []).map((t) => ({
                         ...t,
                         noteId: n.id,
                         noteHeading: n.heading === "__custom__" ? null : n.heading,
                       })),
                     );
-                    
-                    const pinnedT = allTasks.filter((t) => (t as any).pinned && !t.done);
-                    const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
+                    const suggested = allTasksRaw.filter((t) => t.pending);
+                    const allTasks = allTasksRaw.filter((t) => !t.pending);
+                    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
+                    const open = allTasks.filter((t) => !t.pinned && !t.done);
                     const done = allTasks.filter((t) => t.done);
                     const ordered = [...pinnedT, ...open, ...done];
                     const visible = ordered.slice(0, 3);
+
+                    async function approveOne(noteId: string, taskId: string) {
+                      setNotes((prev) => prev ? prev.map((n) => n.id === noteId ? {
+                        ...n, tasks: (n.tasks ?? []).map((t) => t.id === taskId ? { ...t, pending: false } : t),
+                      } : n) : prev);
+                      try { await approveFn({ data: { tasks: [{ noteId, taskId }] } }); } catch { load(); }
+                    }
+                    async function dismissOne(noteId: string, taskId: string) {
+                      setNotes((prev) => prev ? prev.map((n) => n.id === noteId ? {
+                        ...n, tasks: (n.tasks ?? []).filter((t) => t.id !== taskId),
+                      } : n) : prev);
+                      try { await dismissFn({ data: { tasks: [{ noteId, taskId }] } }); } catch { load(); }
+                    }
+                    async function approveAll() {
+                      const items = suggested.map((t) => ({ noteId: t.noteId, taskId: t.id }));
+                      setNotes((prev) => prev ? prev.map((n) => ({
+                        ...n, tasks: (n.tasks ?? []).map((t) => t.pending ? { ...t, pending: false } : t),
+                      })) : prev);
+                      try { await approveFn({ data: { tasks: items } }); } catch { load(); }
+                    }
+                    async function dismissAll() {
+                      const items = suggested.map((t) => ({ noteId: t.noteId, taskId: t.id }));
+                      setNotes((prev) => prev ? prev.map((n) => ({
+                        ...n, tasks: (n.tasks ?? []).filter((t) => !t.pending),
+                      })) : prev);
+                      try { await dismissFn({ data: { tasks: items } }); } catch { load(); }
+                    }
+
                     return (
-                      <div className="pt-4">
-                        <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                          <span>Tasks</span>
-                          <Link
-                            to="/tasks"
-                            className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
-                          >
-                            <span>
-                              {done.length}/{allTasks.length}
-                            </span>
-                            <ChevronRight className="h-4 w-4" />
-                          </Link>
-                        </h2>
-                        {visible.length === 0 ? (
-                          <Link
-                            to="/tasks"
-                            className="flex items-center justify-center rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
-                          >
-                            + Add a task
-                          </Link>
-                        ) : (
-                          <ul className="space-y-1.5">
-                            {visible.map((t) => {
-                              const key: TaskKey = `${t.noteId}::${t.id}`;
-                              const isSel = selectedTasks.has(key);
-                              return (
-                                <li key={key}>
-                                  <TaskRow
-                                    selectMode={taskSelectMode}
-                                    selected={isSel}
-                                    done={t.done}
-                                    pinned={Boolean((t as any).pinned)}
-                                    text={t.text}
-                                    noteHeading={t.noteHeading}
-                                    noteId={t.noteId}
-                                    onToggleDone={() => onToggle(t.noteId, t.id)}
-                                    onLongPress={() => toggleTaskSel(key)}
-                                    onSelectTap={() => toggleTaskSel(key)}
-                                  />
+                      <>
+                        {suggested.length > 0 && (
+                          <div className="pt-4">
+                            <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                              <span>Suggested tasks · {suggested.length}</span>
+                              <div className="flex items-center gap-3 normal-case tracking-normal">
+                                <button onClick={dismissAll} className="text-muted-foreground hover:text-foreground">Dismiss all</button>
+                                <button onClick={approveAll} className="font-semibold text-foreground">Approve all</button>
+                              </div>
+                            </h2>
+                            <ul className="space-y-2 rounded-2xl border-2 border-dashed border-foreground/40 bg-card p-2">
+                              {suggested.map((t) => (
+                                <li key={`${t.noteId}::${t.id}`} className="flex items-start gap-2 rounded-xl px-2 py-2">
+                                  <div className="min-w-0 flex-1">
+                                    <p className="text-sm leading-snug">{t.text}</p>
+                                    {t.noteHeading && (
+                                      <p className="mt-0.5 truncate text-[11px] text-muted-foreground">from {t.noteHeading}</p>
+                                    )}
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-1">
+                                    <button
+                                      onClick={() => dismissOne(t.noteId, t.id)}
+                                      aria-label="Dismiss"
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+                                    >
+                                      <X className="h-4 w-4" />
+                                    </button>
+                                    <button
+                                      onClick={() => approveOne(t.noteId, t.id)}
+                                      aria-label="Approve"
+                                      className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-foreground text-background hover:opacity-90"
+                                    >
+                                      <Check className="h-4 w-4" strokeWidth={3} />
+                                    </button>
+                                  </div>
                                 </li>
-                              );
-                            })}
-                          </ul>
+                              ))}
+                            </ul>
+                          </div>
                         )}
-                      </div>
+                        <div className="pt-4">
+                          <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                            <span>Tasks</span>
+                            <Link
+                              to="/tasks"
+                              className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+                            >
+                              <span>
+                                {done.length}/{allTasks.length}
+                              </span>
+                              <ChevronRight className="h-4 w-4" />
+                            </Link>
+                          </h2>
+                          {visible.length === 0 ? (
+                            <Link
+                              to="/tasks"
+                              className="flex items-center justify-center rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                            >
+                              + Add a task
+                            </Link>
+                          ) : (
+                            <ul className="space-y-1.5">
+                              {visible.map((t) => {
+                                const key: TaskKey = `${t.noteId}::${t.id}`;
+                                const isSel = selectedTasks.has(key);
+                                return (
+                                  <li key={key}>
+                                    <TaskRow
+                                      selectMode={taskSelectMode}
+                                      selected={isSel}
+                                      done={t.done}
+                                      pinned={Boolean(t.pinned)}
+                                      text={t.text}
+                                      noteHeading={t.noteHeading}
+                                      noteId={t.noteId}
+                                      onToggleDone={() => onToggle(t.noteId, t.id)}
+                                      onLongPress={() => toggleTaskSel(key)}
+                                      onSelectTap={() => toggleTaskSel(key)}
+                                    />
+                                  </li>
+                                );
+                              })}
+                            </ul>
+                          )}
+                        </div>
+                      </>
                     );
                   })()}
 

@@ -10,12 +10,12 @@ const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into stru
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 concise sentences capturing the key ideas. If images are provided, describe their content and any text visible.
-- tasks: array of short actionable to-dos, imperative voice ("Call John about invoice").
-  IMPORTANT — Analyze every image carefully and INFER tasks the user could reasonably act on based on what is shown, even if no task is explicitly written:
-    * Extract explicit tasks (handwritten TODOs, checklists, whiteboards, sticky notes, screenshots of task lists, emails, messages).
-    * Infer implicit tasks from context: a receipt → "File expense for <item>"; a business card → "Save contact for <name>"; a poster/event flyer → "RSVP to <event> on <date>"; a product/book → "Look up <product>" or "Buy <item>"; a bill → "Pay <bill> by <date>"; a screenshot of a bug → "Fix <issue>"; a whiteboard diagram → tasks for the next steps shown; a landmark/place → "Plan visit to <place>".
-    * Combine transcript tasks with image-derived tasks. Deduplicate.
-    * If truly nothing actionable can be inferred, return an empty array.
+- tasks: array of HIGH-QUALITY actionable to-dos in imperative voice ("Call John about invoice").
+  STRICT RULES:
+    * Only include a task if the user clearly needs to DO something specific — an explicit action item, a deadline/obligation, a promised follow-up, or a checkbox/handwritten TODO in an image.
+    * DO NOT invent tasks from casual mentions. Do NOT add generic tasks like "Look up X", "Read more about Y", "Consider Z", "Save contact", "File expense" unless the user's own words or the image explicitly state that intent.
+    * If nothing is clearly actionable, return an empty array []. An empty list is better than a filler task.
+    * Maximum 5 tasks. Prefer 0-2 unless the content is genuinely a task list.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string): Promise<string> {
@@ -176,7 +176,7 @@ export const processVoiceNote = createServerFn({ method: "POST" })
       }
 
       const structured = await extractStructured(transcript, images, apiKey);
-      const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false }));
+      const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
 
       await supabase
         .from("voice_notes")
@@ -427,7 +427,12 @@ const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation. Prefer the page's own title if it's concise.
 - summary: 2-5 sentences capturing what the page is about and the key takeaways.
-- tasks: array of short actionable to-dos the user could act on based on the page (e.g. "Read chapter on X", "Watch related video", "Buy <item>", "Try <tool>"). Return [] if nothing useful.
+- tasks: array of HIGH-QUALITY actionable to-dos derived from the page.
+  STRICT RULES:
+    * Only include a task if the page contains a clear call-to-action, a step-by-step guide, an event with a date/RSVP, a specific purchase decision, or an explicit checklist the user should follow.
+    * DO NOT invent generic tasks like "Read the article", "Look into this", "Consider it", "Bookmark this". The note itself is the bookmark.
+    * If nothing is clearly actionable, return []. An empty list is strongly preferred over filler.
+    * Maximum 5 tasks.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
@@ -530,7 +535,7 @@ export const saveWebLink = createServerFn({ method: "POST" })
           ? text
           : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable server-rendered content; summarize based on the URL and title alone.)`;
       const structured = await summarizeWebPage(data.url, title, effectiveText, apiKey);
-      const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false }));
+      const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
       await supabase
         .from("voice_notes")
         .update({
@@ -546,4 +551,48 @@ export const saveWebLink = createServerFn({ method: "POST" })
       await supabase.from("voice_notes").update({ status: "failed", error: msg }).eq("id", inserted.id);
       throw new Error(msg);
     }
+  });
+
+const ReviewTasksInput = z.object({
+  tasks: z.array(z.object({ noteId: z.string().uuid(), taskId: z.string() })).min(1),
+});
+
+export const approveTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReviewTasksInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const byNote = new Map<string, Set<string>>();
+    for (const t of data.tasks) {
+      if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+      byNote.get(t.noteId)!.add(t.taskId);
+    }
+    for (const [noteId, taskIds] of byNote) {
+      const { data: note } = await supabase.from("voice_notes").select("tasks").eq("id", noteId).single();
+      if (!note) continue;
+      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<any>;
+      const next = tasks.map((t) => (taskIds.has(t.id) ? { ...t, pending: false } : t));
+      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+    }
+    return { ok: true as const };
+  });
+
+export const dismissTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => ReviewTasksInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const byNote = new Map<string, Set<string>>();
+    for (const t of data.tasks) {
+      if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+      byNote.get(t.noteId)!.add(t.taskId);
+    }
+    for (const [noteId, taskIds] of byNote) {
+      const { data: note } = await supabase.from("voice_notes").select("tasks").eq("id", noteId).single();
+      if (!note) continue;
+      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<any>;
+      const next = tasks.filter((t) => !taskIds.has(t.id));
+      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+    }
+    return { ok: true as const };
   });
