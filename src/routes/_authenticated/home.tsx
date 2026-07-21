@@ -5,7 +5,7 @@ import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
