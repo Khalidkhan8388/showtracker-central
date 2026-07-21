@@ -321,6 +321,8 @@ function ResizableImage({
         <img
           src={block.src}
           alt={block.alt}
+          loading="lazy"
+          decoding="async"
           className="h-auto w-full select-none rounded-xl"
           draggable={blockIndex !== undefined}
           onDragStart={(e) => {
