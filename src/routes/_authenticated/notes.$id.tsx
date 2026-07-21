@@ -51,7 +51,7 @@ function NoteDetail() {
   const [draftHeading, setDraftHeading] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [saving, setSaving] = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  
 
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
