@@ -144,8 +144,33 @@ function TasksPage() {
     }
   }
 
+  async function onEdit(noteId: string, taskId: string, text: string) {
+    patchTask(noteId, taskId, { text });
+    try {
+      await editFn({ data: { noteId, taskId, text } });
+    } catch {
+      load();
+    }
+  }
+
+  async function onAdd() {
+    const text = newTask.trim();
+    if (!text) return;
+    setNewTask("");
+    try {
+      await addFn({ data: { text } });
+      load();
+    } catch {
+      setNewTask(text);
+    }
+  }
+
   const allTasks = (notes ?? []).flatMap((n) =>
-    (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+    (n.tasks ?? []).map((t) => ({
+      ...t,
+      noteId: n.id,
+      noteHeading: n.heading === CUSTOM_HEADING ? null : n.heading,
+    })),
   );
   const pinned = allTasks.filter((t) => t.pinned && !t.done);
   const open = allTasks.filter((t) => !t.pinned && !t.done);
