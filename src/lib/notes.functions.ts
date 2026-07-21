@@ -692,6 +692,8 @@ export const saveTextNote = createServerFn({ method: "POST" })
         transcript: data.body || null,
         summary: summary || (data.body ? data.body.slice(0, 500) : ""),
         tasks: tasksPayload,
+        image_paths: data.imagePaths ?? [],
+        source_url: data.sourceUrl ?? null,
         status: "ready",
       })
       .select("id")
