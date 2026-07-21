@@ -6,6 +6,7 @@ import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Che
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
+import { Markdown } from "@/components/Markdown";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
