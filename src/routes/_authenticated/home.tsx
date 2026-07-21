@@ -670,6 +670,8 @@ const NoteCard = memo(function NoteCard({
             <img
               src={thumbUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
             />
           )}
