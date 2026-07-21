@@ -47,6 +47,15 @@ function Home() {
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
 
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setCollapsed(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+
   async function onToggle(noteId: string, taskId: string) {
     setNotes((prev) =>
       prev
@@ -188,9 +197,19 @@ function Home() {
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
           <div className="min-w-0">
-            <h1 className="text-[22px] font-bold tracking-tight leading-none">Braintape</h1>
+            <h1
+              className={`font-bold tracking-tight leading-none transition-all duration-200 ${
+                collapsed ? "text-[20px]" : "text-[32px]"
+              }`}
+            >
+              Braintape
+            </h1>
             {notes && notes.length > 0 && (
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
+              <p
+                className={`overflow-hidden text-muted-foreground transition-all duration-200 ${
+                  collapsed ? "mt-0 max-h-0 opacity-0" : "mt-1 max-h-5 text-[13px] opacity-100"
+                }`}
+              >
                 {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
               </p>
             )}
@@ -204,6 +223,7 @@ function Home() {
             <span>Sign out</span>
           </button>
         </div>
+
 
       </header>
 
