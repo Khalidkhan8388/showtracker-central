@@ -167,6 +167,19 @@ function NoteDetail() {
           {new Date(note.created_at).toLocaleString()}
         </p>
 
+        {note.source_url && (
+          <a
+            href={note.source_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full border border-border bg-muted px-3 py-1 text-xs text-foreground hover:bg-accent"
+          >
+            <span aria-hidden>🔗</span>
+            <span className="truncate">{note.source_url.replace(/^https?:\/\//, "")}</span>
+          </a>
+        )}
+
+
         {imageUrls.length > 0 && (
           <section className="mt-6">
             <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
