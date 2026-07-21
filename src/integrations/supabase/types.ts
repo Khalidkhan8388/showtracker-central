@@ -22,6 +22,7 @@ export type Database = {
           error: string | null
           heading: string | null
           id: string
+          pinned: boolean
           status: Database["public"]["Enums"]["note_status"]
           summary: string | null
           tasks: Json
@@ -36,6 +37,7 @@ export type Database = {
           error?: string | null
           heading?: string | null
           id?: string
+          pinned?: boolean
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
           tasks?: Json
@@ -50,6 +52,7 @@ export type Database = {
           error?: string | null
           heading?: string | null
           id?: string
+          pinned?: boolean
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
           tasks?: Json
