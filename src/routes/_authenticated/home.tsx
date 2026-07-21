@@ -311,7 +311,7 @@ function Home() {
                             className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
                           >
                             <div className="flex items-center gap-2">
-                              <Sparkle />
+                              <Sparkles className="h-4 w-4 text-primary-foreground" />
                               <span className="text-[15px] font-semibold text-primary-foreground">
                                 {suggested.length} suggested task{suggested.length === 1 ? "" : "s"}
                               </span>
