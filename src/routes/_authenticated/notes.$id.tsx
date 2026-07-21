@@ -144,7 +144,6 @@ function NoteDetail() {
     setDraftHeading(note.heading ?? "");
     setDraftBody(note.transcript ?? "");
     setEditing(true);
-    setTimeout(() => bodyRef.current?.focus(), 30);
   }
 
   async function saveEdit() {
@@ -161,18 +160,98 @@ function NoteDetail() {
     }
   }
 
-  function insertWikiLink() {
-    const ta = bodyRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart ?? draftBody.length;
-    const end = ta.selectionEnd ?? draftBody.length;
-    const next = draftBody.slice(0, start) + "[[]]" + draftBody.slice(end);
-    setDraftBody(next);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + 2, start + 2);
-    }, 0);
+  function appendToBody(snippet: string) {
+    setDraftBody((prev) => {
+      const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+      return prev + sep + snippet;
+    });
   }
+
+  function insertWikiLinkForTitle(title: string) {
+    appendToBody(`[[${title}]]`);
+  }
+
+  function removeImageFromBody(src: string) {
+    setDraftBody((prev) => {
+      const escaped = src.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?!\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+  function removeLinkFromBody(href: string) {
+    setDraftBody((prev) => {
+      const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?(?<!!)\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [addingLink, setAddingLink] = useState(false);
+  const [linkDraft, setLinkDraft] = useState("");
+  const editFileRef = useRef<HTMLInputElement | null>(null);
+  const linkLabelFn = useServerFn(generateLinkLabel);
+
+  async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingImg(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const urls: string[] = [];
+      for (const f of files) {
+        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
+        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("voice-notes")
+          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
+        if (upErr) throw upErr;
+        const { data: signed, error: signErr } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+        if (signErr || !signed) throw signErr ?? new Error("Sign failed");
+        urls.push(signed.signedUrl);
+      }
+      appendToBody(urls.map((u) => `![](${u})`).join("\n"));
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploadingImg(false);
+    }
+  }
+
+  async function commitLink() {
+    const raw = linkDraft.trim();
+    if (!raw) {
+      setAddingLink(false);
+      return;
+    }
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      new URL(normalized);
+    } catch {
+      toast.error("Link doesn't look valid");
+      return;
+    }
+    setAddingLink(false);
+    setLinkDraft("");
+    const placeholder = `__linking_${Date.now()}__`;
+    appendToBody(`[${placeholder}](${normalized})`);
+    try {
+      const { label } = await linkLabelFn({ data: { url: normalized } });
+      const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
+      setDraftBody((prev) => prev.replace(`[${placeholder}](${normalized})`, `[${clean}](${normalized})`));
+    } catch {
+      let host = normalized;
+      try { host = new URL(normalized).hostname.replace(/^www\./, ""); } catch {}
+      setDraftBody((prev) => prev.replace(`[${placeholder}](${normalized})`, `[${host}](${normalized})`));
+    }
+  }
+
 
   if (!note) {
     return (
