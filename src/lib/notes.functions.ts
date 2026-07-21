@@ -742,7 +742,7 @@ export const updateTextNote = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => UpdateTextNoteInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const patch: Record<string, unknown> = {};
+    const patch: { heading?: string; transcript?: string } = {};
     if (data.heading !== undefined) patch.heading = data.heading.trim() || "Untitled note";
     if (data.body !== undefined) patch.transcript = data.body;
     if (Object.keys(patch).length === 0) return { ok: true as const };
