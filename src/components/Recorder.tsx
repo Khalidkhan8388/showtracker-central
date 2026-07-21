@@ -324,10 +324,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
 
       <div
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all ${
+        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full shadow-2xl ring-1 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
+          shrunk ? "scale-90 p-1 opacity-95" : "scale-100 p-1.5 opacity-100"
+        } ${
           recording
-            ? "bg-destructive/85 ring-destructive/20 animate-pulse"
-            : "bg-foreground/95 ring-background/10"
+            ? "bg-destructive/70 ring-destructive/30 animate-pulse"
+            : "bg-foreground/60 ring-background/10"
         }`}
       >
         <input
@@ -342,17 +344,21 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-background/70 transition-all duration-200 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50"
+          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+            shrunk ? "h-9 w-9" : "h-11 w-11"
+          }`}
         >
-          <ImagePlus className="h-5 w-5" strokeWidth={2} />
+          <ImagePlus className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
         </button>
         <button
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-background/70 transition-all duration-200 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50"
+          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+            shrunk ? "h-9 w-9" : "h-11 w-11"
+          }`}
         >
-          <Link2 className="h-5 w-5" strokeWidth={2} />
+          <Link2 className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
         </button>
 
         <div className="mx-1 h-6 w-px bg-background/10" />
@@ -361,21 +367,23 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="group inline-flex items-center gap-2.5 rounded-full bg-background/10 py-2 pl-3 pr-5 text-background transition-all duration-200 hover:bg-background/15 active:scale-[0.97] disabled:cursor-default"
+          className={`group inline-flex items-center gap-2.5 rounded-full bg-background/10 text-background transition-all duration-300 hover:bg-background/15 active:scale-[0.97] disabled:cursor-default ${
+            shrunk ? "py-1.5 pl-2.5 pr-4" : "py-2 pl-3 pr-5"
+          }`}
         >
           <span className="relative flex items-center justify-center">
             {!recording && !showSpinner && (
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
             )}
             {showSpinner ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className={shrunk ? "h-4 w-4 animate-spin" : "h-5 w-5 animate-spin"} />
             ) : recording ? (
-              <Square className="h-4 w-4" fill="currentColor" />
+              <Square className={shrunk ? "h-3.5 w-3.5" : "h-4 w-4"} fill="currentColor" />
             ) : (
-              <Mic className="h-5 w-5" strokeWidth={2} />
+              <Mic className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
             )}
           </span>
-          <span className="text-sm font-semibold tracking-tight tabular-nums">{label}</span>
+          <span className={`font-semibold tracking-tight tabular-nums ${shrunk ? "text-xs" : "text-sm"}`}>{label}</span>
         </button>
       </div>
 
