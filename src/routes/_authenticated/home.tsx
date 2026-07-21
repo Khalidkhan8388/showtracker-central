@@ -608,6 +608,19 @@ function NoteCard({
             </div>
           </div>
         </div>
+      ) : isText ? (
+        <>
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+            </h3>
+          </div>
+          {note.summary && (
+            <p className="relative z-10 line-clamp-4 text-[11px] leading-snug text-foreground/60">
+              {note.summary}
+            </p>
+          )}
+        </>
       ) : (
         <>
           {isLink && linkHost && (
