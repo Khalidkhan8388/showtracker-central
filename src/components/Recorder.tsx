@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Heading1, Heading2, List, ListOrdered, Quote, Minus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
@@ -36,8 +36,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textBody, setTextBody] = useState("");
   const [textImages, setTextImages] = useState<PendingImage[]>([]);
   const [textLink, setTextLink] = useState("");
+  const [linkFieldOpen, setLinkFieldOpen] = useState(false);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashStart, setSlashStart] = useState(0); // index of "/" in body
+  const [slashIdx, setSlashIdx] = useState(0);
   const textImagesRef = useRef<PendingImage[]>([]);
   const textFileRef = useRef<HTMLInputElement | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const linkInputRef = useRef<HTMLInputElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
@@ -62,12 +69,123 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     updateTextImages(copy);
   }
 
+
   function resetTextComposer() {
     textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     updateTextImages([]);
     setTextHeading("");
     setTextBody("");
     setTextLink("");
+    setLinkFieldOpen(false);
+    setSlashOpen(false);
+    setSlashQuery("");
+  }
+
+  type SlashAction = {
+    key: string;
+    label: string;
+    hint: string;
+    icon: React.ComponentType<{ className?: string }>;
+    // for formatting inserts
+    prefix?: string;
+    // for special actions
+    kind?: "image" | "link" | "divider";
+  };
+  const SLASH_ACTIONS: SlashAction[] = [
+    { key: "h1", label: "Heading", hint: "Big section title", icon: Heading1, prefix: "# " },
+    { key: "h2", label: "Subheading", hint: "Smaller title", icon: Heading2, prefix: "## " },
+    { key: "ul", label: "Bullet list", hint: "Unordered list", icon: List, prefix: "- " },
+    { key: "ol", label: "Numbered list", hint: "Ordered list", icon: ListOrdered, prefix: "1. " },
+    { key: "quote", label: "Quote", hint: "Blockquote", icon: Quote, prefix: "> " },
+    { key: "divider", label: "Divider", hint: "Horizontal rule", icon: Minus, kind: "divider" },
+    { key: "image", label: "Image", hint: "Attach photo(s)", icon: ImagePlus, kind: "image" },
+    { key: "link", label: "Link", hint: "Attach a URL", icon: Link2, kind: "link" },
+  ];
+  const filteredSlash = useMemo(() => {
+    const q = slashQuery.trim().toLowerCase();
+    if (!q) return SLASH_ACTIONS;
+    return SLASH_ACTIONS.filter((a) => a.label.toLowerCase().includes(q) || a.key.includes(q));
+  }, [slashQuery]);
+
+  function onBodyChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value;
+    const caret = e.target.selectionStart ?? value.length;
+    setTextBody(value);
+    // Detect active "/" trigger: nearest "/" before caret with only word chars after it,
+    // and preceded by start-of-line or whitespace.
+    const before = value.slice(0, caret);
+    const slashPos = before.lastIndexOf("/");
+    if (slashPos >= 0) {
+      const prevChar = slashPos === 0 ? "\n" : before[slashPos - 1];
+      const between = before.slice(slashPos + 1);
+      const validPrev = prevChar === "\n" || /\s/.test(prevChar);
+      const validQuery = /^[a-zA-Z0-9]*$/.test(between);
+      if (validPrev && validQuery) {
+        setSlashOpen(true);
+        setSlashStart(slashPos);
+        setSlashQuery(between);
+        setSlashIdx(0);
+        return;
+      }
+    }
+    if (slashOpen) setSlashOpen(false);
+  }
+
+  function applySlash(action: SlashAction) {
+    const ta = textAreaRef.current;
+    const body = textBody;
+    const caret = ta?.selectionStart ?? body.length;
+    // Remove the "/query" from slashStart..caret
+    const cleaned = body.slice(0, slashStart) + body.slice(caret);
+    setSlashOpen(false);
+    setSlashQuery("");
+
+    if (action.kind === "image") {
+      setTextBody(cleaned);
+      requestAnimationFrame(() => textFileRef.current?.click());
+      return;
+    }
+    if (action.kind === "link") {
+      setTextBody(cleaned);
+      setLinkFieldOpen(true);
+      requestAnimationFrame(() => linkInputRef.current?.focus());
+      return;
+    }
+    // Formatting insert
+    const atLineStart = slashStart === 0 || cleaned[slashStart - 1] === "\n";
+    let insert = "";
+    if (action.kind === "divider") {
+      insert = (atLineStart ? "" : "\n") + "---\n";
+    } else if (action.prefix) {
+      insert = (atLineStart ? "" : "\n") + action.prefix;
+    }
+    const next = cleaned.slice(0, slashStart) + insert + cleaned.slice(slashStart);
+    setTextBody(next);
+    const newCaret = slashStart + insert.length;
+    requestAnimationFrame(() => {
+      const el = textAreaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(newCaret, newCaret);
+      }
+    });
+  }
+
+  function onBodyKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!slashOpen || filteredSlash.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSlashIdx((i) => (i + 1) % filteredSlash.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSlashIdx((i) => (i - 1 + filteredSlash.length) % filteredSlash.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      applySlash(filteredSlash[Math.min(slashIdx, filteredSlash.length - 1)]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setSlashOpen(false);
+    }
   }
 
   async function submitText() {
@@ -426,14 +544,51 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               maxLength={200}
               className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
             />
-            <textarea
-              placeholder="Write your note… (optional — we'll pull tasks from the body)"
-              value={textBody}
-              onChange={(e) => setTextBody(e.target.value)}
-              maxLength={20000}
-              rows={6}
-              className="min-h-[140px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
-            />
+            <div className="relative">
+              <textarea
+                ref={textAreaRef}
+                placeholder="Write your note… (type / for options)"
+                value={textBody}
+                onChange={onBodyChange}
+                onKeyDown={onBodyKeyDown}
+                onBlur={() => {
+                  // delay so click on menu item registers
+                  setTimeout(() => setSlashOpen(false), 120);
+                }}
+                maxLength={20000}
+                rows={6}
+                className="min-h-[160px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+              />
+              {slashOpen && filteredSlash.length > 0 && (
+                <div className="absolute left-2 right-2 top-full z-20 mt-1 max-h-64 overflow-y-auto rounded-2xl border border-border bg-background p-1 shadow-xl">
+                  {filteredSlash.map((a, i) => {
+                    const Icon = a.icon;
+                    const active = i === Math.min(slashIdx, filteredSlash.length - 1);
+                    return (
+                      <button
+                        key={a.key}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          applySlash(a);
+                        }}
+                        onMouseEnter={() => setSlashIdx(i)}
+                        className={`flex w-full items-center gap-3 rounded-xl px-3 py-2 text-left transition-colors ${
+                          active ? "bg-muted" : "hover:bg-muted/60"
+                        }`}
+                      >
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-border bg-background">
+                          <Icon className="h-4 w-4 text-foreground" />
+                        </span>
+                        <span className="min-w-0 flex-1">
+                          <span className="block truncate text-sm font-medium text-foreground">{a.label}</span>
+                          <span className="block truncate text-[11px] text-muted-foreground">{a.hint}</span>
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
 
             {textImages.length > 0 && (
               <div className="flex gap-2 overflow-x-auto pb-1">
@@ -456,26 +611,30 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               </div>
             )}
 
-            <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
-              <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <input
-                type="url"
-                inputMode="url"
-                placeholder="Attach a link (optional)"
-                value={textLink}
-                onChange={(e) => setTextLink(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              />
-              {textLink && (
+            {(linkFieldOpen || textLink) && (
+              <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  ref={linkInputRef}
+                  type="url"
+                  inputMode="url"
+                  placeholder="Paste a URL"
+                  value={textLink}
+                  onChange={(e) => setTextLink(e.target.value)}
+                  className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
                 <button
-                  onClick={() => setTextLink("")}
-                  aria-label="Clear link"
+                  onClick={() => {
+                    setTextLink("");
+                    setLinkFieldOpen(false);
+                  }}
+                  aria-label="Remove link"
                   className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
                 >
                   <X className="h-3.5 w-3.5" />
                 </button>
-              )}
-            </div>
+              </div>
+            )}
 
             <input
               ref={textFileRef}
@@ -487,13 +646,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             />
 
             <div className="flex items-center justify-between gap-2">
-              <button
-                onClick={() => textFileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                <ImagePlus className="h-4 w-4" />
-                Add image
-              </button>
+              <span className="text-[11px] text-muted-foreground">
+                Type <kbd className="rounded border border-border bg-muted px-1 py-0.5 text-[10px] font-medium text-foreground">/</kbd> for headings, images, links…
+              </span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
