@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote } from "@/lib/notes.functions";
 import { ArrowLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin } from "lucide-react";
 import { toast } from "sonner";
+import { Markdown } from "@/components/Markdown";
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
   head: () => ({ meta: [{ title: "Note — Braintape" }] }),
@@ -199,7 +200,7 @@ function NoteDetail() {
         {note.summary && (
           <section className="mt-6">
             <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Summary</h2>
-            <p className="text-sm leading-relaxed">{note.summary}</p>
+            <Markdown>{note.summary}</Markdown>
           </section>
         )}
 
@@ -226,8 +227,8 @@ function NoteDetail() {
 
         {note.transcript && (
           <section className="mt-6">
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Transcript</h2>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-muted-foreground">{note.transcript}</p>
+            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">Note</h2>
+            <Markdown className="text-muted-foreground">{note.transcript}</Markdown>
           </section>
         )}
       </div>
