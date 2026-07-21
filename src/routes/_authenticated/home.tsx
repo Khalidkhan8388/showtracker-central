@@ -190,6 +190,17 @@ function Home() {
           <>
             {(() => {
               const [latest, ...rest] = notes;
+              const pinnedRest = rest.filter((n) => n.pinned);
+              const unpinnedRest = rest.filter((n) => !n.pinned);
+              const stripIds = new Set<string>();
+              const strip: Note[] = [];
+              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+                if (!stripIds.has(n.id)) {
+                  stripIds.add(n.id);
+                  strip.push(n);
+                }
+              }
+              const grid = unpinnedRest.slice(5);
               return (
                 <div className="space-y-4">
                   <NoteCard
@@ -202,10 +213,10 @@ function Home() {
                     onToggleSel={() => toggleNoteSel(latest.id)}
                   />
 
-                  {rest.length > 0 && (
+                  {strip.length > 0 && (
                     <div className="-mx-5 overflow-x-auto pb-2">
                       <div className="flex gap-3 px-5">
-                        {rest.map((n) => (
+                        {strip.map((n) => (
                           <NoteCard
                             key={n.id}
                             note={n}
@@ -220,56 +231,79 @@ function Home() {
                       </div>
                     </div>
                   )}
-                </div>
-              );
-            })()}
 
-            {(() => {
-              const allTasks = notes.flatMap((n) =>
-                (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
-              );
-              if (allTasks.length === 0) return null;
-              const pinned = allTasks.filter((t) => (t as any).pinned && !t.done);
-              const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
-              const done = allTasks.filter((t) => t.done);
-              const ordered = [...pinned, ...open, ...done];
-              const visible = ordered.slice(0, 3);
-              return (
-                <div className="mt-8">
-                  <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span>Tasks</span>
-                    <Link
-                      to="/tasks"
-                      className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
-                    >
-                      <span>
-                        {done.length}/{allTasks.length}
-                      </span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </h2>
-                  <ul className="space-y-1.5">
-                    {visible.map((t) => {
-                      const key: TaskKey = `${t.noteId}::${t.id}`;
-                      const isSel = selectedTasks.has(key);
-                      return (
-                        <li key={key}>
-                          <TaskRow
-                            selectMode={taskSelectMode}
-                            selected={isSel}
-                            done={t.done}
-                            pinned={Boolean((t as any).pinned)}
-                            text={t.text}
-                            noteHeading={t.noteHeading}
-                            noteId={t.noteId}
-                            onToggleDone={() => onToggle(t.noteId, t.id)}
-                            onLongPress={() => toggleTaskSel(key)}
-                            onSelectTap={() => toggleTaskSel(key)}
+                  {(() => {
+                    const allTasks = notes.flatMap((n) =>
+                      (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+                    );
+                    if (allTasks.length === 0) return null;
+                    const pinnedT = allTasks.filter((t) => (t as any).pinned && !t.done);
+                    const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
+                    const done = allTasks.filter((t) => t.done);
+                    const ordered = [...pinnedT, ...open, ...done];
+                    const visible = ordered.slice(0, 3);
+                    return (
+                      <div className="pt-4">
+                        <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          <span>Tasks</span>
+                          <Link
+                            to="/tasks"
+                            className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+                          >
+                            <span>
+                              {done.length}/{allTasks.length}
+                            </span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Link>
+                        </h2>
+                        <ul className="space-y-1.5">
+                          {visible.map((t) => {
+                            const key: TaskKey = `${t.noteId}::${t.id}`;
+                            const isSel = selectedTasks.has(key);
+                            return (
+                              <li key={key}>
+                                <TaskRow
+                                  selectMode={taskSelectMode}
+                                  selected={isSel}
+                                  done={t.done}
+                                  pinned={Boolean((t as any).pinned)}
+                                  text={t.text}
+                                  noteHeading={t.noteHeading}
+                                  noteId={t.noteId}
+                                  onToggleDone={() => onToggle(t.noteId, t.id)}
+                                  onLongPress={() => toggleTaskSel(key)}
+                                  onSelectTap={() => toggleTaskSel(key)}
+                                />
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
+
+                  {grid.length > 0 && (
+                    <div className="pt-4">
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        More notes
+                      </h2>
+                      <div className="grid grid-cols-2 gap-3">
+                        {grid.map((n) => (
+                          <NoteCard
+                            key={n.id}
+                            note={n}
+                            variant="square"
+                            fullWidth
+                            selected={selectedNotes.has(n.id)}
+                            selectMode={noteSelectMode}
+                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                            onLongPress={() => toggleNoteSel(n.id)}
+                            onToggleSel={() => toggleNoteSel(n.id)}
                           />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -289,6 +323,15 @@ function Home() {
           >
             <X className="h-4 w-4" />
           </button>
+          {noteSelectMode && (
+            <button
+              onClick={togglePinSelected}
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-foreground/85 px-4 py-2 text-xs font-semibold text-background shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150"
+            >
+              <Pin className="h-3.5 w-3.5" />
+              Pin
+            </button>
+          )}
           <button
             onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
             className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-destructive/85 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg ring-1 ring-destructive/20 backdrop-blur-xl backdrop-saturate-150"
