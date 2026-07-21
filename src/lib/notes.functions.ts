@@ -535,7 +535,7 @@ export const saveWebLink = createServerFn({ method: "POST" })
           ? text
           : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable server-rendered content; summarize based on the URL and title alone.)`;
       const structured = await summarizeWebPage(data.url, title, effectiveText, apiKey);
-      const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false }));
+      const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
       await supabase
         .from("voice_notes")
         .update({
