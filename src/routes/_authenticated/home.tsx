@@ -558,9 +558,7 @@ function NoteCard({
 
   const base = isText
     ? "relative block overflow-hidden rounded-3xl p-4 transition-all " +
-      (selected
-        ? "ring-2 ring-foreground shadow-sm"
-        : "ring-1 ring-black/[0.04] hover:-translate-y-0.5 hover:shadow-md")
+      (selected ? "ring-2 ring-foreground" : "")
     : "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
       (selected
         ? "border-foreground bg-muted shadow-sm"
@@ -679,10 +677,10 @@ function NoteCard({
               )}
             </div>
           )}
-          {(note.transcript || note.summary) && (
+          {note.transcript && (
             <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "9rem" : "16rem" }}>
               <Markdown className="!text-[12px] !leading-snug [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1 [&_img]:!rounded-lg [&_img]:!max-h-24 [&_img]:!w-auto [&_pre]:hidden [&_hr]:hidden">
-                {(note.transcript ?? note.summary) as string}
+                {note.transcript}
               </Markdown>
             </div>
           )}

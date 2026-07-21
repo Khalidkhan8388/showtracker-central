@@ -701,25 +701,7 @@ export const saveTextNote = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => SaveTextNoteInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const apiKey = process.env.LOVABLE_API_KEY;
-
-    let summary = "";
-    let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
-    let tags: string[] = [];
     let finalHeading = data.heading.trim();
-    if (apiKey && data.body.trim().length >= 20) {
-      try {
-        const structured = await extractFromText(finalHeading, data.body, apiKey);
-        summary = structured.summary;
-        tags = structured.tags;
-        if (!finalHeading && structured.heading) finalHeading = structured.heading;
-        tasksPayload = structured.tasks.map((t, i) => ({
-          id: `t${i}`, text: t, done: false, pending: true,
-        }));
-      } catch {
-        // non-fatal: still save the note
-      }
-    }
     if (!finalHeading) {
       const fallback = data.body.trim().split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
       finalHeading = fallback || "Untitled note";
@@ -731,9 +713,9 @@ export const saveTextNote = createServerFn({ method: "POST" })
         user_id: userId,
         heading: finalHeading,
         transcript: data.body || null,
-        summary: summary || (data.body ? data.body.slice(0, 500) : ""),
-        tasks: tasksPayload,
-        tags,
+        summary: "",
+        tasks: [],
+        tags: [],
         image_paths: data.imagePaths ?? [],
         source_url: data.sourceUrl ?? null,
         status: "ready",
@@ -742,6 +724,30 @@ export const saveTextNote = createServerFn({ method: "POST" })
       .single();
     if (insErr || !inserted) throw new Error(insErr?.message ?? "Insert failed");
     return { ok: true as const, noteId: inserted.id };
+  });
+
+const UpdateTextNoteInput = z.object({
+  noteId: z.string().uuid(),
+  heading: z.string().trim().max(200).optional().default(""),
+  body: z.string().max(50000).optional().default(""),
+});
+
+export const updateTextNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => UpdateTextNoteInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    let finalHeading = data.heading.trim();
+    if (!finalHeading) {
+      const fallback = data.body.trim().split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
+      finalHeading = fallback || "Untitled note";
+    }
+    const { error } = await supabase
+      .from("voice_notes")
+      .update({ heading: finalHeading, transcript: data.body || null })
+      .eq("id", data.noteId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
   });
 
 const GenerateLinkLabelInput = z.object({ url: z.string().trim().url().max(2000) });
