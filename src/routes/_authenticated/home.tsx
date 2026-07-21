@@ -517,6 +517,7 @@ function NoteCard({
       tabIndex={0}
       onClick={handleClick}
       {...lp.handlers}
+      style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
       {/* Square variant: image fills the card as background (only when not a link) */}
