@@ -220,12 +220,13 @@ export function BlockEditor({
       i += 1;
       continue;
     }
+    const textIdx = i;
     rendered.push(
       <LineEditor
-        key={`txt-${i}`}
+        key={`txt-${textIdx}`}
         value={b.value}
-        onChange={(v) => updateTextBlock(i, v)}
-        placeholder={!hasMedia && i === 0 ? placeholder ?? "" : ""}
+        onChange={(v) => updateTextBlock(textIdx, v)}
+        placeholder={!hasMedia && textIdx === 0 ? placeholder ?? "" : ""}
       />
     );
     i += 1;
