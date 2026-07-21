@@ -10,12 +10,12 @@ const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into stru
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 concise sentences capturing the key ideas. If images are provided, describe their content and any text visible.
-- tasks: array of short actionable to-dos, imperative voice ("Call John about invoice").
-  IMPORTANT — Analyze every image carefully and INFER tasks the user could reasonably act on based on what is shown, even if no task is explicitly written:
-    * Extract explicit tasks (handwritten TODOs, checklists, whiteboards, sticky notes, screenshots of task lists, emails, messages).
-    * Infer implicit tasks from context: a receipt → "File expense for <item>"; a business card → "Save contact for <name>"; a poster/event flyer → "RSVP to <event> on <date>"; a product/book → "Look up <product>" or "Buy <item>"; a bill → "Pay <bill> by <date>"; a screenshot of a bug → "Fix <issue>"; a whiteboard diagram → tasks for the next steps shown; a landmark/place → "Plan visit to <place>".
-    * Combine transcript tasks with image-derived tasks. Deduplicate.
-    * If truly nothing actionable can be inferred, return an empty array.
+- tasks: array of HIGH-QUALITY actionable to-dos in imperative voice ("Call John about invoice").
+  STRICT RULES:
+    * Only include a task if the user clearly needs to DO something specific — an explicit action item, a deadline/obligation, a promised follow-up, or a checkbox/handwritten TODO in an image.
+    * DO NOT invent tasks from casual mentions. Do NOT add generic tasks like "Look up X", "Read more about Y", "Consider Z", "Save contact", "File expense" unless the user's own words or the image explicitly state that intent.
+    * If nothing is clearly actionable, return an empty array []. An empty list is better than a filler task.
+    * Maximum 5 tasks. Prefer 0-2 unless the content is genuinely a task list.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string): Promise<string> {
