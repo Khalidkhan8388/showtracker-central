@@ -483,6 +483,7 @@ function NoteCard({
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
   const isLink = !!note.source_url;
+  const isText = !isLink && !hasImage && note.duration_seconds == null;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -492,7 +493,9 @@ function NoteCard({
     "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
     (selected
       ? "border-foreground bg-muted shadow-sm"
-      : "border-border bg-card hover:bg-muted/50");
+      : isText
+        ? "border-foreground bg-card hover:bg-muted/40 shadow-[3px_3px_0_0_hsl(var(--foreground))]"
+        : "border-border bg-card hover:bg-muted/50");
   const sizing =
     variant === "wide"
       ? "p-4"
@@ -500,12 +503,21 @@ function NoteCard({
         ? "flex aspect-square w-full flex-col gap-3"
         : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
+  const textNoteStyle: React.CSSProperties | undefined = isText
+    ? {
+        backgroundImage:
+          "repeating-linear-gradient(to bottom, transparent 0, transparent 21px, hsl(var(--border)) 21px, hsl(var(--border)) 22px)",
+        backgroundPosition: variant === "wide" ? "0 40px" : "0 34px",
+      }
+    : undefined;
+
   return (
     <div
       role="button"
       tabIndex={0}
       onClick={handleClick}
       {...lp.handlers}
+      style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
       {/* Square variant: image fills the card as background (only when not a link) */}
