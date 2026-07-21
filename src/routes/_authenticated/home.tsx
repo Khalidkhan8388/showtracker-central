@@ -666,7 +666,7 @@ function NoteCard({
             </h3>
           </div>
           {note.summary && (
-            <p className="relative z-10 line-clamp-4 text-[11px] leading-snug text-foreground/60">
+            <p className="relative z-10 line-clamp-[10] text-[12px] leading-snug text-foreground/60">
               {note.summary}
             </p>
           )}
