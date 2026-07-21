@@ -224,6 +224,7 @@ export const processVoiceNote = createServerFn({ method: "POST" })
           heading: structured.heading,
           summary: structured.summary,
           tasks: tasksPayload,
+          tags: structured.tags,
         })
         .eq("id", note.id);
 
