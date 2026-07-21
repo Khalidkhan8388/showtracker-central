@@ -4,18 +4,11 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ProcessInput = z.object({ noteId: z.string().uuid() });
 
-type ProcessResult = {
-  transcript: string;
-  heading: string;
-  summary: string;
-  tasks: string[];
-};
-
-const SYSTEM_PROMPT = `You turn a raw voice-note transcript into structured notes.
+const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into structured notes.
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation.
-- summary: 2-4 concise sentences capturing the key ideas.
-- tasks: array of short actionable to-dos extracted from the transcript, imperative voice ("Call John about invoice"). Empty array if none.
+- summary: 2-4 concise sentences capturing the key ideas. If images are provided, describe their content and any text visible.
+- tasks: array of short actionable to-dos, imperative voice ("Call John about invoice"). Include tasks visible in the images (e.g. handwritten TODOs, checklists, whiteboards) and tasks mentioned in the transcript. Empty array if none.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string): Promise<string> {
@@ -45,7 +38,35 @@ async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string):
   return (data.text ?? "").trim();
 }
 
-async function extractStructured(transcript: string, apiKey: string): Promise<Omit<ProcessResult, "transcript">> {
+function bytesToBase64(bytes: Uint8Array): string {
+  let bin = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  // btoa is available in the Worker runtime
+  return btoa(bin);
+}
+
+async function extractStructured(
+  transcript: string | null,
+  images: Array<{ mime: string; base64: string }>,
+  apiKey: string,
+): Promise<{ heading: string; summary: string; tasks: string[] }> {
+  const userBlocks: Array<Record<string, unknown>> = [];
+  const intro = transcript
+    ? `Transcript from the voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
+    : images.length > 0
+      ? "There is no voice transcript. Analyze the attached image(s) and produce the structured note based on them alone."
+      : "No content provided.";
+  userBlocks.push({ type: "text", text: intro });
+  for (const img of images) {
+    userBlocks.push({
+      type: "image_url",
+      image_url: { url: `data:${img.mime};base64,${img.base64}` },
+    });
+  }
+
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -53,10 +74,10 @@ async function extractStructured(transcript: string, apiKey: string): Promise<Om
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-3.5-flash",
+      model: "google/gemini-2.5-flash",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        { role: "user", content: `Transcript:\n\n${transcript}` },
+        { role: "user", content: userBlocks },
       ],
       response_format: { type: "json_object" },
     }),
@@ -74,7 +95,6 @@ async function extractStructured(transcript: string, apiKey: string): Promise<Om
   try {
     parsed = JSON.parse(raw);
   } catch {
-    // best-effort: strip fences
     const stripped = raw.replace(/```json|```/g, "").trim();
     parsed = JSON.parse(stripped);
   }
@@ -82,7 +102,9 @@ async function extractStructured(transcript: string, apiKey: string): Promise<Om
   const summary = String(parsed.summary ?? "").slice(0, 2000);
   const tasksArr = Array.isArray(parsed.tasks) ? parsed.tasks : [];
   const tasks = tasksArr
-    .map((t: unknown) => (typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : ""))
+    .map((t: unknown) =>
+      typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : "",
+    )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
   return { heading, summary, tasks };
@@ -99,30 +121,54 @@ export const processVoiceNote = createServerFn({ method: "POST" })
 
     const { data: note, error: noteErr } = await supabase
       .from("voice_notes")
-      .select("id, audio_path, user_id")
+      .select("id, audio_path, image_paths, user_id")
       .eq("id", data.noteId)
       .single();
     if (noteErr || !note) throw new Error("Note not found");
     if (note.user_id !== userId) throw new Error("Forbidden");
 
+    const imagePaths = (Array.isArray((note as any).image_paths)
+      ? ((note as any).image_paths as unknown[])
+      : []
+    )
+      .map((p) => (typeof p === "string" ? p : ""))
+      .filter(Boolean);
+
+    if (!note.audio_path && imagePaths.length === 0) {
+      throw new Error("Note has no audio and no images");
+    }
+
     await supabase.from("voice_notes").update({ status: "transcribing", error: null }).eq("id", note.id);
 
     try {
       const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      const { data: file, error: dlErr } = await supabaseAdmin.storage
-        .from("voice-notes")
-        .download(note.audio_path);
-      if (dlErr || !file) throw new Error(`Download failed: ${dlErr?.message ?? "no file"}`);
 
-      const bytes = new Uint8Array(await file.arrayBuffer());
-      const mime = file.type || "audio/webm";
+      let transcript: string | null = null;
+      if (note.audio_path) {
+        const { data: file, error: dlErr } = await supabaseAdmin.storage
+          .from("voice-notes")
+          .download(note.audio_path);
+        if (dlErr || !file) throw new Error(`Download failed: ${dlErr?.message ?? "no file"}`);
 
-      const transcript = await transcribeAudio(bytes, mime, apiKey);
-      if (!transcript) throw new Error("Empty transcription");
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const mime = file.type || "audio/webm";
+        transcript = await transcribeAudio(bytes, mime, apiKey);
+        if (!transcript) throw new Error("Empty transcription");
+        await supabase.from("voice_notes").update({ status: "processing", transcript }).eq("id", note.id);
+      } else {
+        await supabase.from("voice_notes").update({ status: "processing" }).eq("id", note.id);
+      }
 
-      await supabase.from("voice_notes").update({ status: "processing", transcript }).eq("id", note.id);
+      const images: Array<{ mime: string; base64: string }> = [];
+      for (const p of imagePaths) {
+        const { data: file, error: dlErr } = await supabaseAdmin.storage.from("voice-notes").download(p);
+        if (dlErr || !file) continue;
+        const bytes = new Uint8Array(await file.arrayBuffer());
+        const mime = file.type || (p.endsWith(".png") ? "image/png" : "image/jpeg");
+        images.push({ mime, base64: bytesToBase64(bytes) });
+      }
 
-      const structured = await extractStructured(transcript, apiKey);
+      const structured = await extractStructured(transcript, images, apiKey);
       const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false }));
 
       await supabase
@@ -167,6 +213,19 @@ export const toggleTask = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+async function removeNoteFiles(noteRows: Array<{ audio_path: string | null; image_paths: unknown }>) {
+  const paths: string[] = [];
+  for (const r of noteRows) {
+    if (r.audio_path) paths.push(r.audio_path);
+    if (Array.isArray(r.image_paths)) {
+      for (const p of r.image_paths as unknown[]) if (typeof p === "string" && p) paths.push(p);
+    }
+  }
+  if (paths.length === 0) return;
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  await supabaseAdmin.storage.from("voice-notes").remove(paths);
+}
+
 const DeleteInput = z.object({ noteId: z.string().uuid() });
 
 export const deleteNote = createServerFn({ method: "POST" })
@@ -176,13 +235,10 @@ export const deleteNote = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: note } = await supabase
       .from("voice_notes")
-      .select("audio_path")
+      .select("audio_path, image_paths")
       .eq("id", data.noteId)
       .single();
-    if (note?.audio_path) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin.storage.from("voice-notes").remove([note.audio_path]);
-    }
+    if (note) await removeNoteFiles([note as any]);
     const { error } = await supabase.from("voice_notes").delete().eq("id", data.noteId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
@@ -197,13 +253,9 @@ export const deleteNotes = createServerFn({ method: "POST" })
     const { supabase } = context;
     const { data: rows } = await supabase
       .from("voice_notes")
-      .select("audio_path")
+      .select("audio_path, image_paths")
       .in("id", data.noteIds);
-    const paths = (rows ?? []).map((r: any) => r.audio_path).filter(Boolean) as string[];
-    if (paths.length > 0) {
-      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-      await supabaseAdmin.storage.from("voice-notes").remove(paths);
-    }
+    if (rows && rows.length > 0) await removeNoteFiles(rows as any);
     const { error } = await supabase.from("voice_notes").delete().in("id", data.noteIds);
     if (error) throw new Error(error.message);
     return { ok: true as const };
