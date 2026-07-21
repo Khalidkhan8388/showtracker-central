@@ -3,9 +3,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, Check } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, Check, ImagePlus } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import { BlockEditor } from "@/components/BlockEditor";
+import { generateLinkLabel } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
   head: () => ({ meta: [{ title: "Note — Braintape" }] }),
@@ -49,7 +51,7 @@ function NoteDetail() {
   const [draftHeading, setDraftHeading] = useState("");
   const [draftBody, setDraftBody] = useState("");
   const [saving, setSaving] = useState(false);
-  const bodyRef = useRef<HTMLTextAreaElement | null>(null);
+  
 
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
@@ -142,7 +144,6 @@ function NoteDetail() {
     setDraftHeading(note.heading ?? "");
     setDraftBody(note.transcript ?? "");
     setEditing(true);
-    setTimeout(() => bodyRef.current?.focus(), 30);
   }
 
   async function saveEdit() {
@@ -159,18 +160,98 @@ function NoteDetail() {
     }
   }
 
-  function insertWikiLink() {
-    const ta = bodyRef.current;
-    if (!ta) return;
-    const start = ta.selectionStart ?? draftBody.length;
-    const end = ta.selectionEnd ?? draftBody.length;
-    const next = draftBody.slice(0, start) + "[[]]" + draftBody.slice(end);
-    setDraftBody(next);
-    setTimeout(() => {
-      ta.focus();
-      ta.setSelectionRange(start + 2, start + 2);
-    }, 0);
+  function appendToBody(snippet: string) {
+    setDraftBody((prev) => {
+      const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+      return prev + sep + snippet;
+    });
   }
+
+  function insertWikiLinkForTitle(title: string) {
+    appendToBody(`[[${title}]]`);
+  }
+
+  function removeImageFromBody(src: string) {
+    setDraftBody((prev) => {
+      const escaped = src.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?!\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+  function removeLinkFromBody(href: string) {
+    setDraftBody((prev) => {
+      const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?(?<!!)\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+  const [uploadingImg, setUploadingImg] = useState(false);
+  const [addingLink, setAddingLink] = useState(false);
+  const [linkDraft, setLinkDraft] = useState("");
+  const editFileRef = useRef<HTMLInputElement | null>(null);
+  const linkLabelFn = useServerFn(generateLinkLabel);
+
+  async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingImg(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const urls: string[] = [];
+      for (const f of files) {
+        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
+        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("voice-notes")
+          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
+        if (upErr) throw upErr;
+        const { data: signed, error: signErr } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
+        if (signErr || !signed) throw signErr ?? new Error("Sign failed");
+        urls.push(signed.signedUrl);
+      }
+      appendToBody(urls.map((u) => `![](${u})`).join("\n"));
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploadingImg(false);
+    }
+  }
+
+  async function commitLink() {
+    const raw = linkDraft.trim();
+    if (!raw) {
+      setAddingLink(false);
+      return;
+    }
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+    try {
+      new URL(normalized);
+    } catch {
+      toast.error("Link doesn't look valid");
+      return;
+    }
+    setAddingLink(false);
+    setLinkDraft("");
+    const placeholder = `__linking_${Date.now()}__`;
+    appendToBody(`[${placeholder}](${normalized})`);
+    try {
+      const { label } = await linkLabelFn({ data: { url: normalized } });
+      const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
+      setDraftBody((prev) => prev.replace(`[${placeholder}](${normalized})`, `[${clean}](${normalized})`));
+    } catch {
+      let host = normalized;
+      try { host = new URL(normalized).hostname.replace(/^www\./, ""); } catch {}
+      setDraftBody((prev) => prev.replace(`[${placeholder}](${normalized})`, `[${host}](${normalized})`));
+    }
+  }
+
 
   if (!note) {
     return (
@@ -362,46 +443,78 @@ function NoteDetail() {
 
         {editing ? (
           <section className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
+            <input
+              ref={editFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={onPickImages}
+            />
+
+
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <button
-                onClick={insertWikiLink}
-                className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-[13px] text-primary active:opacity-60"
+                onClick={() => editFileRef.current?.click()}
+                disabled={uploadingImg}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60 disabled:opacity-60"
+              >
+                {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                Image
+              </button>
+              <button
+                onClick={() => setAddingLink((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
               >
                 <Link2 className="h-3.5 w-3.5" />
-                Link a note
+                Link
               </button>
-              <span className="text-[11px] text-muted-foreground">
-                Use <code className="rounded bg-muted px-1">[[Title]]</code> to link
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                <code className="rounded bg-muted px-1">[[Title]]</code> links notes
               </span>
             </div>
-            <textarea
-              ref={bodyRef}
+
+            {addingLink && (
+              <div className="mb-3 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitLink();
+                    if (e.key === "Escape") { setAddingLink(false); setLinkDraft(""); }
+                  }}
+                  placeholder="https://…"
+                  className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/60"
+                />
+                <button
+                  onClick={commitLink}
+                  className="rounded-full bg-primary px-2.5 py-1 text-[12px] font-semibold text-primary-foreground active:opacity-70"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            <BlockEditor
               value={draftBody}
-              onChange={(e) => setDraftBody(e.target.value)}
-              placeholder="Start writing…"
-              className="min-h-[60vh] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground/50"
+              onChange={setDraftBody}
+              onRemoveImage={removeImageFromBody}
+              onRemoveLink={removeLinkFromBody}
+              placeholder="Start writing… # for heading, - for list, > for quote"
             />
+
             {allNotes.length > 0 && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Link to
+                  Link to a note
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {allNotes.slice(0, 20).map((n) => (
                     <button
                       key={n.id}
-                      onClick={() => {
-                        const ta = bodyRef.current;
-                        const start = ta?.selectionStart ?? draftBody.length;
-                        const end = ta?.selectionEnd ?? draftBody.length;
-                        const snippet = `[[${n.heading}]]`;
-                        setDraftBody(draftBody.slice(0, start) + snippet + draftBody.slice(end));
-                        setTimeout(() => {
-                          ta?.focus();
-                          const pos = start + snippet.length;
-                          ta?.setSelectionRange(pos, pos);
-                        }, 0);
-                      }}
+                      onClick={() => insertWikiLinkForTitle(n.heading)}
                       className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
                     >
                       {n.heading}
