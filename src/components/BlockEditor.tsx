@@ -114,77 +114,130 @@ export function BlockEditor({
     onChange(serializeBlocks(copy));
   }
 
+  function swapImages(fromIdx: number, toIdx: number) {
+    if (fromIdx === toIdx) return;
+    const copy = blocks.slice();
+    const a = copy[fromIdx];
+    const b = copy[toIdx];
+    if (!a || !b || a.kind !== "image" || b.kind !== "image") return;
+    // Auto-fit side-by-side if either is > 48%
+    const shrink = (blk: Extract<Block, { kind: "image" }>) => {
+      const w = typeof blk.size === "number" ? blk.size : blk.size === "small" ? 40 : blk.size === "medium" ? 70 : 100;
+      if (w > 48) {
+        const newSize: ImageSize = 48;
+        return { ...blk, size: newSize, raw: buildImageRaw(blk.alt, newSize, blk.src) };
+      }
+      return blk;
+    };
+    copy[fromIdx] = shrink(b);
+    copy[toIdx] = shrink(a);
+    onChange(serializeBlocks(copy));
+  }
+
+  // Group consecutive image blocks (separated only by whitespace text) into rows
+  const rendered: React.ReactNode[] = [];
+  let i = 0;
+  while (i < blocks.length) {
+    const b = blocks[i];
+    if (b.kind === "image") {
+      const group: { block: Extract<Block, { kind: "image" }>; idx: number }[] = [
+        { block: b, idx: i },
+      ];
+      let j = i + 1;
+      while (
+        j + 1 < blocks.length &&
+        blocks[j].kind === "text" &&
+        !(blocks[j] as Extract<Block, { kind: "text" }>).value.trim() &&
+        blocks[j + 1].kind === "image"
+      ) {
+        group.push({
+          block: blocks[j + 1] as Extract<Block, { kind: "image" }>,
+          idx: j + 1,
+        });
+        j += 2;
+      }
+      rendered.push(
+        <div key={`row-${i}`} className="flex w-full flex-wrap items-start gap-2">
+          {group.map(({ block, idx }) => (
+            <ResizableImage
+              key={`img-${idx}`}
+              block={block}
+              onResize={(size) => updateImageSize(idx, size)}
+              onRemove={() => onRemoveImage(block.src)}
+              onDropImage={(fromIdx) => swapImages(fromIdx, idx)}
+              blockIndex={idx}
+            />
+          ))}
+        </div>
+      );
+      i = j;
+      continue;
+    }
+    if (b.kind === "link") {
+      const loading = /^__linking_.*__$/.test(b.label);
+      const favicon = faviconFor(b.href);
+      const host = hostnameOf(b.href);
+      rendered.push(
+        <div
+          key={`link-${i}`}
+          className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
+        >
+          {favicon ? (
+            <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
+          ) : (
+            <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
+          )}
+          <div className="min-w-0 flex-1">
+            <div className="truncate text-sm font-medium text-foreground">
+              {loading ? (
+                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Fetching title…
+                </span>
+              ) : (
+                b.label
+              )}
+            </div>
+            <a
+              href={b.href}
+              target="_blank"
+              rel="noreferrer"
+              className="block truncate text-xs text-muted-foreground hover:underline"
+            >
+              {host}
+            </a>
+          </div>
+          <button
+            type="button"
+            onClick={() => onRemoveLink(b.href)}
+            aria-label="Remove link"
+            className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+          >
+            <X className="h-3.5 w-3.5" strokeWidth={3} />
+          </button>
+        </div>
+      );
+      i += 1;
+      continue;
+    }
+    rendered.push(
+      <LineEditor
+        key={`txt-${i}`}
+        value={b.value}
+        onChange={(v) => updateTextBlock(i, v)}
+        placeholder={!hasMedia && i === 0 ? placeholder ?? "" : ""}
+      />
+    );
+    i += 1;
+  }
+
   return (
     <div
       className={`w-full flex-1 space-y-2 overflow-y-auto bg-transparent px-1 ${
         fullscreen ? "min-h-0" : "min-h-[200px]"
       }`}
     >
-      {blocks.map((b, i) => {
-        if (b.kind === "image") {
-          return (
-            <ResizableImage
-              key={`img-${i}`}
-              block={b}
-              onResize={(size) => updateImageSize(i, size)}
-              onRemove={() => onRemoveImage(b.src)}
-            />
-          );
-        }
-        if (b.kind === "link") {
-          const loading = /^__linking_.*__$/.test(b.label);
-          const favicon = faviconFor(b.href);
-          const host = hostnameOf(b.href);
-          return (
-            <div
-              key={`link-${i}`}
-              className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
-            >
-              {favicon ? (
-                <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
-              ) : (
-                <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
-              )}
-              <div className="min-w-0 flex-1">
-                <div className="truncate text-sm font-medium text-foreground">
-                  {loading ? (
-                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                      <Loader2 className="h-3 w-3 animate-spin" />
-                      Fetching title…
-                    </span>
-                  ) : (
-                    b.label
-                  )}
-                </div>
-                <a
-                  href={b.href}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block truncate text-xs text-muted-foreground hover:underline"
-                >
-                  {host}
-                </a>
-              </div>
-              <button
-                type="button"
-                onClick={() => onRemoveLink(b.href)}
-                aria-label="Remove link"
-                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
-              >
-                <X className="h-3.5 w-3.5" strokeWidth={3} />
-              </button>
-            </div>
-          );
-        }
-        return (
-          <LineEditor
-            key={`txt-${i}`}
-            value={b.value}
-            onChange={(v) => updateTextBlock(i, v)}
-            placeholder={!hasMedia && i === 0 ? placeholder ?? "" : ""}
-          />
-        );
-      })}
+      {rendered}
     </div>
   );
 }
@@ -193,11 +246,16 @@ function ResizableImage({
   block,
   onResize,
   onRemove,
+  onDropImage,
+  blockIndex,
 }: {
   block: Extract<Block, { kind: "image" }>;
   onResize: (size: ImageSize) => void;
   onRemove: () => void;
+  onDropImage?: (fromIdx: number) => void;
+  blockIndex?: number;
 }) {
+  const [dragOver, setDragOver] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ containerW: number } | null>(null);
   const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -243,13 +301,35 @@ function ResizableImage({
   const currentWidth = widthFor(block.size);
 
   return (
-    <div ref={containerRef} className="group relative w-full">
-      <div className="relative" style={{ width: currentWidth, maxWidth: "100%" }}>
+    <div
+      ref={containerRef}
+      className={`group relative ${dragOver ? "ring-2 ring-primary rounded-xl" : ""}`}
+      style={{ width: currentWidth, maxWidth: "100%" }}
+      onDragOver={(e) => {
+        if (onDropImage) {
+          e.preventDefault();
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        setDragOver(false);
+        const from = Number(e.dataTransfer.getData("text/block-index"));
+        if (!Number.isNaN(from) && onDropImage) onDropImage(from);
+      }}
+    >
+      <div className="relative w-full">
         <img
           src={block.src}
           alt={block.alt}
           className="h-auto w-full select-none rounded-xl"
-          draggable={false}
+          draggable={blockIndex !== undefined}
+          onDragStart={(e) => {
+            if (blockIndex !== undefined) {
+              e.dataTransfer.setData("text/block-index", String(blockIndex));
+              e.dataTransfer.effectAllowed = "move";
+            }
+          }}
           onPointerDown={onImgPointerDown}
           onPointerUp={clearHold}
           onPointerLeave={clearHold}
