@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const ProcessInput = z.object({ noteId: z.string().uuid() });
 const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
 const SaveTextNoteInput = z.object({
-  heading: z.string().trim().min(1).max(200),
+  heading: z.string().trim().max(200).optional().default(""),
   body: z.string().trim().max(20000).optional().default(""),
   imagePaths: z.array(z.string().min(1)).max(20).optional().default([]),
   sourceUrl: z.string().trim().url().max(2000).optional().nullable(),
