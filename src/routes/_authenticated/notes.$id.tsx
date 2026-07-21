@@ -5,6 +5,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote } from "@/lib/notes.functions";
 import { ArrowLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin } from "lucide-react";
 import { toast } from "sonner";
+import { Markdown } from "@/components/Markdown";
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
   head: () => ({ meta: [{ title: "Note — Braintape" }] }),
