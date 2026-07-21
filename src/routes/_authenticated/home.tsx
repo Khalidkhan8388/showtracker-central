@@ -225,28 +225,52 @@ function Home() {
                   </div>
                 );
               }
-              const pinnedNotes = displayNotes.filter((n) => n.pinned);
-              const unpinnedNotes = displayNotes.filter((n) => !n.pinned);
-              const gridNotes = [...pinnedNotes, ...unpinnedNotes];
+              const [latest, ...rest] = displayNotes;
+              const pinnedRest = rest.filter((n) => n.pinned);
+              const unpinnedRest = rest.filter((n) => !n.pinned);
+              const stripIds = new Set<string>();
+              const strip: Note[] = [];
+              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+                if (!stripIds.has(n.id)) {
+                  stripIds.add(n.id);
+                  strip.push(n);
+                }
+              }
+              const grid = unpinnedRest.slice(5);
               return (
                 <div className="space-y-4">
-                  {gridNotes.length > 0 && (
-                    <div className="grid grid-cols-2 gap-3">
-                      {gridNotes.map((n) => (
-                        <NoteCard
-                          key={n.id}
-                          note={n}
-                          thumbUrl={thumbs[n.id]}
-                          selected={selectedNotes.has(n.id)}
-                          selectMode={noteSelectMode}
-                          onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                          onLongPress={() => toggleNoteSel(n.id)}
-                          onToggleSel={() => toggleNoteSel(n.id)}
-                        />
-                      ))}
-                    </div>
+                  {latest && (
+                    <NoteCard
+                      note={latest}
+                      variant="wide"
+                      thumbUrl={thumbs[latest.id]}
+                      selected={selectedNotes.has(latest.id)}
+                      selectMode={noteSelectMode}
+                      onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
+                      onLongPress={() => toggleNoteSel(latest.id)}
+                      onToggleSel={() => toggleNoteSel(latest.id)}
+                    />
                   )}
 
+                  {strip.length > 0 && (
+                    <div className="-mx-5 overflow-x-auto pb-2">
+                      <div className="flex gap-3 px-5">
+                        {strip.map((n) => (
+                          <NoteCard
+                            key={n.id}
+                            note={n}
+                            variant="square"
+                            thumbUrl={thumbs[n.id]}
+                            selected={selectedNotes.has(n.id)}
+                            selectMode={noteSelectMode}
+                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                            onLongPress={() => toggleNoteSel(n.id)}
+                            onToggleSel={() => toggleNoteSel(n.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {(() => {
                     const allTasksRaw = notes.flatMap((n) =>
@@ -329,7 +353,29 @@ function Home() {
                   })()}
 
 
-
+                  {grid.length > 0 && (
+                    <div className="pt-4">
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        More notes
+                      </h2>
+                      <div className="grid grid-cols-2 gap-3">
+                        {grid.map((n) => (
+                          <NoteCard
+                            key={n.id}
+                            note={n}
+                            variant="square"
+                            fullWidth
+                            thumbUrl={thumbs[n.id]}
+                            selected={selectedNotes.has(n.id)}
+                            selectMode={noteSelectMode}
+                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                            onLongPress={() => toggleNoteSel(n.id)}
+                            onToggleSel={() => toggleNoteSel(n.id)}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -401,6 +447,8 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 
 function NoteCard({
   note,
+  variant,
+  fullWidth,
   thumbUrl,
   selected,
   selectMode,
@@ -409,6 +457,8 @@ function NoteCard({
   onToggleSel,
 }: {
   note: Note;
+  variant: "wide" | "square";
+  fullWidth?: boolean;
   thumbUrl?: string;
   selected: boolean;
   selectMode: boolean;
@@ -433,34 +483,22 @@ function NoteCard({
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
   const isLink = !!note.source_url;
-  const isVoice = note.duration_seconds != null;
-  const isText = !isLink && !hasImage && !isVoice;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
 
-  // Distinct card treatments per type
-  const typeClasses = isText
-    ? "border-border bg-muted/40"
-    : isLink
-      ? "border-border bg-card"
-      : "border-border bg-card";
-
   const base =
     "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
-    (selected ? "border-foreground bg-muted shadow-sm" : typeClasses + " hover:bg-muted/50");
-  const sizing = "flex aspect-square w-full flex-col gap-2";
-
-  const chip = isLink && linkHost
-    ? { label: linkHost, cls: "bg-foreground text-background" }
-    : isVoice
-      ? { label: "VOICE", cls: "bg-foreground text-background" }
-      : isText
-        ? { label: "NOTE", cls: "border border-foreground text-foreground bg-transparent" }
-        : hasImage
-          ? { label: "PHOTO", cls: "bg-foreground text-background" }
-          : null;
+    (selected
+      ? "border-foreground bg-muted shadow-sm"
+      : "border-border bg-card hover:bg-muted/50");
+  const sizing =
+    variant === "wide"
+      ? "p-4"
+      : fullWidth
+        ? "flex aspect-square w-full flex-col gap-3"
+        : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
   return (
     <div
@@ -470,8 +508,8 @@ function NoteCard({
       {...lp.handlers}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
-      {/* Photo-only card: image fills as background */}
-      {hasImage && !isLink && (
+      {/* Square variant: image fills the card as background (only when not a link) */}
+      {variant === "square" && hasImage && !isLink && (
         <>
           <img
             src={thumbUrl}
@@ -499,59 +537,92 @@ function NoteCard({
         </div>
       )}
       {note.pinned && !selectMode && (
-        <div className={`absolute right-2 top-2 z-10 ${hasImage && !isLink ? "text-white" : "text-foreground"}`}>
-          <Pin className="h-3.5 w-3.5 fill-current" />
+        <div className="absolute right-2 top-2 z-10 text-muted-foreground">
+          <Pin className="h-3.5 w-3.5 fill-foreground text-foreground" />
         </div>
       )}
-
-      {chip && (
-        <div className="relative z-10">
-          <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide max-w-full truncate ${chip.cls}`}>
-            {isVoice && <Mic className="h-2.5 w-2.5" />}
-            {isText && <span aria-hidden>✎</span>}
-            {chip.label}
-          </span>
-        </div>
-      )}
-
-      <div className="relative z-10 flex items-start gap-1.5 pr-5">
-        <h3
-          className={`text-xs font-semibold leading-tight break-words ${
-            hasImage && !isLink ? "text-white drop-shadow" : ""
-          }`}
-        >
-          {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
-        </h3>
-      </div>
-
-      {isText && note.summary && (
-        <p className="relative z-10 line-clamp-3 text-[11px] leading-snug text-muted-foreground">
-          {note.summary}
-        </p>
-      )}
-
-      <div
-        className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-          hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
-        }`}
-      >
-        {note.tasks && note.tasks.length > 0 && (
-          <span className="flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3" />
-            {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
-          </span>
-        )}
-        <div className="flex items-center gap-2">
-          <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-          {note.duration_seconds != null && (
-            <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
+      {variant === "wide" ? (
+        <div className="flex items-start gap-3">
+          {!isLink && hasImage && (
+            <img
+              src={thumbUrl}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+            />
           )}
+          <div className="min-w-0 flex-1">
+            {isLink && linkHost && (
+              <div className="mb-1.5">
+                <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+                  {linkHost}
+                </span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 pr-6">
+              <h3 className="truncate text-sm font-semibold">
+                {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
+              </h3>
+            </div>
+            {note.summary && (
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
+            )}
+            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
+              {note.tasks && note.tasks.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+                </span>
+              )}
+              {imageCount > 0 && !isLink && (
+                <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{imageCount}</span>
+              )}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : (
+        <>
+          {isLink && linkHost && (
+            <div className="relative z-10">
+              <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-background max-w-full truncate">
+                {linkHost}
+              </span>
+            </div>
+          )}
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3
+              className={`text-xs font-semibold leading-tight break-words ${
+                hasImage && !isLink ? "text-white drop-shadow" : ""
+              }`}
+            >
+              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+            </h3>
+          </div>
+
+          <div
+            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
+              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
+            }`}
+          >
+            {note.tasks && note.tasks.length > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
+              </span>
+            )}
+            <div className="flex items-center gap-2">
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.duration_seconds != null && (
+                <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
     </div>
   );
 }
-
 
 function TaskRow({
   selectMode,
