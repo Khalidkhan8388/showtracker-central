@@ -67,7 +67,7 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url,transcript")
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as Note[];
     setNotes(rows);
