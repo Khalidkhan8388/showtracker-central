@@ -236,3 +236,31 @@ export const deleteTasks = createServerFn({ method: "POST" })
     }
     return { ok: true as const };
   });
+
+const PinInput = z.object({
+  noteId: z.string().uuid(),
+  taskId: z.string(),
+});
+
+export const pinTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => PinInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: note, error } = await supabase
+      .from("voice_notes")
+      .select("tasks")
+      .eq("id", data.noteId)
+      .single();
+    if (error || !note) throw new Error("Not found");
+    const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<{
+      id: string;
+      text: string;
+      done: boolean;
+      pinned?: boolean;
+    }>;
+    const next = tasks.map((t) => (t.id === data.taskId ? { ...t, pinned: !t.pinned } : t));
+    const { error: upErr } = await supabase.from("voice_notes").update({ tasks: next }).eq("id", data.noteId);
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true as const };
+  });
