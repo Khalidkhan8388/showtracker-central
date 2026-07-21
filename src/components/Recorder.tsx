@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink } from "@/lib/notes.functions";
 import { toast } from "sonner";
+
 
 function pickMime(): string {
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
