@@ -34,13 +34,69 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textOpen, setTextOpen] = useState(false);
   const [textHeading, setTextHeading] = useState("");
   const [textBody, setTextBody] = useState("");
-  const [textImages, setTextImages] = useState<PendingImage[]>([]);
-  const [textLink, setTextLink] = useState("");
-  const textImagesRef = useRef<PendingImage[]>([]);
+  const [uploadingMd, setUploadingMd] = useState(false);
   const textFileRef = useRef<HTMLInputElement | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
+
+  function insertAtCursor(snippet: string) {
+    const el = textAreaRef.current;
+    setTextBody((prev) => {
+      if (!el) return prev + snippet;
+      const start = el.selectionStart ?? prev.length;
+      const end = el.selectionEnd ?? prev.length;
+      const next = prev.slice(0, start) + snippet + prev.slice(end);
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + snippet.length;
+        el.setSelectionRange(pos, pos);
+      });
+      return next;
+    });
+  }
+
+  async function onPickMarkdownImages(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0) return;
+    setUploadingMd(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const paths = await uploadImages(uid, files);
+      const urls: string[] = [];
+      for (const p of paths) {
+        const { data, error } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(p, 60 * 60 * 24 * 365 * 10);
+        if (error || !data) throw error ?? new Error("Could not sign URL");
+        urls.push(data.signedUrl);
+      }
+      const snippet = urls.map((u) => `\n![](${u})\n`).join("");
+      insertAtCursor(snippet);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploadingMd(false);
+    }
+  }
+
+  function promptInsertLink() {
+    const url = window.prompt("Link URL");
+    if (!url) return;
+    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    try {
+      new URL(normalized);
+    } catch {
+      toast.error("Link doesn't look valid");
+      return;
+    }
+    const label = window.prompt("Link text (optional)", "") || normalized;
+    insertAtCursor(`[${label}](${normalized})`);
+  }
 
   function updateTextImages(next: PendingImage[]) {
     textImagesRef.current = next;
