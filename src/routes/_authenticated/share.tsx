@@ -48,21 +48,21 @@ function SharePage() {
   }, [search, saveFn, navigate]);
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-3 px-6 text-center">
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-6 text-center">
       {error ? (
-        <>
-          <p className="text-sm text-destructive">{error}</p>
+        <div className="w-full max-w-sm rounded-2xl bg-card p-6 shadow-sm">
+          <p className="text-[15px] text-destructive">{error}</p>
           <button
             onClick={() => navigate({ to: "/home" })}
-            className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background"
+            className="mt-4 w-full rounded-xl bg-primary py-3 text-[17px] font-semibold text-primary-foreground active:opacity-80"
           >
-            Go home
+            Go Home
           </button>
-        </>
+        </div>
       ) : (
         <>
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Saving your link…</p>
+          <p className="text-[15px] text-muted-foreground">Saving your link…</p>
         </>
       )}
     </div>

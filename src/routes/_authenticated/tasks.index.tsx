@@ -179,107 +179,120 @@ function TasksPage() {
   const done = allTasks.filter((t) => t.done);
 
   return (
-    <main className="mx-auto min-h-screen w-full max-w-md px-5 py-6 pb-32">
-      <header className="mb-6 flex items-center gap-3">
-        <Link
-          to="/home"
-          aria-label="Back"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Link>
-        <h1 className="text-2xl font-bold tracking-tight">Tasks</h1>
-        <span className="ml-auto text-sm text-muted-foreground">
-          {done.length}/{allTasks.length}
-        </span>
+    <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
+      {/* iOS large-title header */}
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-2 pt-3 pb-1">
+          <Link
+            to="/home"
+            aria-label="Back"
+            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+          >
+            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
+            <span>Home</span>
+          </Link>
+          <span className="px-3 text-[15px] tabular-nums text-muted-foreground">
+            {done.length}/{allTasks.length}
+          </span>
+        </div>
+        <div className="px-4 pt-1 pb-3">
+          <h1 className="text-[34px] font-bold tracking-tight">Tasks</h1>
+        </div>
       </header>
 
-      {!selectMode && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            onAdd();
-          }}
-          className="mb-5 flex items-center gap-2 rounded-2xl border border-border bg-card p-2"
-        >
-          <input
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder="Add a task…"
-            className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
-            maxLength={500}
-          />
-          <button
-            type="submit"
-            disabled={!newTask.trim()}
-            aria-label="Add task"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background disabled:opacity-40"
+      <div className="flex-1 px-4 pt-2">
+        {!selectMode && (
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              onAdd();
+            }}
+            className="mb-6 flex items-center gap-2 rounded-2xl bg-card px-3 py-2 shadow-sm"
           >
-            <Plus className="h-4 w-4" />
-          </button>
-        </form>
-      )}
+            <Plus className="h-5 w-5 shrink-0 text-primary" />
+            <input
+              value={newTask}
+              onChange={(e) => setNewTask(e.target.value)}
+              placeholder="Add a task"
+              className="flex-1 bg-transparent px-1 py-1.5 text-[17px] outline-none placeholder:text-muted-foreground"
+              maxLength={500}
+            />
+            {newTask.trim() && (
+              <button
+                type="submit"
+                aria-label="Add task"
+                className="inline-flex h-8 items-center rounded-full bg-primary px-3 text-[13px] font-semibold text-primary-foreground active:opacity-70"
+              >
+                Add
+              </button>
+            )}
+          </form>
+        )}
 
-      {notes === null ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : allTasks.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No tasks yet.</p>
-      ) : (
-        <div className="space-y-6">
-          {pinned.length > 0 && (
-            <Section label="Pinned">
-              <TaskList
-                items={pinned}
-                selected={selected}
-                selectMode={selectMode}
-                onToggle={onToggle}
-                onPin={onPin}
-                onEdit={onEdit}
-                onSelectTap={toggleSel}
-              />
-            </Section>
-          )}
-          {open.length > 0 && (
-            <Section label="Open">
-              <TaskList
-                items={open}
-                selected={selected}
-                selectMode={selectMode}
-                onToggle={onToggle}
-                onPin={onPin}
-                onEdit={onEdit}
-                onSelectTap={toggleSel}
-              />
-            </Section>
-          )}
-          {done.length > 0 && (
-            <Section label="Done">
-              <TaskList
-                items={done}
-                selected={selected}
-                selectMode={selectMode}
-                onToggle={onToggle}
-                onPin={onPin}
-                onEdit={onEdit}
-                onSelectTap={toggleSel}
-              />
-            </Section>
-          )}
-        </div>
-      )}
+        {notes === null ? (
+          <p className="text-[15px] text-muted-foreground">Loading…</p>
+        ) : allTasks.length === 0 ? (
+          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+            <p className="text-[17px] font-semibold">No tasks yet</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Add one above or capture a note.</p>
+          </div>
+        ) : (
+          <div className="space-y-6">
+            {pinned.length > 0 && (
+              <Section label="Pinned">
+                <TaskList
+                  items={pinned}
+                  selected={selected}
+                  selectMode={selectMode}
+                  onToggle={onToggle}
+                  onPin={onPin}
+                  onEdit={onEdit}
+                  onSelectTap={toggleSel}
+                />
+              </Section>
+            )}
+            {open.length > 0 && (
+              <Section label="Open">
+                <TaskList
+                  items={open}
+                  selected={selected}
+                  selectMode={selectMode}
+                  onToggle={onToggle}
+                  onPin={onPin}
+                  onEdit={onEdit}
+                  onSelectTap={toggleSel}
+                />
+              </Section>
+            )}
+            {done.length > 0 && (
+              <Section label="Done">
+                <TaskList
+                  items={done}
+                  selected={selected}
+                  selectMode={selectMode}
+                  onToggle={onToggle}
+                  onPin={onPin}
+                  onEdit={onEdit}
+                  onSelectTap={toggleSel}
+                />
+              </Section>
+            )}
+          </div>
+        )}
+      </div>
 
       {selectMode && (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center gap-2 px-5">
           <button
             onClick={() => setSelected(new Set())}
             aria-label="Cancel selection"
-            className="pointer-events-auto inline-flex h-10 w-10 items-center justify-center rounded-full bg-foreground/80 text-background shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150"
+            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5 backdrop-blur-xl"
           >
-            <X className="h-4 w-4" />
+            Cancel
           </button>
           <button
             onClick={confirmDelete}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-destructive/90 px-5 py-2.5 text-sm font-semibold text-destructive-foreground shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150"
+            className="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-full bg-destructive px-5 text-[15px] font-semibold text-destructive-foreground shadow-lg"
           >
             <Trash2 className="h-4 w-4" />
             Delete
@@ -293,13 +306,14 @@ function TasksPage() {
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <section>
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+      <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
         {label}
       </h2>
-      <ul className="space-y-1.5">{children}</ul>
+      <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">{children}</ul>
     </section>
   );
 }
+
 
 function TaskList({
   items,
@@ -320,7 +334,7 @@ function TaskList({
 }) {
   return (
     <>
-      {items.map((t) => {
+      {items.map((t, i) => {
         const key: TaskKey = `${t.noteId}::${t.id}`;
         return (
           <li key={key}>
@@ -334,12 +348,14 @@ function TaskList({
               onLongPress={() => onSelectTap(key)}
               onSelectTap={() => onSelectTap(key)}
             />
+            {i < items.length - 1 && <div className="ml-12 h-px bg-border" />}
           </li>
         );
       })}
     </>
   );
 }
+
 
 function TaskRow({
   task,
@@ -389,8 +405,8 @@ function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-2 rounded-xl border-2 p-3 select-none transition-colors ${
-        selected ? "border-foreground bg-muted" : "border-border bg-card"
+      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+        selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
       <button
@@ -406,9 +422,9 @@ function TaskRow({
         className="mt-0.5 shrink-0"
       >
         {task.done ? (
-          <CheckCircle2 className="h-4 w-4 text-foreground" />
+          <CheckCircle2 className="h-5 w-5 text-primary" />
         ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
+          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
@@ -427,12 +443,12 @@ function TaskRow({
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-md bg-transparent text-sm leading-snug outline-none ring-1 ring-border focus:ring-foreground px-1.5 py-0.5"
+            className="w-full rounded-lg bg-background px-2 py-1 text-[17px] leading-tight outline-none ring-1 ring-border focus:ring-primary"
             maxLength={500}
           />
         ) : (
           <p
-            className={`text-sm leading-snug ${
+            className={`text-[17px] leading-tight ${
               task.done ? "text-muted-foreground line-through" : "text-foreground"
             }`}
           >
@@ -441,7 +457,7 @@ function TaskRow({
         )}
         {task.noteHeading &&
           (selectMode ? (
-            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {task.noteHeading}
             </span>
           ) : (
@@ -449,7 +465,7 @@ function TaskRow({
               to="/notes/$id"
               params={{ id: task.noteId }}
               onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
             >
               {task.noteHeading}
             </Link>
@@ -463,9 +479,9 @@ function TaskRow({
               setEditing(true);
             }}
             aria-label="Edit task"
-            className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+            className="shrink-0 rounded-full p-1.5 text-muted-foreground active:opacity-60"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => {
@@ -473,8 +489,8 @@ function TaskRow({
               onPin();
             }}
             aria-label={task.pinned ? "Unpin task" : "Pin task"}
-            className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
-              task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
+            className={`shrink-0 rounded-full p-1.5 active:opacity-60 ${
+              task.pinned ? "text-primary" : "text-muted-foreground"
             }`}
           >
             {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -489,11 +505,12 @@ function TaskRow({
             commit();
           }}
           aria-label="Save"
-          className="mt-0.5 shrink-0 rounded-md p-1 text-foreground"
+          className="shrink-0 rounded-full p-1.5 text-primary"
         >
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4" strokeWidth={2.5} />
         </button>
       )}
     </div>
   );
 }
+

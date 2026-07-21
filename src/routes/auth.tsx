@@ -56,47 +56,50 @@ function AuthPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-6">
       <div className="w-full max-w-sm">
-        <div className="mb-8 flex flex-col items-center text-center">
-          <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-foreground text-background">
-            <Mic className="h-6 w-6" />
+        <div className="mb-10 flex flex-col items-center text-center">
+          <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-foreground text-background shadow-sm">
+            <Mic className="h-7 w-7" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Braintape</h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <h1 className="text-[28px] font-bold tracking-tight">Braintape</h1>
+          <p className="mt-1 text-[15px] text-muted-foreground">
             Speak. We'll remember for you.
           </p>
         </div>
 
-        <form onSubmit={onSubmit} className="space-y-3">
+        <form onSubmit={onSubmit} className="overflow-hidden rounded-2xl bg-card shadow-sm">
           <input
             type="email"
             required
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@example.com"
-            className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Email"
+            className="w-full bg-transparent px-4 py-3.5 text-[17px] outline-none placeholder:text-muted-foreground"
           />
+          <div className="ml-4 h-px bg-border" />
           <input
             type="password"
             required
             minLength={6}
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            placeholder="Password (min 6 chars)"
-            className="w-full rounded-xl border border-input bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring"
+            placeholder="Password"
+            className="w-full bg-transparent px-4 py-3.5 text-[17px] outline-none placeholder:text-muted-foreground"
           />
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full rounded-xl bg-foreground py-3 text-sm font-semibold text-background transition-opacity hover:opacity-90 disabled:opacity-50"
-          >
-            {busy ? "Please wait…" : mode === "signup" ? "Create account" : "Sign in"}
-          </button>
         </form>
+
+        <button
+          type="submit"
+          onClick={onSubmit as any}
+          disabled={busy}
+          className="mt-4 w-full rounded-2xl bg-primary py-3.5 text-[17px] font-semibold text-primary-foreground shadow-sm active:opacity-80 disabled:opacity-40"
+        >
+          {busy ? "Please wait…" : mode === "signup" ? "Create Account" : "Sign In"}
+        </button>
 
         <button
           type="button"
           onClick={() => setMode(mode === "signin" ? "signup" : "signin")}
-          className="mt-4 w-full text-center text-xs text-muted-foreground hover:text-foreground"
+          className="mt-5 w-full text-center text-[15px] text-primary active:opacity-60"
         >
           {mode === "signin" ? "New here? Create an account" : "Already have an account? Sign in"}
         </button>
