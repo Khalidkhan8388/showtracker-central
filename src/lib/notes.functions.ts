@@ -336,3 +336,87 @@ export const pinNote = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+const EditTaskInput = z.object({
+  noteId: z.string().uuid(),
+  taskId: z.string(),
+  text: z.string().trim().min(1).max(500),
+});
+
+export const editTaskText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => EditTaskInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: note, error } = await supabase
+      .from("voice_notes")
+      .select("tasks")
+      .eq("id", data.noteId)
+      .single();
+    if (error || !note) throw new Error("Not found");
+    const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<{
+      id: string;
+      text: string;
+      done: boolean;
+      pinned?: boolean;
+    }>;
+    const next = tasks.map((t) => (t.id === data.taskId ? { ...t, text: data.text } : t));
+    const { error: upErr } = await supabase
+      .from("voice_notes")
+      .update({ tasks: next })
+      .eq("id", data.noteId);
+    if (upErr) throw new Error(upErr.message);
+    return { ok: true as const };
+  });
+
+const CUSTOM_HEADING = "__custom__";
+
+const AddCustomTaskInput = z.object({ text: z.string().trim().min(1).max(500) });
+
+export const addCustomTask = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => AddCustomTaskInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    // find-or-create the per-user custom-task bucket
+    const { data: existing } = await supabase
+      .from("voice_notes")
+      .select("id, tasks")
+      .eq("user_id", userId)
+      .eq("heading", CUSTOM_HEADING)
+      .limit(1)
+      .maybeSingle();
+
+    const newTask = {
+      id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+      text: data.text,
+      done: false,
+    };
+
+    if (existing) {
+      const tasks = (Array.isArray(existing.tasks) ? existing.tasks : []) as Array<{
+        id: string;
+        text: string;
+        done: boolean;
+      }>;
+      const { error: upErr } = await supabase
+        .from("voice_notes")
+        .update({ tasks: [...tasks, newTask] })
+        .eq("id", existing.id);
+      if (upErr) throw new Error(upErr.message);
+      return { ok: true as const, noteId: existing.id, taskId: newTask.id };
+    }
+
+    const { data: created, error: insErr } = await supabase
+      .from("voice_notes")
+      .insert({
+        user_id: userId,
+        heading: CUSTOM_HEADING,
+        status: "ready",
+        tasks: [newTask],
+      })
+      .select("id")
+      .single();
+    if (insErr || !created) throw new Error(insErr?.message ?? "Insert failed");
+    return { ok: true as const, noteId: created.id, taskId: newTask.id };
+  });

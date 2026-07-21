@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteTasks, pinTask } from "@/lib/notes.functions";
+import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
+
+const CUSTOM_HEADING = "__custom__";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
@@ -53,9 +55,12 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 function TasksPage() {
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [selected, setSelected] = useState<Set<TaskKey>>(new Set());
+  const [newTask, setNewTask] = useState("");
   const toggleFn = useServerFn(toggleTask);
   const pinFn = useServerFn(pinTask);
   const delFn = useServerFn(deleteTasks);
+  const editFn = useServerFn(editTaskText);
+  const addFn = useServerFn(addCustomTask);
   const selectMode = selected.size > 0;
 
   async function load() {
@@ -139,8 +144,33 @@ function TasksPage() {
     }
   }
 
+  async function onEdit(noteId: string, taskId: string, text: string) {
+    patchTask(noteId, taskId, { text });
+    try {
+      await editFn({ data: { noteId, taskId, text } });
+    } catch {
+      load();
+    }
+  }
+
+  async function onAdd() {
+    const text = newTask.trim();
+    if (!text) return;
+    setNewTask("");
+    try {
+      await addFn({ data: { text } });
+      load();
+    } catch {
+      setNewTask(text);
+    }
+  }
+
   const allTasks = (notes ?? []).flatMap((n) =>
-    (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+    (n.tasks ?? []).map((t) => ({
+      ...t,
+      noteId: n.id,
+      noteHeading: n.heading === CUSTOM_HEADING ? null : n.heading,
+    })),
   );
   const pinned = allTasks.filter((t) => t.pinned && !t.done);
   const open = allTasks.filter((t) => !t.pinned && !t.done);
@@ -162,6 +192,32 @@ function TasksPage() {
         </span>
       </header>
 
+      {!selectMode && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onAdd();
+          }}
+          className="mb-5 flex items-center gap-2 rounded-2xl border border-border bg-card p-2"
+        >
+          <input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Add a task…"
+            className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+            maxLength={500}
+          />
+          <button
+            type="submit"
+            disabled={!newTask.trim()}
+            aria-label="Add task"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </form>
+      )}
+
       {notes === null ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : allTasks.length === 0 ? (
@@ -176,6 +232,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
@@ -188,6 +245,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
@@ -200,6 +258,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
@@ -246,6 +305,7 @@ function TaskList({
   selectMode,
   onToggle,
   onPin,
+  onEdit,
   onSelectTap,
 }: {
   items: Array<Task & { noteId: string; noteHeading: string | null }>;
@@ -253,6 +313,7 @@ function TaskList({
   selectMode: boolean;
   onToggle: (noteId: string, taskId: string, done: boolean) => void;
   onPin: (noteId: string, taskId: string, pinned: boolean) => void;
+  onEdit: (noteId: string, taskId: string, text: string) => void;
   onSelectTap: (k: TaskKey) => void;
 }) {
   return (
@@ -267,6 +328,7 @@ function TaskList({
               selectMode={selectMode}
               onToggle={() => onToggle(t.noteId, t.id, t.done)}
               onPin={() => onPin(t.noteId, t.id, !!t.pinned)}
+              onEdit={(text) => onEdit(t.noteId, t.id, text)}
               onLongPress={() => onSelectTap(key)}
               onSelectTap={() => onSelectTap(key)}
             />
@@ -283,6 +345,7 @@ function TaskRow({
   selectMode,
   onToggle,
   onPin,
+  onEdit,
   onLongPress,
   onSelectTap,
 }: {
@@ -291,14 +354,33 @@ function TaskRow({
   selectMode: boolean;
   onToggle: () => void;
   onPin: () => void;
+  onEdit: (text: string) => void;
   onLongPress: () => void;
   onSelectTap: () => void;
 }) {
   const lp = useLongPress(onLongPress);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.text);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(task.text);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [editing, task.text]);
+
+  function commit() {
+    const t = draft.trim();
+    setEditing(false);
+    if (t && t !== task.text) onEdit(t);
+  }
+
   return (
     <div
-      {...lp.handlers}
+      {...(editing ? {} : lp.handlers)}
       onClick={(e) => {
+        if (editing) return;
         if (lp.wasLongPress()) {
           e.preventDefault();
           return;
@@ -328,13 +410,33 @@ function TaskRow({
         )}
       </button>
       <div className="min-w-0 flex-1">
-        <p
-          className={`text-sm leading-snug ${
-            task.done ? "text-muted-foreground line-through" : "text-foreground"
-          }`}
-        >
-          {task.text}
-        </p>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                setEditing(false);
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full rounded-md bg-transparent text-sm leading-snug outline-none ring-1 ring-border focus:ring-foreground px-1.5 py-0.5"
+            maxLength={500}
+          />
+        ) : (
+          <p
+            className={`text-sm leading-snug ${
+              task.done ? "text-muted-foreground line-through" : "text-foreground"
+            }`}
+          >
+            {task.text}
+          </p>
+        )}
         {task.noteHeading &&
           (selectMode ? (
             <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
@@ -351,18 +453,43 @@ function TaskRow({
             </Link>
           ))}
       </div>
-      {!selectMode && (
+      {!selectMode && !editing && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditing(true);
+            }}
+            aria-label="Edit task"
+            className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPin();
+            }}
+            aria-label={task.pinned ? "Unpin task" : "Pin task"}
+            className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
+              task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
+            }`}
+          >
+            {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </button>
+        </>
+      )}
+      {editing && (
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={(e) => {
             e.stopPropagation();
-            onPin();
+            commit();
           }}
-          aria-label={task.pinned ? "Unpin task" : "Pin task"}
-          className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
-            task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
-          }`}
+          aria-label="Save"
+          className="mt-0.5 shrink-0 rounded-md p-1 text-foreground"
         >
-          {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          <Check className="h-4 w-4" />
         </button>
       )}
     </div>
