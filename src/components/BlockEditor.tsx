@@ -123,48 +123,56 @@ export function BlockEditor({
       {blocks.map((b, i) => {
         if (b.kind === "image") {
           return (
-            <div key={`img-${i}`} className="group relative">
-              <img
-                src={b.src}
-                alt={b.alt}
-                className="h-auto rounded-xl"
-                style={{ width: IMAGE_WIDTH[b.size], maxWidth: "100%" }}
-              />
-              <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 p-0.5 text-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "small")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "small" ? "bg-white/25" : ""}`}
-                  aria-label="Small"
+            <ResizableImage
+              key={`img-${i}`}
+              block={b}
+              onResize={(size) => updateImageSize(i, size)}
+              onRemove={() => onRemoveImage(b.src)}
+            />
+          );
+        }
+        if (b.kind === "link") {
+          const loading = /^__linking_.*__$/.test(b.label);
+          const favicon = faviconFor(b.href);
+          const host = hostnameOf(b.href);
+          return (
+            <div
+              key={`link-${i}`}
+              className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
+            >
+              {favicon ? (
+                <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
+              ) : (
+                <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-foreground">
+                  {loading ? (
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Fetching title…
+                    </span>
+                  ) : (
+                    b.label
+                  )}
+                </div>
+                <a
+                  href={b.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-xs text-muted-foreground hover:underline"
                 >
-                  <Minus className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "medium")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "medium" ? "bg-white/25" : ""}`}
-                  aria-label="Medium"
-                >
-                  <Square className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "full")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "full" ? "bg-white/25" : ""}`}
-                  aria-label="Full width"
-                >
-                  <Maximize2 className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <div className="mx-0.5 h-4 w-px bg-white/30" />
-                <button
-                  type="button"
-                  onClick={() => onRemoveImage(b.src)}
-                  aria-label="Remove image"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/25"
-                >
-                  <X className="h-3 w-3" strokeWidth={3} />
-                </button>
+                  {host}
+                </a>
               </div>
+              <button
+                type="button"
+                onClick={() => onRemoveLink(b.href)}
+                aria-label="Remove link"
+                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={3} />
+              </button>
             </div>
           );
         }
