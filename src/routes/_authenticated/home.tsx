@@ -329,29 +329,7 @@ function Home() {
                   })()}
 
 
-                  {grid.length > 0 && (
-                    <div className="pt-4">
-                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        More notes
-                      </h2>
-                      <div className="grid grid-cols-2 gap-3">
-                        {grid.map((n) => (
-                          <NoteCard
-                            key={n.id}
-                            note={n}
-                            variant="square"
-                            fullWidth
-                            thumbUrl={thumbs[n.id]}
-                            selected={selectedNotes.has(n.id)}
-                            selectMode={noteSelectMode}
-                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                            onLongPress={() => toggleNoteSel(n.id)}
-                            onToggleSel={() => toggleNoteSel(n.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+
                 </div>
               );
             })()}
