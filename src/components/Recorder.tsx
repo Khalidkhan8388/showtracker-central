@@ -796,31 +796,71 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 const MEDIA_RE = /(!?)\[([^\]]*)\]\(([^)\s]+)\)/g;
 
 type Block =
-  | { kind: "text"; value: string }
-  | { kind: "image"; src: string; raw: string }
-  | { kind: "link"; href: string; label: string; raw: string };
+  | { kind: "text"; value: string; sep: string }
+  | { kind: "heading"; level: 1 | 2 | 3; text: string; sep: string }
+  | { kind: "image"; src: string; raw: string; sep: string }
+  | { kind: "link"; href: string; label: string; raw: string; sep: string };
+
+function splitTextIntoLineBlocks(text: string): Array<{ kind: "text"; value: string } | { kind: "heading"; level: 1 | 2 | 3; text: string }> {
+  const lines = text.split("\n");
+  const hasHeading = lines.some((l) => /^#{1,3}\s+.+/.test(l));
+  if (!hasHeading) return [{ kind: "text", value: text }];
+  const out: Array<{ kind: "text"; value: string } | { kind: "heading"; level: 1 | 2 | 3; text: string }> = [];
+  let buf: string[] = [];
+  for (const line of lines) {
+    const m = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (m) {
+      out.push({ kind: "text", value: buf.join("\n") });
+      buf = [];
+      out.push({ kind: "heading", level: m[1].length as 1 | 2 | 3, text: m[2] });
+    } else {
+      buf.push(line);
+    }
+  }
+  out.push({ kind: "text", value: buf.join("\n") });
+  return out;
+}
 
 function parseBlocks(md: string): Block[] {
   const blocks: Block[] = [];
   let last = 0;
   const re = new RegExp(MEDIA_RE.source, "g");
   let m: RegExpExecArray | null;
+
+  function pushTextSegment(text: string) {
+    const parts = splitTextIntoLineBlocks(text);
+    parts.forEach((p, i) => {
+      const sep = i === 0 ? "" : "\n";
+      if (p.kind === "text") blocks.push({ kind: "text", value: p.value, sep });
+      else blocks.push({ kind: "heading", level: p.level, text: p.text, sep });
+    });
+  }
+
   while ((m = re.exec(md)) !== null) {
-    const before = md.slice(last, m.index);
-    blocks.push({ kind: "text", value: before });
+    pushTextSegment(md.slice(last, m.index));
     if (m[1] === "!") {
-      blocks.push({ kind: "image", src: m[3], raw: m[0] });
+      blocks.push({ kind: "image", src: m[3], raw: m[0], sep: "" });
     } else {
-      blocks.push({ kind: "link", href: m[3], label: m[2] || m[3], raw: m[0] });
+      blocks.push({ kind: "link", href: m[3], label: m[2] || m[3], raw: m[0], sep: "" });
     }
     last = m.index + m[0].length;
   }
-  blocks.push({ kind: "text", value: md.slice(last) });
+  pushTextSegment(md.slice(last));
   return blocks;
 }
 
 function serializeBlocks(blocks: Block[]): string {
-  return blocks.map((b) => (b.kind === "text" ? b.value : b.raw)).join("");
+  return blocks
+    .map((b) => {
+      const body =
+        b.kind === "text"
+          ? b.value
+          : b.kind === "heading"
+            ? `${"#".repeat(b.level)} ${b.text}`
+            : b.raw;
+      return b.sep + body;
+    })
+    .join("");
 }
 
 function faviconFor(href: string): string | null {
