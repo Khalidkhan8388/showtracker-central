@@ -1,9 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X } from "lucide-react";
+import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteTasks, pinTask } from "@/lib/notes.functions";
+import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
+
+const CUSTOM_HEADING = "__custom__";
 
 export const Route = createFileRoute("/_authenticated/tasks")({
   head: () => ({
