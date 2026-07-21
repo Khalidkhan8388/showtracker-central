@@ -4,6 +4,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ProcessInput = z.object({ noteId: z.string().uuid() });
 const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
+const SaveTextNoteInput = z.object({
+  heading: z.string().trim().min(1).max(200),
+  body: z.string().trim().max(20000).optional().default(""),
+});
 
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
