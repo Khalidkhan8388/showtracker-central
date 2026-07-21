@@ -884,13 +884,13 @@ function BlockEditor({
           );
         }
         return (
-          <AutoTextarea
+          <MarkdownEditor
             key={`txt-${i}`}
             value={b.value}
             onChange={(v) => updateTextBlock(i, v)}
             placeholder={
               !hasMedia && i === 0
-                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
+                ? "Write in markdown…  Try  # Heading  or  ## Subheading"
                 : ""
             }
             innerRef={i === lastTextIdx ? textAreaRef : undefined}
