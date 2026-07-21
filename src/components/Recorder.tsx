@@ -896,11 +896,11 @@ function BlockEditor({
   onRemoveLink: (href: string) => void;
 }) {
   const blocks = parseBlocks(value);
-  const hasMedia = blocks.some((b) => b.kind !== "text");
+  const hasMedia = blocks.some((b) => b.kind !== "text" && b.kind !== "heading");
 
-  function updateTextBlock(idx: number, next: string) {
+  function updateBlock(idx: number, patch: Partial<Block>) {
     const copy = blocks.slice();
-    copy[idx] = { kind: "text", value: next };
+    copy[idx] = { ...(copy[idx] as any), ...patch };
     onChange(serializeBlocks(copy));
   }
 
