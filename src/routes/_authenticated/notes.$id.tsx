@@ -23,7 +23,9 @@ type Note = {
   created_at: string;
   pinned: boolean;
   image_paths: string[] | null;
+  source_url: string | null;
 };
+
 
 function NoteDetail() {
   const { id } = Route.useParams();
