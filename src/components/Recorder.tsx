@@ -229,10 +229,11 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const mmss = `${mm}:${ss}`;
 
   const label = busy
-    ? "Uploading…"
+    ? "Saving…"
     : recording
       ? `Recording ${mmss}${pending.length > 0 ? ` · ${pending.length} 📷` : ""}`
       : "Tap to record";
+
 
   const showSpinner = busy;
   const disabled = busy;
