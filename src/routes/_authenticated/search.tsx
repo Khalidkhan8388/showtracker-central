@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
-import { Search, ArrowLeft, Sparkles, Loader2, Circle, CheckCircle2 } from "lucide-react";
+import { Search, ChevronLeft, Sparkles, Loader2, Circle, CheckCircle2, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
@@ -45,7 +45,6 @@ function SearchPage() {
       });
   }, []);
 
-  // Reset AI results when query changes
   useEffect(() => {
     setAiIds(null);
     setAiReasoning(null);
@@ -117,60 +116,81 @@ function SearchPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="sticky top-0 z-10 flex items-center gap-2 border-b border-border bg-background/80 px-4 pt-6 pb-3 backdrop-blur-xl">
-        <button
-          onClick={() => navigate({ to: "/home" })}
-          aria-label="Back"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </button>
-        <div className="flex flex-1 items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-2">
-          <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
-          <input
-            autoFocus
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setAiMode(false);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") runAiSearch();
-            }}
-            placeholder="Search notes, tasks, tags…"
-            className="w-full bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-          />
+      {/* iOS large-title style header */}
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-2 pt-3 pb-1">
+          <button
+            onClick={() => navigate({ to: "/home" })}
+            aria-label="Back"
+            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+          >
+            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
+            <span>Home</span>
+          </button>
+          <button
+            onClick={runAiSearch}
+            disabled={!query.trim() || aiLoading}
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[17px] font-semibold text-primary disabled:opacity-30 active:opacity-60"
+          >
+            {aiLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
+            Ask AI
+          </button>
+        </div>
+        <div className="px-4 pt-1 pb-2">
+          <h1 className="text-[34px] font-bold tracking-tight text-foreground">Search</h1>
+        </div>
+        <div className="px-4 pb-3">
+          <div className="flex items-center gap-2 rounded-xl bg-muted px-2.5 py-2">
+            <Search className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <input
+              autoFocus
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setAiMode(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runAiSearch();
+              }}
+              placeholder="Notes, tasks, tags"
+              className="w-full bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground outline-none"
+            />
+            {query && (
+              <button
+                onClick={() => {
+                  setQuery("");
+                  setAiMode(false);
+                }}
+                aria-label="Clear"
+                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/40 text-background active:opacity-60"
+              >
+                <X className="h-3 w-3" strokeWidth={3} />
+              </button>
+            )}
+          </div>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-5 px-5 py-4 pb-24">
-        <button
-          onClick={runAiSearch}
-          disabled={!query.trim() || aiLoading}
-          className="inline-flex items-center justify-center gap-2 self-start rounded-full bg-foreground px-4 py-2 text-xs font-semibold text-background disabled:opacity-40"
-        >
-          {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-          Ask AI to search
-        </button>
-
+      <div className="flex flex-1 flex-col gap-6 px-4 pt-2 pb-28">
         {aiMode && aiReasoning && (
-          <p className="rounded-2xl bg-muted/50 px-4 py-2 text-xs italic text-muted-foreground">
+          <div className="rounded-2xl bg-card px-4 py-3 text-[13px] italic text-muted-foreground shadow-sm">
             {aiReasoning}
-          </p>
+          </div>
         )}
 
         {allTags.length > 0 && (
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
               Tags
             </h2>
             <div className="flex flex-wrap gap-1.5">
               {activeTag && (
                 <button
                   onClick={() => setActiveTag(null)}
-                  className="rounded-full bg-foreground px-3 py-1 text-xs font-medium text-background"
+                  className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[13px] font-medium text-primary-foreground active:opacity-70"
                 >
-                  #{activeTag} ✕
+                  #{activeTag}
+                  <X className="h-3 w-3" strokeWidth={3} />
                 </button>
               )}
               {allTags
@@ -179,7 +199,7 @@ function SearchPage() {
                   <button
                     key={t}
                     onClick={() => setActiveTag(t)}
-                    className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-foreground hover:bg-muted"
+                    className="rounded-full bg-muted px-3 py-1 text-[13px] text-foreground active:opacity-60"
                   >
                     #{t} <span className="text-muted-foreground">{count}</span>
                   </button>
@@ -190,31 +210,32 @@ function SearchPage() {
 
         {matchingTasks.length > 0 && (
           <section>
-            <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
               Tasks
             </h2>
-            <ul className="space-y-1.5">
-              {matchingTasks.map((t) => (
+            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+              {matchingTasks.map((t, i) => (
                 <li key={`${t.noteId}::${t.taskId}`}>
                   <Link
                     to="/notes/$id"
                     params={{ id: t.noteId }}
-                    className="flex items-start gap-2 rounded-xl border border-border bg-background px-3 py-2"
+                    className="flex items-start gap-3 px-4 py-3 active:bg-muted"
                   >
                     {t.done ? (
-                      <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
                     ) : (
-                      <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                      <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
                     )}
                     <div className="min-w-0 flex-1">
-                      <div className={`text-sm ${t.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
+                      <div className={`text-[17px] leading-tight ${t.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
                         {t.text}
                       </div>
                       {t.noteHeading && (
-                        <div className="truncate text-xs text-muted-foreground">from {t.noteHeading}</div>
+                        <div className="mt-0.5 truncate text-[13px] text-muted-foreground">from {t.noteHeading}</div>
                       )}
                     </div>
                   </Link>
+                  {i < matchingTasks.length - 1 && <div className="ml-12 h-px bg-border" />}
                 </li>
               ))}
             </ul>
@@ -222,34 +243,34 @@ function SearchPage() {
         )}
 
         <section>
-          <h2 className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {aiMode ? "AI results" : activeTag ? `#${activeTag}` : query ? "Notes" : "All notes"}
+          <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+            {aiMode ? "AI Results" : activeTag ? `#${activeTag}` : query ? "Notes" : "All Notes"}
           </h2>
           {filteredNotes.length === 0 ? (
-            <p className="rounded-2xl border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-              No matches. {aiMode ? "Try a different question." : "Try Ask AI or a tag."}
-            </p>
+            <div className="rounded-2xl bg-card px-4 py-10 text-center text-[15px] text-muted-foreground shadow-sm">
+              No matches.{aiMode ? " Try a different question." : " Try Ask AI or a tag."}
+            </div>
           ) : (
-            <ul className="space-y-2">
-              {filteredNotes.map((n) => (
+            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+              {filteredNotes.map((n, i) => (
                 <li key={n.id}>
                   <Link
                     to="/notes/$id"
                     params={{ id: n.id }}
-                    className="block rounded-2xl border border-border bg-background p-3 hover:bg-muted/30"
+                    className="block px-4 py-3 active:bg-muted"
                   >
-                    <div className="text-sm font-semibold text-foreground line-clamp-1">
+                    <div className="text-[17px] font-semibold text-foreground line-clamp-1">
                       {n.heading || "Untitled note"}
                     </div>
                     {n.summary && (
-                      <div className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">{n.summary}</div>
+                      <div className="mt-0.5 line-clamp-2 text-[15px] text-muted-foreground">{n.summary}</div>
                     )}
                     {(n.tags ?? []).length > 0 && (
-                      <div className="mt-1.5 flex flex-wrap gap-1">
+                      <div className="mt-2 flex flex-wrap gap-1">
                         {(n.tags ?? []).slice(0, 6).map((t) => (
                           <span
                             key={t}
-                            className="rounded-full bg-muted px-2 py-0.5 text-[10px] text-muted-foreground"
+                            className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground"
                           >
                             #{t}
                           </span>
@@ -257,6 +278,7 @@ function SearchPage() {
                       </div>
                     )}
                   </Link>
+                  {i < filteredNotes.length - 1 && <div className="ml-4 h-px bg-border" />}
                 </li>
               ))}
             </ul>
