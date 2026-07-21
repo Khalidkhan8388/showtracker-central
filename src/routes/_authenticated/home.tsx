@@ -33,6 +33,7 @@ type TaskKey = string; // `${noteId}::${taskId}`
 
 function Home() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
   const toggleFn = useServerFn(toggleTask);
