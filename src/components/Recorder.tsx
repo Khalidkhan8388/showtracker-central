@@ -114,7 +114,7 @@ export function Recorder() {
   const label = busy ? "Uploading…" : recording ? `Recording ${mmss}` : "Tap to record";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-5">
+    <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
       <button
         onClick={recording ? stop : start}
         disabled={busy}
