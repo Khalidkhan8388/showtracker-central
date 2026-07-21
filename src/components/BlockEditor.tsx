@@ -301,13 +301,35 @@ function ResizableImage({
   const currentWidth = widthFor(block.size);
 
   return (
-    <div ref={containerRef} className="group relative w-full">
-      <div className="relative" style={{ width: currentWidth, maxWidth: "100%" }}>
+    <div
+      ref={containerRef}
+      className={`group relative ${dragOver ? "ring-2 ring-primary rounded-xl" : ""}`}
+      style={{ width: currentWidth, maxWidth: "100%" }}
+      onDragOver={(e) => {
+        if (onDropImage) {
+          e.preventDefault();
+          setDragOver(true);
+        }
+      }}
+      onDragLeave={() => setDragOver(false)}
+      onDrop={(e) => {
+        setDragOver(false);
+        const from = Number(e.dataTransfer.getData("text/block-index"));
+        if (!Number.isNaN(from) && onDropImage) onDropImage(from);
+      }}
+    >
+      <div className="relative w-full">
         <img
           src={block.src}
           alt={block.alt}
           className="h-auto w-full select-none rounded-xl"
-          draggable={false}
+          draggable={blockIndex !== undefined}
+          onDragStart={(e) => {
+            if (blockIndex !== undefined) {
+              e.dataTransfer.setData("text/block-index", String(blockIndex));
+              e.dataTransfer.effectAllowed = "move";
+            }
+          }}
           onPointerDown={onImgPointerDown}
           onPointerUp={clearHold}
           onPointerLeave={clearHold}
