@@ -334,7 +334,7 @@ function TaskList({
 }) {
   return (
     <>
-      {items.map((t) => {
+      {items.map((t, i) => {
         const key: TaskKey = `${t.noteId}::${t.id}`;
         return (
           <li key={key}>
@@ -348,12 +348,14 @@ function TaskList({
               onLongPress={() => onSelectTap(key)}
               onSelectTap={() => onSelectTap(key)}
             />
+            {i < items.length - 1 && <div className="ml-12 h-px bg-border" />}
           </li>
         );
       })}
     </>
   );
 }
+
 
 function TaskRow({
   task,
