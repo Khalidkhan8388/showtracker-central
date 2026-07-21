@@ -28,6 +28,7 @@ type Note = {
   pinned: boolean;
   image_paths: string[] | null;
   source_url: string | null;
+  transcript: string | null;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
