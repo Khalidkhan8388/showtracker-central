@@ -430,23 +430,87 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
               maxLength={20000}
-              rows={8}
-              className="min-h-[180px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+              rows={6}
+              className="min-h-[140px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
             />
-            <div className="flex items-center justify-end gap-2">
+
+            {textImages.length > 0 && (
+              <div className="flex gap-2 overflow-x-auto pb-1">
+                {textImages.map((p, i) => (
+                  <div key={i} className="relative shrink-0">
+                    <img
+                      src={p.previewUrl}
+                      alt=""
+                      className="h-16 w-16 rounded-xl object-cover ring-1 ring-border"
+                    />
+                    <button
+                      onClick={() => removeTextImage(i)}
+                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-background shadow"
+                      aria-label="Remove image"
+                    >
+                      <X className="h-3 w-3" strokeWidth={3} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
+              <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+              <input
+                type="url"
+                inputMode="url"
+                placeholder="Attach a link (optional)"
+                value={textLink}
+                onChange={(e) => setTextLink(e.target.value)}
+                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+              />
+              {textLink && (
+                <button
+                  onClick={() => setTextLink("")}
+                  aria-label="Clear link"
+                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <input
+              ref={textFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              className="hidden"
+              onChange={onPickTextImages}
+            />
+
+            <div className="flex items-center justify-between gap-2">
               <button
-                onClick={() => setTextOpen(false)}
-                className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+                onClick={() => textFileRef.current?.click()}
+                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
               >
-                Cancel
+                <ImagePlus className="h-4 w-4" />
+                Add image
               </button>
-              <button
-                onClick={submitText}
-                disabled={!textHeading.trim()}
-                className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-              >
-                Save note
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => {
+                    resetTextComposer();
+                    setTextOpen(false);
+                  }}
+                  className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={submitText}
+                  disabled={!textHeading.trim()}
+                  className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+                >
+                  Save note
+                </button>
+              </div>
             </div>
           </div>
         </div>
