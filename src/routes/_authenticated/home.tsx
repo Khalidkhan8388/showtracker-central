@@ -174,7 +174,7 @@ function Home() {
 
       <section className="flex-1 px-5 pb-32 pt-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Your notes
+          Pinned & Recent
         </h2>
 
         {notes === null ? (
