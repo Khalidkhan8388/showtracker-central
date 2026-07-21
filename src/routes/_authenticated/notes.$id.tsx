@@ -33,10 +33,15 @@ function NoteDetail() {
   const navigate = useNavigate();
   const [note, setNote] = useState<Note | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [editHeading, setEditHeading] = useState("");
+  const [editBody, setEditBody] = useState("");
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
   const processFn = useServerFn(processVoiceNote);
   const pinFn = useServerFn(pinNote);
+  const updateFn = useServerFn(updateTextNote);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTextNote = !!note && note.duration_seconds == null && note.transcript != null;
 
   async function load() {
     const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
