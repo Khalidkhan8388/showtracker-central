@@ -420,6 +420,7 @@ function TaskRow({
   selectMode,
   selected,
   done,
+  pinned,
   text,
   noteHeading,
   noteId,
@@ -430,6 +431,7 @@ function TaskRow({
   selectMode: boolean;
   selected: boolean;
   done: boolean;
+  pinned?: boolean;
   text: string;
   noteHeading: string | null;
   noteId: string;
@@ -476,6 +478,7 @@ function TaskRow({
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
+          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-foreground text-foreground" />}
           {text}
         </p>
         {noteHeading && (
