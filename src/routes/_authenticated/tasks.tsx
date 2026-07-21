@@ -305,6 +305,7 @@ function TaskList({
   selectMode,
   onToggle,
   onPin,
+  onEdit,
   onSelectTap,
 }: {
   items: Array<Task & { noteId: string; noteHeading: string | null }>;
@@ -312,6 +313,7 @@ function TaskList({
   selectMode: boolean;
   onToggle: (noteId: string, taskId: string, done: boolean) => void;
   onPin: (noteId: string, taskId: string, pinned: boolean) => void;
+  onEdit: (noteId: string, taskId: string, text: string) => void;
   onSelectTap: (k: TaskKey) => void;
 }) {
   return (
@@ -326,6 +328,7 @@ function TaskList({
               selectMode={selectMode}
               onToggle={() => onToggle(t.noteId, t.id, t.done)}
               onPin={() => onPin(t.noteId, t.id, !!t.pinned)}
+              onEdit={(text) => onEdit(t.noteId, t.id, text)}
               onLongPress={() => onSelectTap(key)}
               onSelectTap={() => onSelectTap(key)}
             />
@@ -342,6 +345,7 @@ function TaskRow({
   selectMode,
   onToggle,
   onPin,
+  onEdit,
   onLongPress,
   onSelectTap,
 }: {
@@ -350,14 +354,33 @@ function TaskRow({
   selectMode: boolean;
   onToggle: () => void;
   onPin: () => void;
+  onEdit: (text: string) => void;
   onLongPress: () => void;
   onSelectTap: () => void;
 }) {
   const lp = useLongPress(onLongPress);
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(task.text);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (editing) {
+      setDraft(task.text);
+      requestAnimationFrame(() => inputRef.current?.focus());
+    }
+  }, [editing, task.text]);
+
+  function commit() {
+    const t = draft.trim();
+    setEditing(false);
+    if (t && t !== task.text) onEdit(t);
+  }
+
   return (
     <div
-      {...lp.handlers}
+      {...(editing ? {} : lp.handlers)}
       onClick={(e) => {
+        if (editing) return;
         if (lp.wasLongPress()) {
           e.preventDefault();
           return;
@@ -387,13 +410,33 @@ function TaskRow({
         )}
       </button>
       <div className="min-w-0 flex-1">
-        <p
-          className={`text-sm leading-snug ${
-            task.done ? "text-muted-foreground line-through" : "text-foreground"
-          }`}
-        >
-          {task.text}
-        </p>
+        {editing ? (
+          <input
+            ref={inputRef}
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                commit();
+              } else if (e.key === "Escape") {
+                setEditing(false);
+              }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            className="w-full rounded-md bg-transparent text-sm leading-snug outline-none ring-1 ring-border focus:ring-foreground px-1.5 py-0.5"
+            maxLength={500}
+          />
+        ) : (
+          <p
+            className={`text-sm leading-snug ${
+              task.done ? "text-muted-foreground line-through" : "text-foreground"
+            }`}
+          >
+            {task.text}
+          </p>
+        )}
         {task.noteHeading &&
           (selectMode ? (
             <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
@@ -410,18 +453,43 @@ function TaskRow({
             </Link>
           ))}
       </div>
-      {!selectMode && (
+      {!selectMode && !editing && (
+        <>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              setEditing(true);
+            }}
+            aria-label="Edit task"
+            className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPin();
+            }}
+            aria-label={task.pinned ? "Unpin task" : "Pin task"}
+            className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
+              task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
+            }`}
+          >
+            {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          </button>
+        </>
+      )}
+      {editing && (
         <button
+          onMouseDown={(e) => e.preventDefault()}
           onClick={(e) => {
             e.stopPropagation();
-            onPin();
+            commit();
           }}
-          aria-label={task.pinned ? "Unpin task" : "Pin task"}
-          className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
-            task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
-          }`}
+          aria-label="Save"
+          className="mt-0.5 shrink-0 rounded-md p-1 text-foreground"
         >
-          {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+          <Check className="h-4 w-4" />
         </button>
       )}
     </div>
