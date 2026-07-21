@@ -571,7 +571,7 @@ function NoteCard({
       : fullWidth
         ? "flex aspect-square w-full flex-col gap-3"
         : isText
-          ? "flex aspect-[2/3] w-44 shrink-0 flex-col gap-3"
+          ? "flex aspect-square w-40 shrink-0 flex-col gap-3"
           : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
 
