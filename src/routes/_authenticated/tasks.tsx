@@ -55,9 +55,12 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 function TasksPage() {
   const [notes, setNotes] = useState<Note[] | null>(null);
   const [selected, setSelected] = useState<Set<TaskKey>>(new Set());
+  const [newTask, setNewTask] = useState("");
   const toggleFn = useServerFn(toggleTask);
   const pinFn = useServerFn(pinTask);
   const delFn = useServerFn(deleteTasks);
+  const editFn = useServerFn(editTaskText);
+  const addFn = useServerFn(addCustomTask);
   const selectMode = selected.size > 0;
 
   async function load() {
