@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil, Heading1, Heading2, Heading3 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
@@ -40,6 +40,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textMode, setTextMode] = useState<"write" | "preview">("write");
   const [uploadingMd, setUploadingMd] = useState(false);
   const [textFullscreen, setTextFullscreen] = useState(false);
+  const [composerLinkOpen, setComposerLinkOpen] = useState(false);
+  const [composerLinkUrl, setComposerLinkUrl] = useState("");
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
@@ -96,31 +98,54 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  async function promptInsertLink() {
-    const url = window.prompt("Paste link URL");
-    if (!url) return;
-    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+  async function insertLinkFromComposer() {
+    const raw = composerLinkUrl.trim();
+    if (!raw) return;
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     try {
       new URL(normalized);
     } catch {
       toast.error("Link doesn't look valid");
       return;
     }
-    // Insert with a placeholder label immediately so the user sees the pill,
-    // then swap in the AI-generated title once it arrives.
+    setComposerLinkOpen(false);
+    setComposerLinkUrl("");
     const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
-    const initialLabel = placeholderId;
-    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
+    insertAtCursor(`\n[${placeholderId}](${normalized})\n`);
     try {
       const { label } = await linkLabelFn({ data: { url: normalized } });
       const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${clean}](${normalized})`));
     } catch {
       const hostname = (() => {
         try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
       })();
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${hostname}](${normalized})`));
     }
+  }
+
+  function insertHeading(level: 1 | 2 | 3) {
+    const prefix = "#".repeat(level) + " ";
+    const el = textAreaRef.current;
+    setTextBody((prev) => {
+      if (!el || el.value !== prev) {
+        const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+        return prev + sep + prefix;
+      }
+      const pos = el.selectionStart ?? prev.length;
+      // find start of current line
+      const lineStart = prev.lastIndexOf("\n", pos - 1) + 1;
+      // strip existing heading prefix
+      const rest = prev.slice(lineStart).replace(/^#{1,6}\s+/, "");
+      const next = prev.slice(0, lineStart) + prefix + rest;
+      const delta = prefix.length - (prev.slice(lineStart).length - rest.length);
+      requestAnimationFrame(() => {
+        el.focus();
+        const p = pos + delta;
+        el.setSelectionRange(p, p);
+      });
+      return next;
+    });
   }
 
   function removeImageFromBody(src: string) {
@@ -509,7 +534,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             <input
               autoFocus
               type="text"
-              placeholder="Title (optional — AI will generate one)"
+              placeholder="Title"
               value={textHeading}
               onChange={(e) => setTextHeading(e.target.value)}
               maxLength={200}
@@ -582,22 +607,85 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
+            {composerLinkOpen && (
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/50 p-1 pl-3">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  placeholder="Paste a link…"
+                  value={composerLinkUrl}
+                  onChange={(e) => setComposerLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      insertLinkFromComposer();
+                    }
+                    if (e.key === "Escape") {
+                      setComposerLinkOpen(false);
+                      setComposerLinkUrl("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setComposerLinkOpen(false);
+                    setComposerLinkUrl("");
+                  }}
+                  aria-label="Cancel"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={insertLinkFromComposer}
+                  disabled={!composerLinkUrl.trim()}
+                  className="inline-flex items-center rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <button
+                  onClick={() => insertHeading(1)}
+                  aria-label="Heading 1"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading1 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => insertHeading(2)}
+                  aria-label="Heading 2"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading2 className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => insertHeading(3)}
+                  aria-label="Heading 3"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted"
+                >
+                  <Heading3 className="h-4 w-4" />
+                </button>
                 <button
                   onClick={() => textFileRef.current?.click()}
                   disabled={uploadingMd}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                  aria-label="Insert image"
+                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted disabled:opacity-50"
                 >
                   {uploadingMd ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  Image
                 </button>
                 <button
-                  onClick={promptInsertLink}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                  onClick={() => setComposerLinkOpen((v) => !v)}
+                  aria-label="Insert link"
+                  className={`inline-flex h-9 w-9 items-center justify-center rounded-full border border-border text-foreground hover:bg-muted ${composerLinkOpen ? "bg-muted" : ""}`}
                 >
                   <Link2 className="h-4 w-4" />
-                  Link
                 </button>
               </div>
               <div className="flex items-center gap-2">
@@ -708,31 +796,71 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 const MEDIA_RE = /(!?)\[([^\]]*)\]\(([^)\s]+)\)/g;
 
 type Block =
-  | { kind: "text"; value: string }
-  | { kind: "image"; src: string; raw: string }
-  | { kind: "link"; href: string; label: string; raw: string };
+  | { kind: "text"; value: string; sep: string }
+  | { kind: "heading"; level: 1 | 2 | 3; text: string; sep: string }
+  | { kind: "image"; src: string; raw: string; sep: string }
+  | { kind: "link"; href: string; label: string; raw: string; sep: string };
+
+function splitTextIntoLineBlocks(text: string): Array<{ kind: "text"; value: string } | { kind: "heading"; level: 1 | 2 | 3; text: string }> {
+  const lines = text.split("\n");
+  const hasHeading = lines.some((l) => /^#{1,3}\s+.+/.test(l));
+  if (!hasHeading) return [{ kind: "text", value: text }];
+  const out: Array<{ kind: "text"; value: string } | { kind: "heading"; level: 1 | 2 | 3; text: string }> = [];
+  let buf: string[] = [];
+  for (const line of lines) {
+    const m = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (m) {
+      out.push({ kind: "text", value: buf.join("\n") });
+      buf = [];
+      out.push({ kind: "heading", level: m[1].length as 1 | 2 | 3, text: m[2] });
+    } else {
+      buf.push(line);
+    }
+  }
+  out.push({ kind: "text", value: buf.join("\n") });
+  return out;
+}
 
 function parseBlocks(md: string): Block[] {
   const blocks: Block[] = [];
   let last = 0;
   const re = new RegExp(MEDIA_RE.source, "g");
   let m: RegExpExecArray | null;
+
+  function pushTextSegment(text: string) {
+    const parts = splitTextIntoLineBlocks(text);
+    parts.forEach((p, i) => {
+      const sep = i === 0 ? "" : "\n";
+      if (p.kind === "text") blocks.push({ kind: "text", value: p.value, sep });
+      else blocks.push({ kind: "heading", level: p.level, text: p.text, sep });
+    });
+  }
+
   while ((m = re.exec(md)) !== null) {
-    const before = md.slice(last, m.index);
-    blocks.push({ kind: "text", value: before });
+    pushTextSegment(md.slice(last, m.index));
     if (m[1] === "!") {
-      blocks.push({ kind: "image", src: m[3], raw: m[0] });
+      blocks.push({ kind: "image", src: m[3], raw: m[0], sep: "" });
     } else {
-      blocks.push({ kind: "link", href: m[3], label: m[2] || m[3], raw: m[0] });
+      blocks.push({ kind: "link", href: m[3], label: m[2] || m[3], raw: m[0], sep: "" });
     }
     last = m.index + m[0].length;
   }
-  blocks.push({ kind: "text", value: md.slice(last) });
+  pushTextSegment(md.slice(last));
   return blocks;
 }
 
 function serializeBlocks(blocks: Block[]): string {
-  return blocks.map((b) => (b.kind === "text" ? b.value : b.raw)).join("");
+  return blocks
+    .map((b) => {
+      const body =
+        b.kind === "text"
+          ? b.value
+          : b.kind === "heading"
+            ? `${"#".repeat(b.level)} ${b.text}`
+            : b.raw;
+      return b.sep + body;
+    })
+    .join("");
 }
 
 function faviconFor(href: string): string | null {
@@ -768,11 +896,11 @@ function BlockEditor({
   onRemoveLink: (href: string) => void;
 }) {
   const blocks = parseBlocks(value);
-  const hasMedia = blocks.some((b) => b.kind !== "text");
+  const hasMedia = blocks.some((b) => b.kind !== "text" && b.kind !== "heading");
 
-  function updateTextBlock(idx: number, next: string) {
+  function updateBlock(idx: number, patch: Partial<Block>) {
     const copy = blocks.slice();
-    copy[idx] = { kind: "text", value: next };
+    copy[idx] = { ...(copy[idx] as any), ...patch };
     onChange(serializeBlocks(copy));
   }
 
@@ -848,14 +976,36 @@ function BlockEditor({
             </div>
           );
         }
+        if (b.kind === "heading") {
+          const sizeClass =
+            b.level === 1
+              ? "text-2xl font-bold tracking-tight"
+              : b.level === 2
+                ? "text-xl font-semibold tracking-tight"
+                : "text-lg font-semibold";
+          return (
+            <div key={`h-${i}`} className="flex items-start gap-2">
+              <span className="mt-1 select-none rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+                H{b.level}
+              </span>
+              <input
+                type="text"
+                value={b.text}
+                onChange={(e) => updateBlock(i, { text: e.target.value } as Partial<Block>)}
+                placeholder={`Heading ${b.level}`}
+                className={`w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none ${sizeClass}`}
+              />
+            </div>
+          );
+        }
         return (
           <AutoTextarea
             key={`txt-${i}`}
             value={b.value}
-            onChange={(v) => updateTextBlock(i, v)}
+            onChange={(v) => updateBlock(i, { value: v } as Partial<Block>)}
             placeholder={
               !hasMedia && i === 0
-                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
+                ? "Write in markdown…\n\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nTip: use H1/H2/H3 above for headings"
                 : ""
             }
             innerRef={i === lastTextIdx ? textAreaRef : undefined}
