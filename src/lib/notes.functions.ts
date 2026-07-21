@@ -4,6 +4,10 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ProcessInput = z.object({ noteId: z.string().uuid() });
 const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
+const SaveTextNoteInput = z.object({
+  heading: z.string().trim().min(1).max(200),
+  body: z.string().trim().max(20000).optional().default(""),
+});
 
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
@@ -613,4 +617,83 @@ export const dismissTasks = createServerFn({ method: "POST" })
       await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
     }
     return { ok: true as const };
+  });
+
+const TEXT_SYSTEM_PROMPT = `You are analyzing a user's written note.
+Return ONE JSON object with keys: summary, tasks. No prose, no code fences.
+
+- summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short to summarize meaningfully.
+- tasks: array of clear, actionable to-dos extracted from the note (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
+
+Respond with ONLY the JSON object.`;
+
+async function extractFromText(
+  heading: string,
+  body: string,
+  apiKey: string,
+): Promise<{ summary: string; tasks: string[] }> {
+  if (!body || body.trim().length < 20) return { summary: "", tasks: [] };
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "google/gemini-3.5-flash",
+      messages: [
+        { role: "system", content: TEXT_SYSTEM_PROMPT },
+        { role: "user", content: `Title: ${heading}\n\nNote:\n${body}` },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) return { summary: "", tasks: [] };
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = data.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any;
+  try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+  const summary = String(parsed.summary ?? "").slice(0, 2000);
+  const tasksArr = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+  const tasks = tasksArr
+    .map((t: unknown) =>
+      typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : "",
+    )
+    .filter((t: string) => t.trim().length > 0)
+    .slice(0, 20);
+  return { summary, tasks };
+}
+
+export const saveTextNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SaveTextNoteInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const apiKey = process.env.LOVABLE_API_KEY;
+
+    let summary = "";
+    let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
+    if (apiKey && data.body.trim().length >= 20) {
+      try {
+        const structured = await extractFromText(data.heading, data.body, apiKey);
+        summary = structured.summary;
+        tasksPayload = structured.tasks.map((t, i) => ({
+          id: `t${i}`, text: t, done: false, pending: true,
+        }));
+      } catch {
+        // non-fatal: still save the note
+      }
+    }
+
+    const { data: inserted, error: insErr } = await supabase
+      .from("voice_notes")
+      .insert({
+        user_id: userId,
+        heading: data.heading,
+        transcript: data.body || null,
+        summary: summary || (data.body ? data.body.slice(0, 500) : ""),
+        tasks: tasksPayload,
+        status: "ready",
+      })
+      .select("id")
+      .single();
+    if (insErr || !inserted) throw new Error(insErr?.message ?? "Insert failed");
+    return { ok: true as const, noteId: inserted.id };
   });

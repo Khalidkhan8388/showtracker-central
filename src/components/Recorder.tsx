@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2 } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote, saveWebLink } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
 import { toast } from "sonner";
 
 
@@ -31,8 +31,32 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const fileRef = useRef<HTMLInputElement | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
   const [linkUrl, setLinkUrl] = useState("");
+  const [textOpen, setTextOpen] = useState(false);
+  const [textHeading, setTextHeading] = useState("");
+  const [textBody, setTextBody] = useState("");
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
+  const saveTextFn = useServerFn(saveTextNote);
+
+  async function submitText() {
+    const heading = textHeading.trim();
+    if (!heading) {
+      toast.error("Please add a title");
+      return;
+    }
+    setTextOpen(false);
+    setBusy(true);
+    try {
+      await saveTextFn({ data: { heading, body: textBody.trim() } });
+      setTextHeading("");
+      setTextBody("");
+      onNoteReady?.();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not save note");
+    } finally {
+      setBusy(false);
+    }
+  }
 
   useEffect(() => {
     let lastY = typeof window !== "undefined" ? window.scrollY : 0;
@@ -321,6 +345,55 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         </div>
       )}
 
+      {textOpen && (
+        <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col gap-3 rounded-t-3xl border border-border bg-background p-5 shadow-2xl sm:rounded-3xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold tracking-tight">New note</h2>
+              <button
+                onClick={() => setTextOpen(false)}
+                aria-label="Close"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Title"
+              value={textHeading}
+              onChange={(e) => setTextHeading(e.target.value)}
+              maxLength={200}
+              className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
+            />
+            <textarea
+              placeholder="Write your note… (optional — we'll pull tasks from the body)"
+              value={textBody}
+              onChange={(e) => setTextBody(e.target.value)}
+              maxLength={20000}
+              rows={8}
+              className="min-h-[180px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setTextOpen(false)}
+                className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitText}
+                disabled={!textHeading.trim()}
+                className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+              >
+                Save note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
       <div
@@ -349,6 +422,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           }`}
         >
           <ImagePlus className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
+        </button>
+        <button
+          onClick={() => setTextOpen(true)}
+          disabled={disabled || recording}
+          aria-label="Write text note"
+          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+            shrunk ? "h-9 w-9" : "h-11 w-11"
+          }`}
+        >
+          <FileText className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
         </button>
         <button
           onClick={() => setLinkOpen(true)}
