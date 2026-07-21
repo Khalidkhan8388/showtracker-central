@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
@@ -213,16 +213,23 @@ function Home() {
               const open = allTasks.filter((t) => !t.done);
               const done = allTasks.filter((t) => t.done);
               const ordered = [...open, ...done];
+              const visible = ordered.slice(0, 3);
               return (
                 <div className="mt-8">
                   <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     <span>Tasks</span>
-                    <span className="normal-case tracking-normal">
-                      {done.length}/{allTasks.length}
-                    </span>
+                    <Link
+                      to="/tasks"
+                      className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+                    >
+                      <span>
+                        {done.length}/{allTasks.length}
+                      </span>
+                      <ChevronRight className="h-4 w-4" />
+                    </Link>
                   </h2>
                   <ul className="space-y-1.5">
-                    {ordered.map((t) => {
+                    {visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
                       const isSel = selectedTasks.has(key);
                       return (
