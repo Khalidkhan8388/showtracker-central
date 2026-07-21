@@ -109,7 +109,7 @@ export function BlockEditor({
 
   return (
     <div
-      className={`w-full flex-1 space-y-2 overflow-y-auto rounded-2xl bg-transparent ${
+      className={`w-full flex-1 space-y-2 overflow-y-auto bg-transparent px-1 ${
         fullscreen ? "min-h-0" : "min-h-[200px]"
       }`}
     >
