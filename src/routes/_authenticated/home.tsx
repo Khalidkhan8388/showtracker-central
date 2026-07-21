@@ -248,6 +248,7 @@ function Home() {
                             key={n.id}
                             note={n}
                             variant="square"
+                            thumbUrl={thumbs[n.id]}
                             selected={selectedNotes.has(n.id)}
                             selectMode={noteSelectMode}
                             onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
