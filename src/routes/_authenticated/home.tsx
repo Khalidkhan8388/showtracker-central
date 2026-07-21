@@ -349,9 +349,11 @@ function NoteCard({
       {selectMode && (
         <div className="absolute right-2 top-2 z-10">
           {selected ? (
-            <CheckCircle2 className="h-5 w-5 text-foreground" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+              <Check className="h-3 w-3 text-background" strokeWidth={3} />
+            </div>
           ) : (
-            <Circle className="h-5 w-5 text-muted-foreground" />
+            <div className="h-5 w-5 rounded-full bg-background ring-2 ring-background shadow-sm border border-muted-foreground/40" />
           )}
         </div>
       )}
