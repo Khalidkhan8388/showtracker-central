@@ -26,12 +26,14 @@ type Note = {
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
+  image_paths: string[] | null;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
 
 function Home() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
   const toggleFn = useServerFn(toggleTask);
@@ -63,9 +65,33 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths")
       .order("created_at", { ascending: false });
-    setNotes((data ?? []) as Note[]);
+    const rows = (data ?? []) as Note[];
+    setNotes(rows);
+    // Sign first image per note that has one, skip already-signed
+    setThumbs((prev) => {
+      const needed = rows.filter(
+        (n) => Array.isArray(n.image_paths) && n.image_paths.length > 0 && !prev[n.id],
+      );
+      if (needed.length === 0) return prev;
+      Promise.all(
+        needed.map(async (n) => {
+          const p = n.image_paths![0];
+          const { data: s } = await supabase.storage
+            .from("voice-notes")
+            .createSignedUrl(p, 3600);
+          return [n.id, s?.signedUrl ?? ""] as const;
+        }),
+      ).then((pairs) => {
+        setThumbs((cur) => {
+          const next = { ...cur };
+          for (const [id, url] of pairs) if (url) next[id] = url;
+          return next;
+        });
+      });
+      return prev;
+    });
   }
 
   useEffect(() => {
@@ -206,6 +232,7 @@ function Home() {
                   <NoteCard
                     note={latest}
                     variant="wide"
+                    thumbUrl={thumbs[latest.id]}
                     selected={selectedNotes.has(latest.id)}
                     selectMode={noteSelectMode}
                     onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
@@ -221,6 +248,7 @@ function Home() {
                             key={n.id}
                             note={n}
                             variant="square"
+                            thumbUrl={thumbs[n.id]}
                             selected={selectedNotes.has(n.id)}
                             selectMode={noteSelectMode}
                             onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
@@ -294,6 +322,7 @@ function Home() {
                             note={n}
                             variant="square"
                             fullWidth
+                            thumbUrl={thumbs[n.id]}
                             selected={selectedNotes.has(n.id)}
                             selectMode={noteSelectMode}
                             onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
@@ -377,6 +406,7 @@ function NoteCard({
   note,
   variant,
   fullWidth,
+  thumbUrl,
   selected,
   selectMode,
   onOpen,
@@ -386,6 +416,7 @@ function NoteCard({
   note: Note;
   variant: "wide" | "square";
   fullWidth?: boolean;
+  thumbUrl?: string;
   selected: boolean;
   selectMode: boolean;
   onOpen: () => void;
@@ -406,8 +437,11 @@ function NoteCard({
     onOpen();
   };
 
+  const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
+  const hasImage = imageCount > 0 && !!thumbUrl;
+
   const base =
-    "relative block rounded-2xl border-2 p-3 transition-colors " +
+    "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
     (selected ? "border-foreground bg-muted shadow-sm" : "border-border bg-card hover:bg-muted/50");
   const sizing =
     variant === "wide"
@@ -424,6 +458,23 @@ function NoteCard({
       {...lp.handlers}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
+      {/* Square variant: image fills the card as background */}
+      {variant === "square" && hasImage && (
+        <>
+          <img
+            src={thumbUrl}
+            alt=""
+            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+          />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          {imageCount > 1 && (
+            <div className="absolute left-2 top-2 z-10 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+              +{imageCount - 1}
+            </div>
+          )}
+        </>
+      )}
+
       {selectMode && (
         <div className="absolute right-2 top-2 z-10">
           {selected ? (
@@ -441,36 +492,54 @@ function NoteCard({
         </div>
       )}
       {variant === "wide" ? (
-        <>
-          <div className="flex items-center gap-2 pr-6">
-            <h3 className="truncate text-sm font-semibold">
-              {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
-            </h3>
-          </div>
-
-          {note.summary && (
-            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
+        <div className="flex items-start gap-3">
+          {hasImage && (
+            <img
+              src={thumbUrl}
+              alt=""
+              className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+            />
           )}
-          <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-            <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-            {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-              </span>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 pr-6">
+              <h3 className="truncate text-sm font-semibold">
+                {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
+              </h3>
+            </div>
+
+            {note.summary && (
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
             )}
+            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
+              {note.tasks && note.tasks.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+                </span>
+              )}
+              {imageCount > 0 && <span>{imageCount} 📷</span>}
+            </div>
           </div>
-        </>
+        </div>
       ) : (
         <>
-          <div className="flex items-start gap-1.5 pr-5">
-            <h3 className="text-xs font-semibold leading-tight break-words">
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3
+              className={`text-xs font-semibold leading-tight break-words ${
+                hasImage ? "text-white drop-shadow" : ""
+              }`}
+            >
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
           </div>
 
-          <div className="mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
+          <div
+            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
+              hasImage ? "text-white/85" : "text-muted-foreground"
+            }`}
+          >
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
