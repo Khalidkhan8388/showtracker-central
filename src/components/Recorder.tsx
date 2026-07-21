@@ -485,16 +485,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
             />
             {textMode === "write" ? (
-              <textarea
-                ref={textAreaRef}
-                placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nUse the buttons below to insert images or links."}
+              <BlockEditor
                 value={textBody}
-                onChange={(e) => setTextBody(e.target.value)}
-                maxLength={20000}
-                rows={8}
-                className={`w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40 ${
-                  textFullscreen ? "min-h-0" : "min-h-[200px]"
-                }`}
+                onChange={setTextBody}
+                textAreaRef={textAreaRef}
+                fullscreen={textFullscreen}
+                onRemoveImage={removeImageFromBody}
               />
             ) : (
               <div
