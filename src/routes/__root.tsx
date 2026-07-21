@@ -77,6 +77,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { property: "og:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: "Braintape — Voice-first Second Brain" },
+      { name: "twitter:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
