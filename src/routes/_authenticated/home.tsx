@@ -231,6 +231,51 @@ function Home() {
 
   const selectMode = noteSelectMode || taskSelectMode;
 
+  // Memoized derivations — only recompute when notes actually change.
+  const derived = useMemo(() => {
+    if (!notes) return null;
+    const displayNotes = notes.filter((n) => n.heading !== "__custom__");
+    const [latest, ...rest] = displayNotes;
+    const pinnedRest = rest.filter((n) => n.pinned);
+    const unpinnedRest = rest.filter((n) => !n.pinned);
+    const stripIds = new Set<string>();
+    const strip: Note[] = [];
+    for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+      if (!stripIds.has(n.id)) {
+        stripIds.add(n.id);
+        strip.push(n);
+      }
+    }
+    const grid = unpinnedRest.slice(5);
+
+    const allTasksRaw = notes.flatMap((n) =>
+      (n.tasks ?? []).map((t) => ({
+        ...t,
+        noteId: n.id,
+        noteHeading: n.heading === "__custom__" ? null : n.heading,
+      })),
+    );
+    const suggested = allTasksRaw.filter((t) => t.pending);
+    const allTasks = allTasksRaw.filter((t) => !t.pending);
+    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
+    const openT = allTasks.filter((t) => !t.pinned && !t.done);
+    const doneT = allTasks.filter((t) => t.done);
+    const visible = [...pinnedT, ...openT, ...doneT].slice(0, 3);
+
+    return {
+      displayNotes,
+      latest,
+      strip,
+      grid,
+      suggested,
+      allTasks,
+      visible,
+      doneCount: doneT.length,
+      hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
+    };
+  }, [notes]);
+
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* iOS large-title header */}
