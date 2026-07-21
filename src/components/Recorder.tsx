@@ -422,13 +422,29 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           <div className="flex max-h-[90vh] w-full max-w-lg flex-col gap-3 rounded-t-3xl border border-border bg-background p-5 shadow-2xl sm:rounded-3xl">
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold tracking-tight">New note</h2>
-              <button
-                onClick={() => setTextOpen(false)}
-                aria-label="Close"
-                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-              >
-                <X className="h-4 w-4" />
-              </button>
+              <div className="flex items-center gap-1">
+                <div className="mr-2 flex items-center rounded-full bg-muted p-0.5 text-xs">
+                  <button
+                    onClick={() => setTextMode("write")}
+                    className={`rounded-full px-3 py-1 font-medium transition ${textMode === "write" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    Write
+                  </button>
+                  <button
+                    onClick={() => setTextMode("preview")}
+                    className={`rounded-full px-3 py-1 font-medium transition ${textMode === "preview" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
+                  >
+                    Preview
+                  </button>
+                </div>
+                <button
+                  onClick={() => setTextOpen(false)}
+                  aria-label="Close"
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
             </div>
             <input
               autoFocus
@@ -439,15 +455,25 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               maxLength={200}
               className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
             />
-            <textarea
-              ref={textAreaRef}
-              placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nUse the buttons below to insert images or links."}
-              value={textBody}
-              onChange={(e) => setTextBody(e.target.value)}
-              maxLength={20000}
-              rows={8}
-              className="min-h-[200px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
-            />
+            {textMode === "write" ? (
+              <textarea
+                ref={textAreaRef}
+                placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nUse the buttons below to insert images or links."}
+                value={textBody}
+                onChange={(e) => setTextBody(e.target.value)}
+                maxLength={20000}
+                rows={8}
+                className="min-h-[200px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+              />
+            ) : (
+              <div className="min-h-[200px] w-full flex-1 overflow-y-auto rounded-2xl border border-border bg-muted/30 p-4">
+                {textBody.trim() ? (
+                  <Markdown>{textBody}</Markdown>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nothing to preview yet.</p>
+                )}
+              </div>
+            )}
 
             <input
               ref={textFileRef}
