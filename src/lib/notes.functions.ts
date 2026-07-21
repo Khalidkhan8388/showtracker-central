@@ -8,7 +8,12 @@ const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into stru
 Return a single JSON object with keys: heading, summary, tasks.
 - heading: one short line (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 concise sentences capturing the key ideas. If images are provided, describe their content and any text visible.
-- tasks: array of short actionable to-dos, imperative voice ("Call John about invoice"). Include tasks visible in the images (e.g. handwritten TODOs, checklists, whiteboards) and tasks mentioned in the transcript. Empty array if none.
+- tasks: array of short actionable to-dos, imperative voice ("Call John about invoice").
+  IMPORTANT — Analyze every image carefully and INFER tasks the user could reasonably act on based on what is shown, even if no task is explicitly written:
+    * Extract explicit tasks (handwritten TODOs, checklists, whiteboards, sticky notes, screenshots of task lists, emails, messages).
+    * Infer implicit tasks from context: a receipt → "File expense for <item>"; a business card → "Save contact for <name>"; a poster/event flyer → "RSVP to <event> on <date>"; a product/book → "Look up <product>" or "Buy <item>"; a bill → "Pay <bill> by <date>"; a screenshot of a bug → "Fix <issue>"; a whiteboard diagram → tasks for the next steps shown; a landmark/place → "Plan visit to <place>".
+    * Combine transcript tasks with image-derived tasks. Deduplicate.
+    * If truly nothing actionable can be inferred, return an empty array.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string): Promise<string> {
