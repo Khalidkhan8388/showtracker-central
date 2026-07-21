@@ -36,8 +36,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textBody, setTextBody] = useState("");
   const [textImages, setTextImages] = useState<PendingImage[]>([]);
   const [textLink, setTextLink] = useState("");
+  const [linkFieldOpen, setLinkFieldOpen] = useState(false);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashQuery, setSlashQuery] = useState("");
+  const [slashStart, setSlashStart] = useState(0); // index of "/" in body
+  const [slashIdx, setSlashIdx] = useState(0);
   const textImagesRef = useRef<PendingImage[]>([]);
   const textFileRef = useRef<HTMLInputElement | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+  const linkInputRef = useRef<HTMLInputElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
