@@ -121,6 +121,8 @@ function Home() {
           </ul>
         )}
       </section>
+
+      <Recorder />
     </div>
   );
 }
