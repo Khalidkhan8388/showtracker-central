@@ -435,6 +435,15 @@ function Home() {
   );
 }
 
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
+
+
 function useLongPress(onLongPress: () => void, ms = 450) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const triggered = useRef(false);
