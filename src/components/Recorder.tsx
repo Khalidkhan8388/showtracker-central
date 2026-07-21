@@ -49,7 +49,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   function insertAtCursor(snippet: string) {
     const el = textAreaRef.current;
     setTextBody((prev) => {
-      if (!el) return prev + snippet;
+      // If the textarea's value matches the full body, it's a single block: insert at cursor.
+      // Otherwise (block editor split by images), append to end to avoid corrupting existing markdown.
+      if (!el || el.value !== prev) {
+        const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+        return prev + sep + snippet;
+      }
       const start = el.selectionStart ?? prev.length;
       const end = el.selectionEnd ?? prev.length;
       const next = prev.slice(0, start) + snippet + prev.slice(end);
@@ -61,6 +66,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       return next;
     });
   }
+
 
   async function onPickMarkdownImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
