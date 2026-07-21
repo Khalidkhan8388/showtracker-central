@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
@@ -210,9 +210,10 @@ function Home() {
                 (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
               );
               if (allTasks.length === 0) return null;
-              const open = allTasks.filter((t) => !t.done);
+              const pinned = allTasks.filter((t) => (t as any).pinned && !t.done);
+              const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
               const done = allTasks.filter((t) => t.done);
-              const ordered = [...open, ...done];
+              const ordered = [...pinned, ...open, ...done];
               const visible = ordered.slice(0, 3);
               return (
                 <div className="mt-8">
@@ -238,6 +239,7 @@ function Home() {
                             selectMode={taskSelectMode}
                             selected={isSel}
                             done={t.done}
+                            pinned={Boolean((t as any).pinned)}
                             text={t.text}
                             noteHeading={t.noteHeading}
                             noteId={t.noteId}
@@ -418,6 +420,7 @@ function TaskRow({
   selectMode,
   selected,
   done,
+  pinned,
   text,
   noteHeading,
   noteId,
@@ -428,6 +431,7 @@ function TaskRow({
   selectMode: boolean;
   selected: boolean;
   done: boolean;
+  pinned?: boolean;
   text: string;
   noteHeading: string | null;
   noteId: string;
@@ -474,6 +478,7 @@ function TaskRow({
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
+          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-foreground text-foreground" />}
           {text}
         </p>
         {noteHeading && (
