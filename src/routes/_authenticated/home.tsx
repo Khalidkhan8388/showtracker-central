@@ -239,6 +239,7 @@ function Home() {
                             selectMode={taskSelectMode}
                             selected={isSel}
                             done={t.done}
+                            pinned={Boolean((t as any).pinned)}
                             text={t.text}
                             noteHeading={t.noteHeading}
                             noteId={t.noteId}
