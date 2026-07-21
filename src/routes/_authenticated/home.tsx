@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
@@ -74,48 +74,87 @@ function Home() {
     }
   }
 
-  async function load() {
+  // Sign only images we haven't signed yet — cache is keyed by storage path so
+  // task/pin updates don't churn signed URLs.
+  const signedCacheRef = useRef<Map<string, string>>(new Map());
+  const signInFlightRef = useRef<Set<string>>(new Set());
+  const signThumbsFor = useCallback((rows: Note[]) => {
+    const toSign: Array<{ id: string; path: string }> = [];
+    for (const n of rows) {
+      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
+      if (!p) continue;
+      const cached = signedCacheRef.current.get(p);
+      if (cached) {
+        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
+        continue;
+      }
+      if (signInFlightRef.current.has(p)) continue;
+      signInFlightRef.current.add(p);
+      toSign.push({ id: n.id, path: p });
+    }
+    if (toSign.length === 0) return;
+    Promise.all(
+      toSign.map(async ({ id, path }) => {
+        const { data: s } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(path, 3600);
+        return { id, path, url: s?.signedUrl ?? "" };
+      }),
+    ).then((pairs) => {
+      setThumbs((cur) => {
+        const next = { ...cur };
+        for (const { id, path, url } of pairs) {
+          signInFlightRef.current.delete(path);
+          if (url) {
+            signedCacheRef.current.set(path, url);
+            next[id] = url;
+          }
+        }
+        return next;
+      });
+    });
+  }, []);
+
+  const load = useCallback(async () => {
     const { data } = await supabase
       .from("voice_notes")
       .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url,transcript")
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as Note[];
     setNotes(rows);
-    // Sign first image per note that has one, skip already-signed
-    setThumbs((prev) => {
-      const needed = rows.filter(
-        (n) => Array.isArray(n.image_paths) && n.image_paths.length > 0 && !prev[n.id],
-      );
-      if (needed.length === 0) return prev;
-      Promise.all(
-        needed.map(async (n) => {
-          const p = n.image_paths![0];
-          const { data: s } = await supabase.storage
-            .from("voice-notes")
-            .createSignedUrl(p, 3600);
-          return [n.id, s?.signedUrl ?? ""] as const;
-        }),
-      ).then((pairs) => {
-        setThumbs((cur) => {
-          const next = { ...cur };
-          for (const [id, url] of pairs) if (url) next[id] = url;
-          return next;
-        });
-      });
-      return prev;
-    });
-  }
+    signThumbsFor(rows);
+  }, [signThumbsFor]);
 
   useEffect(() => {
     load();
     const channel = supabase
       .channel("voice_notes_home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "voice_notes" }, () => load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "voice_notes" },
+        (payload) => {
+          const event = payload.eventType;
+          if (event === "INSERT") {
+            const row = payload.new as Note;
+            setNotes((prev) => (prev ? [row, ...prev.filter((n) => n.id !== row.id)] : [row]));
+            signThumbsFor([row]);
+          } else if (event === "UPDATE") {
+            const row = payload.new as Note;
+            setNotes((prev) => (prev ? prev.map((n) => (n.id === row.id ? row : n)) : prev));
+            signThumbsFor([row]);
+          } else if (event === "DELETE") {
+            const oldRow = payload.old as { id?: string };
+            if (oldRow?.id) {
+              setNotes((prev) => (prev ? prev.filter((n) => n.id !== oldRow.id) : prev));
+            }
+          }
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [load, signThumbsFor]);
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -192,6 +231,51 @@ function Home() {
 
   const selectMode = noteSelectMode || taskSelectMode;
 
+  // Memoized derivations — only recompute when notes actually change.
+  const derived = useMemo(() => {
+    if (!notes) return null;
+    const displayNotes = notes.filter((n) => n.heading !== "__custom__");
+    const [latest, ...rest] = displayNotes;
+    const pinnedRest = rest.filter((n) => n.pinned);
+    const unpinnedRest = rest.filter((n) => !n.pinned);
+    const stripIds = new Set<string>();
+    const strip: Note[] = [];
+    for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+      if (!stripIds.has(n.id)) {
+        stripIds.add(n.id);
+        strip.push(n);
+      }
+    }
+    const grid = unpinnedRest.slice(5);
+
+    const allTasksRaw = notes.flatMap((n) =>
+      (n.tasks ?? []).map((t) => ({
+        ...t,
+        noteId: n.id,
+        noteHeading: n.heading === "__custom__" ? null : n.heading,
+      })),
+    );
+    const suggested = allTasksRaw.filter((t) => t.pending);
+    const allTasks = allTasksRaw.filter((t) => !t.pending);
+    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
+    const openT = allTasks.filter((t) => !t.pinned && !t.done);
+    const doneT = allTasks.filter((t) => t.done);
+    const visible = [...pinnedT, ...openT, ...doneT].slice(0, 3);
+
+    return {
+      displayNotes,
+      latest,
+      strip,
+      grid,
+      suggested,
+      allTasks,
+      visible,
+      doneCount: doneT.length,
+      hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
+    };
+  }, [notes]);
+
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* iOS large-title header */}
@@ -241,184 +325,142 @@ function Home() {
             <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
             <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
+        ) : !derived || !derived.hasAnyContent ? (
+          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
+          </div>
         ) : (
-          <>
-            {(() => {
-              const displayNotes = notes.filter((n) => n.heading !== "__custom__");
-              if (displayNotes.length === 0 && notes.every((n) => (n.tasks ?? []).length === 0)) {
-                return (
-                  <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                      <Mic className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-                    <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-                  </div>
-                );
-              }
-              const [latest, ...rest] = displayNotes;
-              const pinnedRest = rest.filter((n) => n.pinned);
-              const unpinnedRest = rest.filter((n) => !n.pinned);
-              const stripIds = new Set<string>();
-              const strip: Note[] = [];
-              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
-                if (!stripIds.has(n.id)) {
-                  stripIds.add(n.id);
-                  strip.push(n);
-                }
-              }
-              const grid = unpinnedRest.slice(5);
-              return (
-                <div className="space-y-6">
-                  {latest && (
-                    <div>
-                      <SectionHeader>Latest</SectionHeader>
+          <div className="space-y-6">
+            {derived.latest && (
+              <div>
+                <SectionHeader>Latest</SectionHeader>
+                <NoteCard
+                  note={derived.latest}
+                  variant="wide"
+                  thumbUrl={thumbs[derived.latest.id]}
+                  selected={selectedNotes.has(derived.latest.id)}
+                  selectMode={noteSelectMode}
+                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                  onLongPress={() => toggleNoteSel(derived.latest.id)}
+                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                />
+              </div>
+            )}
+
+            {derived.strip.length > 0 && (
+              <div>
+                <SectionHeader>Pinned & Recent</SectionHeader>
+                <div className="-mx-4 overflow-x-auto pb-1">
+                  <div className="flex gap-3 px-4">
+                    {derived.strip.map((n) => (
                       <NoteCard
-                        note={latest}
-                        variant="wide"
-                        thumbUrl={thumbs[latest.id]}
-                        selected={selectedNotes.has(latest.id)}
+                        key={n.id}
+                        note={n}
+                        variant="square"
+                        thumbUrl={thumbs[n.id]}
+                        selected={selectedNotes.has(n.id)}
                         selectMode={noteSelectMode}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
-                        onLongPress={() => toggleNoteSel(latest.id)}
-                        onToggleSel={() => toggleNoteSel(latest.id)}
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => toggleNoteSel(n.id)}
+                        onToggleSel={() => toggleNoteSel(n.id)}
                       />
-                    </div>
-                  )}
-
-                  {strip.length > 0 && (
-                    <div>
-                      <SectionHeader>Pinned & Recent</SectionHeader>
-                      <div className="-mx-4 overflow-x-auto pb-1">
-                        <div className="flex gap-3 px-4">
-                          {strip.map((n) => (
-                            <NoteCard
-                              key={n.id}
-                              note={n}
-                              variant="square"
-                              thumbUrl={thumbs[n.id]}
-                              selected={selectedNotes.has(n.id)}
-                              selectMode={noteSelectMode}
-                              onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                              onLongPress={() => toggleNoteSel(n.id)}
-                              onToggleSel={() => toggleNoteSel(n.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(() => {
-                    const allTasksRaw = notes.flatMap((n) =>
-                      (n.tasks ?? []).map((t) => ({
-                        ...t,
-                        noteId: n.id,
-                        noteHeading: n.heading === "__custom__" ? null : n.heading,
-                      })),
-                    );
-                    const suggested = allTasksRaw.filter((t) => t.pending);
-                    const allTasks = allTasksRaw.filter((t) => !t.pending);
-                    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
-                    const open = allTasks.filter((t) => !t.pinned && !t.done);
-                    const done = allTasks.filter((t) => t.done);
-                    const ordered = [...pinnedT, ...open, ...done];
-                    const visible = ordered.slice(0, 3);
-
-                    return (
-                      <>
-                        {suggested.length > 0 && (
-                          <Link
-                            to="/tasks/review"
-                            className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-primary-foreground" />
-                              <span className="text-[15px] font-semibold text-primary-foreground">
-                                {suggested.length} suggested task{suggested.length === 1 ? "" : "s"}
-                              </span>
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-                          </Link>
-                        )}
-                        <div>
-                          <div className="mb-2 flex items-baseline justify-between px-1">
-                            <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-                              Tasks
-                            </h2>
-                            <Link
-                              to="/tasks"
-                              className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
-                            >
-                              <span className="tabular-nums">{done.length}/{allTasks.length}</span>
-                              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                            </Link>
-                          </div>
-                          {visible.length === 0 ? (
-                            <Link
-                              to="/tasks"
-                              className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
-                            >
-                              + Add a task
-                            </Link>
-                          ) : (
-                            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-                              {visible.map((t, i) => {
-                                const key: TaskKey = `${t.noteId}::${t.id}`;
-                                const isSel = selectedTasks.has(key);
-                                return (
-                                  <li key={key}>
-                                    <TaskRow
-                                      selectMode={taskSelectMode}
-                                      selected={isSel}
-                                      done={t.done}
-                                      pinned={Boolean(t.pinned)}
-                                      text={t.text}
-                                      noteHeading={t.noteHeading}
-                                      noteId={t.noteId}
-                                      onToggleDone={() => onToggle(t.noteId, t.id)}
-                                      onLongPress={() => toggleTaskSel(key)}
-                                      onSelectTap={() => toggleTaskSel(key)}
-                                    />
-                                    {i < visible.length - 1 && <div className="ml-12 h-px bg-border" />}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-
-
-                  {grid.length > 0 && (
-                    <div>
-                      <SectionHeader>More Notes</SectionHeader>
-                      <div className="grid grid-cols-2 gap-3">
-                        {grid.map((n) => (
-                          <NoteCard
-                            key={n.id}
-                            note={n}
-                            variant="square"
-                            fullWidth
-                            thumbUrl={thumbs[n.id]}
-                            selected={selectedNotes.has(n.id)}
-                            selectMode={noteSelectMode}
-                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                            onLongPress={() => toggleNoteSel(n.id)}
-                            onToggleSel={() => toggleNoteSel(n.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              );
-            })()}
-          </>
+              </div>
+            )}
+
+            {derived.suggested.length > 0 && (
+              <Link
+                to="/tasks/review"
+                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  <span className="text-[15px] font-semibold text-primary-foreground">
+                    {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+              </Link>
+            )}
+
+            <div>
+              <div className="mb-2 flex items-baseline justify-between px-1">
+                <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                  Tasks
+                </h2>
+                <Link
+                  to="/tasks"
+                  className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
+                >
+                  <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                </Link>
+              </div>
+              {derived.visible.length === 0 ? (
+                <Link
+                  to="/tasks"
+                  className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
+                >
+                  + Add a task
+                </Link>
+              ) : (
+                <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                  {derived.visible.map((t, i) => {
+                    const key: TaskKey = `${t.noteId}::${t.id}`;
+                    const isSel = selectedTasks.has(key);
+                    return (
+                      <li key={key}>
+                        <TaskRow
+                          selectMode={taskSelectMode}
+                          selected={isSel}
+                          done={t.done}
+                          pinned={Boolean(t.pinned)}
+                          text={t.text}
+                          noteHeading={t.noteHeading}
+                          noteId={t.noteId}
+                          onToggleDone={() => onToggle(t.noteId, t.id)}
+                          onLongPress={() => toggleTaskSel(key)}
+                          onSelectTap={() => toggleTaskSel(key)}
+                        />
+                        {i < derived.visible.length - 1 && <div className="ml-12 h-px bg-border" />}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {derived.grid.length > 0 && (
+              <div>
+                <SectionHeader>More Notes</SectionHeader>
+                <div className="grid grid-cols-2 gap-3">
+                  {derived.grid.map((n) => (
+                    <NoteCard
+                      key={n.id}
+                      note={n}
+                      variant="square"
+                      fullWidth
+                      thumbUrl={thumbs[n.id]}
+                      selected={selectedNotes.has(n.id)}
+                      selectMode={noteSelectMode}
+                      onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                      onLongPress={() => toggleNoteSel(n.id)}
+                      onToggleSel={() => toggleNoteSel(n.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </section>
+
 
 
       {selectMode ? (
@@ -492,7 +534,7 @@ function useLongPress(onLongPress: () => void, ms = 450) {
   };
 }
 
-function NoteCard({
+const NoteCard = memo(function NoteCard({
   note,
   variant,
   fullWidth,
@@ -593,6 +635,8 @@ function NoteCard({
           <img
             src={thumbUrl}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
@@ -626,6 +670,8 @@ function NoteCard({
             <img
               src={thumbUrl}
               alt=""
+              loading="lazy"
+              decoding="async"
               className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
             />
           )}
@@ -669,7 +715,7 @@ function NoteCard({
           </div>
           {hasImage && (
             <div className="relative z-10 -mx-1 overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
-              <img src={thumbUrl} alt="" className="h-24 w-full object-cover" />
+              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="h-24 w-full object-cover" />
               {imageCount > 1 && (
                 <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                   +{imageCount - 1}
@@ -727,9 +773,9 @@ function NoteCard({
       )}
     </div>
   );
-}
+});
 
-function TaskRow({
+const TaskRow = memo(function TaskRow({
   selectMode,
   selected,
   done,
@@ -813,7 +859,7 @@ function TaskRow({
       </div>
     </div>
   );
-}
+});
 
 
 function StatusIcon({ status }: { status: Note["status"] }) {

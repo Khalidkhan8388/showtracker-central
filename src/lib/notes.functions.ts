@@ -321,17 +321,19 @@ export const deleteTasks = createServerFn({ method: "POST" })
       if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
       byNote.get(t.noteId)!.add(t.taskId);
     }
-    for (const [noteId, taskIds] of byNote) {
-      const { data: note } = await supabase
-        .from("voice_notes")
-        .select("tasks")
-        .eq("id", noteId)
-        .single();
-      if (!note) continue;
-      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<{ id: string; text: string; done: boolean }>;
-      const next = tasks.filter((t) => !taskIds.has(t.id));
-      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
-    }
+    await Promise.all(
+      Array.from(byNote).map(async ([noteId, taskIds]) => {
+        const { data: note } = await supabase
+          .from("voice_notes")
+          .select("tasks")
+          .eq("id", noteId)
+          .single();
+        if (!note) return;
+        const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<{ id: string; text: string; done: boolean }>;
+        const next = tasks.filter((t) => !taskIds.has(t.id));
+        await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+      }),
+    );
     return { ok: true as const };
   });
 

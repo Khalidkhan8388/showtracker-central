@@ -59,29 +59,44 @@ function NoteDetail() {
   const pinFn = useServerFn(pinNote);
   const updateFn = useServerFn(updateTextNote);
 
+  // Signed-URL cache keyed by storage path, so task/pin updates don't
+  // trigger re-signing every image on every realtime hit.
+  const signedCacheRef = useRef<Map<string, string>>(new Map());
+
   async function load() {
     const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
     setNote(data as Note | null);
     const paths = Array.isArray((data as any)?.image_paths) ? ((data as any).image_paths as string[]) : [];
-    if (paths.length > 0) {
-      const signed = await Promise.all(
-        paths.map((p) => supabase.storage.from("voice-notes").createSignedUrl(p, 3600)),
-      );
-      setImageUrls(signed.map((r) => r.data?.signedUrl ?? "").filter(Boolean));
-    } else {
+    if (paths.length === 0) {
       setImageUrls([]);
+      return;
     }
+    const missing = paths.filter((p) => !signedCacheRef.current.has(p));
+    if (missing.length > 0) {
+      const signed = await Promise.all(
+        missing.map((p) => supabase.storage.from("voice-notes").createSignedUrl(p, 3600)),
+      );
+      missing.forEach((p, i) => {
+        const url = signed[i]?.data?.signedUrl;
+        if (url) signedCacheRef.current.set(p, url);
+      });
+    }
+    setImageUrls(paths.map((p) => signedCacheRef.current.get(p) ?? "").filter(Boolean));
   }
 
   async function loadIndex() {
     const { data } = await supabase
       .from("voice_notes")
       .select("id,heading")
-      .neq("id", id);
+      .neq("id", id)
+      .neq("heading", "__custom__")
+      .not("heading", "is", null)
+      .order("created_at", { ascending: false })
+      .limit(500);
     const rows = (data ?? []) as Array<{ id: string; heading: string | null }>;
     setAllNotes(
       rows
-        .filter((r) => r.heading && r.heading !== "__custom__")
+        .filter((r) => r.heading)
         .map((r) => ({ id: r.id, heading: r.heading as string })),
     );
   }
@@ -390,6 +405,8 @@ function NoteDetail() {
                   <img
                     src={url}
                     alt=""
+                    loading={i === 0 ? "eager" : "lazy"}
+                    decoding="async"
                     className="w-full rounded-2xl object-cover shadow-sm"
                   />
                 </a>
