@@ -69,13 +69,6 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     updateTextImages(copy);
   }
 
-  function resetTextComposer() {
-    textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-    updateTextImages([]);
-    setTextHeading("");
-    setTextBody("");
-    setTextLink("");
-  }
 
   function resetTextComposer() {
     textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
