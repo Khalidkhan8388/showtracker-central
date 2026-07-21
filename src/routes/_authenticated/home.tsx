@@ -65,9 +65,33 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths")
       .order("created_at", { ascending: false });
-    setNotes((data ?? []) as Note[]);
+    const rows = (data ?? []) as Note[];
+    setNotes(rows);
+    // Sign first image per note that has one, skip already-signed
+    setThumbs((prev) => {
+      const needed = rows.filter(
+        (n) => Array.isArray(n.image_paths) && n.image_paths.length > 0 && !prev[n.id],
+      );
+      if (needed.length === 0) return prev;
+      Promise.all(
+        needed.map(async (n) => {
+          const p = n.image_paths![0];
+          const { data: s } = await supabase.storage
+            .from("voice-notes")
+            .createSignedUrl(p, 3600);
+          return [n.id, s?.signedUrl ?? ""] as const;
+        }),
+      ).then((pairs) => {
+        setThumbs((cur) => {
+          const next = { ...cur };
+          for (const [id, url] of pairs) if (url) next[id] = url;
+          return next;
+        });
+      });
+      return prev;
+    });
   }
 
   useEffect(() => {
