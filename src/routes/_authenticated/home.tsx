@@ -2,8 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
+import { useServerFn } from "@tanstack/react-start";
+import { toggleTask } from "@/lib/notes.functions";
+
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -27,6 +30,26 @@ type Note = {
 
 function Home() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const toggleFn = useServerFn(toggleTask);
+
+  async function onToggle(noteId: string, taskId: string) {
+    setNotes((prev) =>
+      prev
+        ? prev.map((n) =>
+            n.id === noteId
+              ? { ...n, tasks: (n.tasks ?? []).map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
+              : n,
+          )
+        : prev,
+    );
+    try {
+      await toggleFn({ data: { noteId, taskId } });
+    } catch {
+      load();
+    }
+  }
+
+
 
   async function load() {
     const { data } = await supabase
@@ -123,7 +146,7 @@ function Home() {
                             key={n.id}
                             to="/notes/$id"
                             params={{ id: n.id }}
-                            className="flex w-56 shrink-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                            className="flex aspect-square w-40 shrink-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
                           >
                             <div className="flex items-start gap-1.5">
                               <StatusIcon status={n.status} />
@@ -156,10 +179,68 @@ function Home() {
                 </div>
               );
             })()}
+
+            {(() => {
+              const allTasks = notes.flatMap((n) =>
+                (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+              );
+              if (allTasks.length === 0) return null;
+              const open = allTasks.filter((t) => !t.done);
+              const done = allTasks.filter((t) => t.done);
+              const ordered = [...open, ...done];
+              return (
+                <div className="mt-8">
+                  <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    <span>Tasks</span>
+                    <span className="normal-case tracking-normal">
+                      {done.length}/{allTasks.length}
+                    </span>
+                  </h2>
+                  <ul className="space-y-1.5">
+                    {ordered.map((t) => (
+                      <li key={`${t.noteId}-${t.id}`}>
+                        <div className="flex items-start gap-2 rounded-xl border border-border bg-card p-3">
+                          <button
+                            onClick={() => onToggle(t.noteId, t.id)}
+                            aria-label={t.done ? "Mark as not done" : "Mark as done"}
+                            className="mt-0.5 shrink-0"
+                          >
+                            {t.done ? (
+                              <CheckCircle2 className="h-4 w-4 text-foreground" />
+                            ) : (
+                              <Circle className="h-4 w-4 text-muted-foreground" />
+                            )}
+                          </button>
+                          <div className="min-w-0 flex-1">
+                            <p
+                              className={`text-sm leading-snug ${
+                                t.done ? "text-muted-foreground line-through" : "text-foreground"
+                              }`}
+                            >
+                              {t.text}
+                            </p>
+                            {t.noteHeading && (
+                              <Link
+                                to="/notes/$id"
+                                params={{ id: t.noteId }}
+                                className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+                              >
+                                {t.noteHeading}
+                              </Link>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              );
+            })()}
           </>
         )}
 
       </section>
+
 
       <Recorder onNoteReady={load} />
     </div>
