@@ -191,13 +191,22 @@ function Home() {
           </div>
           <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
         </div>
-        <button
-          onClick={signOut}
-          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/search"
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+          </Link>
+          <button
+            onClick={signOut}
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <section className="flex-1 px-5 pb-32 pt-4">
