@@ -574,6 +574,47 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
+            {linkComposerOpen && (
+              <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 p-1 pl-3">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://…"
+                  value={linkComposerUrl}
+                  onChange={(e) => setLinkComposerUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      insertLinkFromComposer();
+                    }
+                    if (e.key === "Escape") {
+                      setLinkComposerOpen(false);
+                      setLinkComposerUrl("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-1 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setLinkComposerOpen(false);
+                    setLinkComposerUrl("");
+                  }}
+                  className="rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={insertLinkFromComposer}
+                  disabled={!linkComposerUrl.trim()}
+                  className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <button
@@ -585,8 +626,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   Image
                 </button>
                 <button
-                  onClick={promptInsertLink}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                  onClick={() => setLinkComposerOpen((v) => !v)}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium hover:bg-muted ${
+                    linkComposerOpen ? "border-foreground bg-muted text-foreground" : "border-border text-foreground"
+                  }`}
                 >
                   <Link2 className="h-4 w-4" />
                   Link
@@ -604,7 +647,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
                 <button
                   onClick={submitText}
-                  disabled={!textHeading.trim()}
+                  disabled={!textHeading.trim() && !textBody.trim()}
                   className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
                 >
                   Save note
