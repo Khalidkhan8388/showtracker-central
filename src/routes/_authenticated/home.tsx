@@ -225,52 +225,28 @@ function Home() {
                   </div>
                 );
               }
-              const [latest, ...rest] = displayNotes;
-              const pinnedRest = rest.filter((n) => n.pinned);
-              const unpinnedRest = rest.filter((n) => !n.pinned);
-              const stripIds = new Set<string>();
-              const strip: Note[] = [];
-              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
-                if (!stripIds.has(n.id)) {
-                  stripIds.add(n.id);
-                  strip.push(n);
-                }
-              }
-              const grid = unpinnedRest.slice(5);
+              const pinnedNotes = displayNotes.filter((n) => n.pinned);
+              const unpinnedNotes = displayNotes.filter((n) => !n.pinned);
+              const gridNotes = [...pinnedNotes, ...unpinnedNotes];
               return (
                 <div className="space-y-4">
-                  {latest && (
-                    <NoteCard
-                      note={latest}
-                      variant="wide"
-                      thumbUrl={thumbs[latest.id]}
-                      selected={selectedNotes.has(latest.id)}
-                      selectMode={noteSelectMode}
-                      onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
-                      onLongPress={() => toggleNoteSel(latest.id)}
-                      onToggleSel={() => toggleNoteSel(latest.id)}
-                    />
-                  )}
-
-                  {strip.length > 0 && (
-                    <div className="-mx-5 overflow-x-auto pb-2">
-                      <div className="flex gap-3 px-5">
-                        {strip.map((n) => (
-                          <NoteCard
-                            key={n.id}
-                            note={n}
-                            variant="square"
-                            thumbUrl={thumbs[n.id]}
-                            selected={selectedNotes.has(n.id)}
-                            selectMode={noteSelectMode}
-                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                            onLongPress={() => toggleNoteSel(n.id)}
-                            onToggleSel={() => toggleNoteSel(n.id)}
-                          />
-                        ))}
-                      </div>
+                  {gridNotes.length > 0 && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {gridNotes.map((n) => (
+                        <NoteCard
+                          key={n.id}
+                          note={n}
+                          thumbUrl={thumbs[n.id]}
+                          selected={selectedNotes.has(n.id)}
+                          selectMode={noteSelectMode}
+                          onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                          onLongPress={() => toggleNoteSel(n.id)}
+                          onToggleSel={() => toggleNoteSel(n.id)}
+                        />
+                      ))}
                     </div>
                   )}
+
 
                   {(() => {
                     const allTasksRaw = notes.flatMap((n) =>
