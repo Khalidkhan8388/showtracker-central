@@ -405,8 +405,8 @@ function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-2 rounded-xl border-2 p-3 select-none transition-colors ${
-        selected ? "border-foreground bg-muted" : "border-border bg-card"
+      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+        selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
       <button
@@ -422,9 +422,9 @@ function TaskRow({
         className="mt-0.5 shrink-0"
       >
         {task.done ? (
-          <CheckCircle2 className="h-4 w-4 text-foreground" />
+          <CheckCircle2 className="h-5 w-5 text-primary" />
         ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
+          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
@@ -443,12 +443,12 @@ function TaskRow({
               }
             }}
             onClick={(e) => e.stopPropagation()}
-            className="w-full rounded-md bg-transparent text-sm leading-snug outline-none ring-1 ring-border focus:ring-foreground px-1.5 py-0.5"
+            className="w-full rounded-lg bg-background px-2 py-1 text-[17px] leading-tight outline-none ring-1 ring-border focus:ring-primary"
             maxLength={500}
           />
         ) : (
           <p
-            className={`text-sm leading-snug ${
+            className={`text-[17px] leading-tight ${
               task.done ? "text-muted-foreground line-through" : "text-foreground"
             }`}
           >
@@ -457,7 +457,7 @@ function TaskRow({
         )}
         {task.noteHeading &&
           (selectMode ? (
-            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {task.noteHeading}
             </span>
           ) : (
@@ -465,7 +465,7 @@ function TaskRow({
               to="/notes/$id"
               params={{ id: task.noteId }}
               onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
             >
               {task.noteHeading}
             </Link>
@@ -479,9 +479,9 @@ function TaskRow({
               setEditing(true);
             }}
             aria-label="Edit task"
-            className="mt-0.5 shrink-0 rounded-md p-1 text-muted-foreground/60 transition-colors hover:text-foreground"
+            className="shrink-0 rounded-full p-1.5 text-muted-foreground active:opacity-60"
           >
-            <Pencil className="h-3.5 w-3.5" />
+            <Pencil className="h-4 w-4" />
           </button>
           <button
             onClick={(e) => {
@@ -489,8 +489,8 @@ function TaskRow({
               onPin();
             }}
             aria-label={task.pinned ? "Unpin task" : "Pin task"}
-            className={`mt-0.5 shrink-0 rounded-md p-1 transition-colors ${
-              task.pinned ? "text-foreground" : "text-muted-foreground/60 hover:text-foreground"
+            className={`shrink-0 rounded-full p-1.5 active:opacity-60 ${
+              task.pinned ? "text-primary" : "text-muted-foreground"
             }`}
           >
             {task.pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
@@ -505,11 +505,12 @@ function TaskRow({
             commit();
           }}
           aria-label="Save"
-          className="mt-0.5 shrink-0 rounded-md p-1 text-foreground"
+          className="shrink-0 rounded-full p-1.5 text-primary"
         >
-          <Check className="h-4 w-4" />
+          <Check className="h-4 w-4" strokeWidth={2.5} />
         </button>
       )}
     </div>
   );
 }
+
