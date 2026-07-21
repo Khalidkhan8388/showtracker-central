@@ -192,6 +192,32 @@ function TasksPage() {
         </span>
       </header>
 
+      {!selectMode && (
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            onAdd();
+          }}
+          className="mb-5 flex items-center gap-2 rounded-2xl border border-border bg-card p-2"
+        >
+          <input
+            value={newTask}
+            onChange={(e) => setNewTask(e.target.value)}
+            placeholder="Add a task…"
+            className="flex-1 bg-transparent px-2 py-1.5 text-sm outline-none placeholder:text-muted-foreground"
+            maxLength={500}
+          />
+          <button
+            type="submit"
+            disabled={!newTask.trim()}
+            aria-label="Add task"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-foreground text-background disabled:opacity-40"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </form>
+      )}
+
       {notes === null ? (
         <p className="text-sm text-muted-foreground">Loading…</p>
       ) : allTasks.length === 0 ? (
@@ -206,6 +232,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
@@ -218,6 +245,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
@@ -230,6 +258,7 @@ function TasksPage() {
                 selectMode={selectMode}
                 onToggle={onToggle}
                 onPin={onPin}
+                onEdit={onEdit}
                 onSelectTap={toggleSel}
               />
             </Section>
