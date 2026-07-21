@@ -176,7 +176,7 @@ export const processVoiceNote = createServerFn({ method: "POST" })
       }
 
       const structured = await extractStructured(transcript, images, apiKey);
-      const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false }));
+      const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
 
       await supabase
         .from("voice_notes")
