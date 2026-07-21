@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2 } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote, saveWebLink } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
 import { toast } from "sonner";
 
 
