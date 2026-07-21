@@ -799,3 +799,92 @@ export const generateLinkLabel = createServerFn({ method: "POST" })
     }
     return { label: hostname || url, hostname };
   });
+
+const SearchInput = z.object({
+  query: z.string().trim().min(1).max(500),
+  useAi: z.boolean().optional().default(false),
+});
+
+export const searchEverything = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SearchInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const q = data.query.trim();
+    const { data: rows } = await supabase
+      .from("voice_notes")
+      .select("id, heading, summary, tags, tasks, transcript, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const notes = (rows ?? []).filter((n: any) => n.heading !== "__custom__");
+
+    if (!data.useAi) {
+      const needle = q.toLowerCase();
+      const noteMatches = notes.filter((n: any) => {
+        const hay = [
+          n.heading ?? "",
+          n.summary ?? "",
+          n.transcript ?? "",
+          ...(Array.isArray(n.tags) ? n.tags : []),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(needle);
+      });
+      const taskMatches: Array<{ noteId: string; taskId: string; text: string; done: boolean; noteHeading: string | null }> = [];
+      for (const n of notes) {
+        const tasks = Array.isArray((n as any).tasks) ? ((n as any).tasks as any[]) : [];
+        for (const t of tasks) {
+          if (typeof t?.text === "string" && t.text.toLowerCase().includes(needle)) {
+            taskMatches.push({
+              noteId: n.id,
+              taskId: t.id,
+              text: t.text,
+              done: Boolean(t.done),
+              noteHeading: (n as any).heading === "__custom__" ? null : (n as any).heading ?? null,
+            });
+          }
+        }
+      }
+      return { noteIds: noteMatches.map((n: any) => n.id), tasks: taskMatches, reasoning: null };
+    }
+
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const catalog = notes.slice(0, 200).map((n: any) => ({
+      id: n.id,
+      heading: n.heading ?? "",
+      summary: (n.summary ?? "").slice(0, 300),
+      tags: Array.isArray(n.tags) ? n.tags : [],
+    }));
+    const sys = `You are a semantic search assistant over the user's personal notes.
+Given a query and a JSON catalog of notes (id, heading, summary, tags), return the most relevant note ids ordered by relevance.
+Only include notes that are genuinely relevant. If nothing fits, return an empty array.
+Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is one short sentence. No prose, no code fences.`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-3.5-flash",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: `Query: ${q}\n\nNotes:\n${JSON.stringify(catalog)}` },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`Search failed (${res.status})`);
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = json.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const validIds = new Set(notes.map((n: any) => n.id));
+    const ids: string[] = (Array.isArray(parsed.ids) ? parsed.ids : [])
+      .map((x: unknown) => String(x))
+      .filter((id: string) => validIds.has(id))
+      .slice(0, 30);
+    const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 300) : null;
+    return { noteIds: ids, tasks: [], reasoning };
+  });
