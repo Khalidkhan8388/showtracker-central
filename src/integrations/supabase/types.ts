@@ -27,6 +27,7 @@ export type Database = {
           source_url: string | null
           status: Database["public"]["Enums"]["note_status"]
           summary: string | null
+          tags: string[]
           tasks: Json
           transcript: string | null
           updated_at: string
@@ -44,6 +45,7 @@ export type Database = {
           source_url?: string | null
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
+          tags?: string[]
           tasks?: Json
           transcript?: string | null
           updated_at?: string
@@ -61,6 +63,7 @@ export type Database = {
           source_url?: string | null
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
+          tags?: string[]
           tasks?: Json
           transcript?: string | null
           updated_at?: string

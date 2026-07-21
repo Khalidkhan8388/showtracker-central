@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
@@ -191,13 +191,22 @@ function Home() {
           </div>
           <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
         </div>
-        <button
-          onClick={signOut}
-          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <Link
+            to="/search"
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Search"
+          >
+            <Search className="h-4 w-4" />
+          </Link>
+          <button
+            onClick={signOut}
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <section className="flex-1 px-5 pb-32 pt-4">

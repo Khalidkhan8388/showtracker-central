@@ -13,11 +13,12 @@ const SaveTextNoteInput = z.object({
 
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Reflect the actual topic — do not use "Untitled" or "Voice Note".
 - summary: 2-4 sentences capturing the key ideas. If images are attached, describe what's visible (objects, people, on-screen text, handwriting) and weave that into the summary.
 - tasks: array of clear, actionable to-dos, each in imperative voice ("Call John about the invoice", "Buy milk on Tuesday", "Reply to Priya's email").
+- tags: 3-6 short lowercase tags (one or two words each, no #, no spaces around, kebab-case ok). Categorize by topic, project, person, place, or type (e.g. "work", "grocery", "travel", "invoice", "meeting", "idea"). No duplicates.
 
 HOW TO EXTRACT TASKS — be smart, not stingy:
 1. Pull EVERY concrete action the user mentions or implies they should do. Examples that ARE tasks:
@@ -71,11 +72,31 @@ function bytesToBase64(bytes: Uint8Array): string {
   return btoa(bin);
 }
 
+function parseTags(input: unknown): string[] {
+  if (!Array.isArray(input)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of input) {
+    const s = String(raw ?? "")
+      .toLowerCase()
+      .trim()
+      .replace(/^#+/, "")
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9\-]/g, "")
+      .slice(0, 32);
+    if (!s || seen.has(s)) continue;
+    seen.add(s);
+    out.push(s);
+    if (out.length >= 8) break;
+  }
+  return out;
+}
+
 async function extractStructured(
   transcript: string | null,
   images: Array<{ mime: string; base64: string }>,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userBlocks: Array<Record<string, unknown>> = [];
   const intro = transcript
     ? `Transcript from the voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
@@ -130,7 +151,8 @@ async function extractStructured(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading, summary, tasks, tags };
 }
 
 export const processVoiceNote = createServerFn({ method: "POST" })
@@ -202,6 +224,7 @@ export const processVoiceNote = createServerFn({ method: "POST" })
           heading: structured.heading,
           summary: structured.summary,
           tasks: tasksPayload,
+          tags: structured.tags,
         })
         .eq("id", note.id);
 
@@ -440,11 +463,12 @@ export const addCustomTask = createServerFn({ method: "POST" })
   });
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
 - summary: 2-5 sentences on what the page is about and the key takeaways the reader would want to remember.
 - tasks: array of concrete, actionable to-dos the user would plausibly want to do because they saved this page.
+- tags: 3-6 short lowercase tags (kebab-case, no #). Cover topic, domain type (e.g. "article", "recipe", "product", "video"), and subject (e.g. "cooking", "startup", "python").
 
 HOW TO EXTRACT TASKS — be smart:
 - A product page → "Buy <product>", "Compare <product> vs <alt>" if alternatives are mentioned.
@@ -499,7 +523,7 @@ async function summarizeWebPage(
   title: string | null,
   text: string,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userMsg = `URL: ${url}\n${title ? `Page title: ${title}\n` : ""}\nPage content:\n${text}`;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -534,7 +558,8 @@ async function summarizeWebPage(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading, summary, tasks, tags };
 }
 
 export const saveWebLink = createServerFn({ method: "POST" })
@@ -567,6 +592,7 @@ export const saveWebLink = createServerFn({ method: "POST" })
           heading: structured.heading,
           summary: structured.summary,
           tasks: tasksPayload,
+          tags: structured.tags,
         })
         .eq("id", inserted.id);
       return { ok: true as const, noteId: inserted.id };
@@ -622,11 +648,12 @@ export const dismissTasks = createServerFn({ method: "POST" })
   });
 
 const TEXT_SYSTEM_PROMPT = `You are analyzing a user's written note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation, reflecting the note's actual topic. Never use "Untitled" or generic filler.
 - summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short to summarize meaningfully.
 - tasks: array of clear, actionable to-dos extracted from the note (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
+- tags: 3-6 short lowercase tags (kebab-case, no #) categorizing the note by topic, project, person, or type.
 
 Respond with ONLY the JSON object.`;
 
@@ -634,8 +661,8 @@ async function extractFromText(
   heading: string,
   body: string,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
-  if (!body || body.trim().length < 20) return { heading: "", summary: "", tasks: [] };
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
+  if (!body || body.trim().length < 20) return { heading: "", summary: "", tasks: [], tags: [] };
   const userContent = heading
     ? `Title: ${heading}\n\nNote:\n${body}`
     : `Note:\n${body}\n\n(No title provided — generate one.)`;
@@ -651,7 +678,7 @@ async function extractFromText(
       response_format: { type: "json_object" },
     }),
   });
-  if (!res.ok) return { heading: "", summary: "", tasks: [] };
+  if (!res.ok) return { heading: "", summary: "", tasks: [], tags: [] };
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const raw = data.choices?.[0]?.message?.content ?? "{}";
   let parsed: any;
@@ -665,7 +692,8 @@ async function extractFromText(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading: outHeading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading: outHeading, summary, tasks, tags };
 }
 
 export const saveTextNote = createServerFn({ method: "POST" })
@@ -677,11 +705,13 @@ export const saveTextNote = createServerFn({ method: "POST" })
 
     let summary = "";
     let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
+    let tags: string[] = [];
     let finalHeading = data.heading.trim();
     if (apiKey && data.body.trim().length >= 20) {
       try {
         const structured = await extractFromText(finalHeading, data.body, apiKey);
         summary = structured.summary;
+        tags = structured.tags;
         if (!finalHeading && structured.heading) finalHeading = structured.heading;
         tasksPayload = structured.tasks.map((t, i) => ({
           id: `t${i}`, text: t, done: false, pending: true,
@@ -703,6 +733,7 @@ export const saveTextNote = createServerFn({ method: "POST" })
         transcript: data.body || null,
         summary: summary || (data.body ? data.body.slice(0, 500) : ""),
         tasks: tasksPayload,
+        tags,
         image_paths: data.imagePaths ?? [],
         source_url: data.sourceUrl ?? null,
         status: "ready",
@@ -767,4 +798,93 @@ export const generateLinkLabel = createServerFn({ method: "POST" })
       // fall through to hostname
     }
     return { label: hostname || url, hostname };
+  });
+
+const SearchInput = z.object({
+  query: z.string().trim().min(1).max(500),
+  useAi: z.boolean().optional().default(false),
+});
+
+export const searchEverything = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SearchInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const q = data.query.trim();
+    const { data: rows } = await supabase
+      .from("voice_notes")
+      .select("id, heading, summary, tags, tasks, transcript, created_at")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    const notes = (rows ?? []).filter((n: any) => n.heading !== "__custom__");
+
+    if (!data.useAi) {
+      const needle = q.toLowerCase();
+      const noteMatches = notes.filter((n: any) => {
+        const hay = [
+          n.heading ?? "",
+          n.summary ?? "",
+          n.transcript ?? "",
+          ...(Array.isArray(n.tags) ? n.tags : []),
+        ]
+          .join(" ")
+          .toLowerCase();
+        return hay.includes(needle);
+      });
+      const taskMatches: Array<{ noteId: string; taskId: string; text: string; done: boolean; noteHeading: string | null }> = [];
+      for (const n of notes) {
+        const tasks = Array.isArray((n as any).tasks) ? ((n as any).tasks as any[]) : [];
+        for (const t of tasks) {
+          if (typeof t?.text === "string" && t.text.toLowerCase().includes(needle)) {
+            taskMatches.push({
+              noteId: n.id,
+              taskId: t.id,
+              text: t.text,
+              done: Boolean(t.done),
+              noteHeading: (n as any).heading === "__custom__" ? null : (n as any).heading ?? null,
+            });
+          }
+        }
+      }
+      return { noteIds: noteMatches.map((n: any) => n.id), tasks: taskMatches, reasoning: null };
+    }
+
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const catalog = notes.slice(0, 200).map((n: any) => ({
+      id: n.id,
+      heading: n.heading ?? "",
+      summary: (n.summary ?? "").slice(0, 300),
+      tags: Array.isArray(n.tags) ? n.tags : [],
+    }));
+    const sys = `You are a semantic search assistant over the user's personal notes.
+Given a query and a JSON catalog of notes (id, heading, summary, tags), return the most relevant note ids ordered by relevance.
+Only include notes that are genuinely relevant. If nothing fits, return an empty array.
+Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is one short sentence. No prose, no code fences.`;
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: "google/gemini-3.5-flash",
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: `Query: ${q}\n\nNotes:\n${JSON.stringify(catalog)}` },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    });
+    if (!res.ok) throw new Error(`Search failed (${res.status})`);
+    const json = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = json.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const validIds = new Set(notes.map((n: any) => n.id));
+    const ids: string[] = (Array.isArray(parsed.ids) ? parsed.ids : [])
+      .map((x: unknown) => String(x))
+      .filter((id: string) => validIds.has(id))
+      .slice(0, 30);
+    const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 300) : null;
+    return { noteIds: ids, tasks: [], reasoning };
   });
