@@ -569,12 +569,15 @@ function NoteCard({
       ? isText ? "p-5" : "p-4"
       : fullWidth
         ? "flex aspect-square w-full flex-col gap-3"
-        : "flex aspect-[2/4] w-44 shrink-0 flex-col gap-3";
+        : isText
+          ? "flex aspect-[2/3] w-44 shrink-0 flex-col gap-3"
+          : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
 
   const textNoteStyle: React.CSSProperties | undefined = isText
-    ? { backgroundColor: textTint }
+    ? { backgroundColor: "#ffffff" }
     : undefined;
+
 
   return (
     <div
@@ -665,11 +668,12 @@ function NoteCard({
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
           </div>
-          {note.summary && (
-            <p className="relative z-10 line-clamp-[10] text-[12px] leading-snug text-foreground/60">
-              {note.summary}
+          {(note.transcript || note.summary) && (
+            <p className="relative z-10 line-clamp-[12] whitespace-pre-wrap text-[12px] leading-snug text-foreground/70">
+              {note.transcript ?? note.summary}
             </p>
           )}
+
         </>
       ) : (
         <>
