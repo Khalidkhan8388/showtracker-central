@@ -387,14 +387,17 @@ export function LineEditor({
   value,
   onChange,
   placeholder,
+  wikiIndex,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
+  wikiIndex?: Map<string, string>;
 }) {
   const lines = value.length === 0 ? [""] : value.split("\n");
   const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     refs.current.forEach((el) => {
@@ -412,10 +415,13 @@ export function LineEditor({
       }
       focusPending.current = null;
     }
-  }, [value]);
+  }, [value, focusedIdx]);
 
   function commit(nextLines: string[], focus?: { index: number; pos: number }) {
-    if (focus) focusPending.current = focus;
+    if (focus) {
+      focusPending.current = focus;
+      setFocusedIdx(focus.index);
+    }
     onChange(nextLines.join("\n"));
   }
 
@@ -448,37 +454,89 @@ export function LineEditor({
       const prev = refs.current[i - 1];
       if (prev) {
         e.preventDefault();
-        prev.focus();
-        const pos = Math.min(start, prev.value.length);
-        prev.setSelectionRange(pos, pos);
+        setFocusedIdx(i - 1);
+        focusPending.current = { index: i - 1, pos: Math.min(start, prev.value.length) };
       }
     } else if (e.key === "ArrowDown" && i < lines.length - 1) {
       const next = refs.current[i + 1];
       if (next) {
         e.preventDefault();
-        next.focus();
-        const pos = Math.min(start, next.value.length);
-        next.setSelectionRange(pos, pos);
+        setFocusedIdx(i + 1);
+        focusPending.current = { index: i + 1, pos: Math.min(start, next.value.length) };
       }
     }
   }
 
+  function renderPreview(line: string, i: number) {
+    const nodes: React.ReactNode[] = [];
+    const re = /\[\[([^\]\n]+?)\]\]/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    let k = 0;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) nodes.push(line.slice(last, m.index));
+      const title = m[1].trim();
+      const found = wikiIndex?.get(title.toLowerCase());
+      nodes.push(
+        <span
+          key={`w-${i}-${k++}`}
+          className={
+            found
+              ? "mx-0.5 inline-flex items-center rounded-full bg-yellow-400/25 px-2 py-0.5 text-[0.9em] font-medium text-yellow-700 ring-1 ring-yellow-500/40 shadow-[0_0_12px_rgba(250,204,21,0.55)]"
+              : "mx-0.5 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.9em] font-medium text-muted-foreground ring-1 ring-border"
+          }
+        >
+          {title}
+        </span>,
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) nodes.push(line.slice(last));
+    if (nodes.length === 0) {
+      return <span className="text-muted-foreground/50">{placeholder && i === 0 ? placeholder : "\u00A0"}</span>;
+    }
+    return <>{nodes}</>;
+  }
+
   return (
     <div className="flex flex-col">
-      {lines.map((line, i) => (
-        <textarea
-          key={i}
-          ref={(el) => {
-            refs.current[i] = el;
-          }}
-          value={line}
-          onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
-          onKeyDown={(e) => onKey(i, e)}
-          placeholder={i === 0 ? placeholder : ""}
-          rows={1}
-          className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
-        />
-      ))}
+      {lines.map((line, i) => {
+        const hasWiki = /\[\[([^\]\n]+?)\]\]/.test(line);
+        const isFocused = focusedIdx === i;
+        if (hasWiki && !isFocused) {
+          return (
+            <div
+              key={i}
+              onClick={(e) => {
+                setFocusedIdx(i);
+                // approximate caret at end
+                focusPending.current = { index: i, pos: line.length };
+                e.stopPropagation();
+              }}
+              className={`w-full cursor-text leading-relaxed ${lineStyleFor(line)}`}
+            >
+              {renderPreview(line, i)}
+            </div>
+          );
+        }
+        return (
+          <textarea
+            key={i}
+            ref={(el) => {
+              refs.current[i] = el;
+            }}
+            value={line}
+            onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
+            onKeyDown={(e) => onKey(i, e)}
+            onFocus={() => setFocusedIdx(i)}
+            onBlur={() => setFocusedIdx((cur) => (cur === i ? null : cur))}
+            placeholder={i === 0 ? placeholder : ""}
+            rows={1}
+            className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
+          />
+        );
+      })}
     </div>
   );
 }
+
