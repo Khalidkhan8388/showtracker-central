@@ -40,6 +40,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textMode, setTextMode] = useState<"write" | "preview">("write");
   const [uploadingMd, setUploadingMd] = useState(false);
   const [textFullscreen, setTextFullscreen] = useState(false);
+  const [composerLinkOpen, setComposerLinkOpen] = useState(false);
+  const [composerLinkUrl, setComposerLinkUrl] = useState("");
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
