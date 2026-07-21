@@ -455,6 +455,7 @@ function NoteDetail() {
 
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <button
+                type="button"
                 onClick={() => editFileRef.current?.click()}
                 disabled={uploadingImg}
                 className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60 disabled:opacity-60"
@@ -463,6 +464,7 @@ function NoteDetail() {
                 Image
               </button>
               <button
+                type="button"
                 onClick={() => setAddingLink((v) => !v)}
                 className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
               >
