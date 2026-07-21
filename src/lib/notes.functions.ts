@@ -434,16 +434,24 @@ export const addCustomTask = createServerFn({ method: "POST" })
   });
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return a single JSON object with keys: heading, summary, tasks.
-- heading: one short line (max ~8 words), title case, no trailing punctuation. Prefer the page's own title if it's concise.
-- summary: 2-5 sentences capturing what the page is about and the key takeaways.
-- tasks: array of HIGH-QUALITY actionable to-dos derived from the page.
-  STRICT RULES:
-    * Only include a task if the page contains a clear call-to-action, a step-by-step guide, an event with a date/RSVP, a specific purchase decision, or an explicit checklist the user should follow.
-    * DO NOT invent generic tasks like "Read the article", "Look into this", "Consider it", "Bookmark this". The note itself is the bookmark.
-    * If nothing is clearly actionable, return []. An empty list is strongly preferred over filler.
-    * Maximum 5 tasks.
-Respond ONLY with valid JSON, no code fences.`;
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+
+- heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
+- summary: 2-5 sentences on what the page is about and the key takeaways the reader would want to remember.
+- tasks: array of concrete, actionable to-dos the user would plausibly want to do because they saved this page.
+
+HOW TO EXTRACT TASKS — be smart:
+- A product page → "Buy <product>", "Compare <product> vs <alt>" if alternatives are mentioned.
+- A recipe → "Cook <dish>", plus grocery items as separate tasks if it's a shopping-worthy list.
+- A how-to / tutorial → each major step becomes a task, in order.
+- An event / concert / movie release → "Attend <event> on <date>", "Book tickets for <event>".
+- A job posting → "Apply to <role> at <company> by <deadline>".
+- An article that recommends specific actions → capture each recommendation as its own task.
+- Rewrite tasks so they include the specific item, name, date, or amount from the page. No vague verbs.
+
+Skip "Read this later" / "Bookmark this" — saving the note IS the bookmark. If the page is purely informational with no plausible action, return []. Cap at 8 tasks.
+
+Respond with ONLY the JSON object.`;
 
 async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
