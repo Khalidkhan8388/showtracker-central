@@ -178,45 +178,38 @@ export function BlockEditor({
       const favicon = faviconFor(b.href);
       const host = hostnameOf(b.href);
       rendered.push(
-        <div
-          key={`link-${i}`}
-          className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
-        >
+        <div key={`link-${i}`} className="group relative inline-flex max-w-full items-center gap-1.5 rounded-full bg-yellow-400/20 pl-2 pr-1 py-1 align-middle">
           {favicon ? (
-            <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
+            <img src={favicon} alt="" className="h-3.5 w-3.5 flex-shrink-0 rounded-sm" />
           ) : (
-            <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
+            <div className="h-3.5 w-3.5 flex-shrink-0 rounded-sm bg-yellow-500/30" />
           )}
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-medium text-foreground">
-              {loading ? (
-                <span className="inline-flex items-center gap-1.5 text-muted-foreground">
-                  <Loader2 className="h-3 w-3 animate-spin" />
-                  Fetching title…
-                </span>
-              ) : (
-                b.label
-              )}
-            </div>
-            <a
-              href={b.href}
-              target="_blank"
-              rel="noreferrer"
-              className="block truncate text-xs text-muted-foreground hover:underline"
-            >
-              {host}
-            </a>
-          </div>
+          <a
+            href={b.href}
+            target="_blank"
+            rel="noreferrer"
+            className="min-w-0 truncate text-xs font-medium text-yellow-700 no-underline"
+          >
+            {loading ? (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 className="h-3 w-3 animate-spin" />
+                Fetching…
+              </span>
+            ) : (
+              b.label || host
+            )}
+          </a>
           <button
             type="button"
             onClick={() => onRemoveLink(b.href)}
             aria-label="Remove link"
-            className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+            className="inline-flex h-4 w-4 flex-shrink-0 items-center justify-center rounded-full bg-yellow-700/70 text-white"
           >
-            <X className="h-3.5 w-3.5" strokeWidth={3} />
+            <X className="h-2.5 w-2.5" strokeWidth={3} />
           </button>
         </div>
       );
+
       i += 1;
       continue;
     }
