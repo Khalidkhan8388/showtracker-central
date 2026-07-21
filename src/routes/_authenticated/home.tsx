@@ -715,7 +715,7 @@ const NoteCard = memo(function NoteCard({
           </div>
           {hasImage && (
             <div className="relative z-10 -mx-1 overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
-              <img src={thumbUrl} alt="" className="h-24 w-full object-cover" />
+              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="h-24 w-full object-cover" />
               {imageCount > 1 && (
                 <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                   +{imageCount - 1}
