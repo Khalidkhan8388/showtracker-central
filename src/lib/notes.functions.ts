@@ -523,7 +523,7 @@ async function summarizeWebPage(
   title: string | null,
   text: string,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userMsg = `URL: ${url}\n${title ? `Page title: ${title}\n` : ""}\nPage content:\n${text}`;
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
@@ -558,7 +558,8 @@ async function summarizeWebPage(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading, summary, tasks, tags };
 }
 
 export const saveWebLink = createServerFn({ method: "POST" })
