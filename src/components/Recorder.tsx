@@ -34,40 +34,73 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textOpen, setTextOpen] = useState(false);
   const [textHeading, setTextHeading] = useState("");
   const [textBody, setTextBody] = useState("");
-  const [textImages, setTextImages] = useState<PendingImage[]>([]);
-  const [textLink, setTextLink] = useState("");
-  const textImagesRef = useRef<PendingImage[]>([]);
+  const [uploadingMd, setUploadingMd] = useState(false);
   const textFileRef = useRef<HTMLInputElement | null>(null);
+  const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
 
-  function updateTextImages(next: PendingImage[]) {
-    textImagesRef.current = next;
-    setTextImages(next);
+  function insertAtCursor(snippet: string) {
+    const el = textAreaRef.current;
+    setTextBody((prev) => {
+      if (!el) return prev + snippet;
+      const start = el.selectionStart ?? prev.length;
+      const end = el.selectionEnd ?? prev.length;
+      const next = prev.slice(0, start) + snippet + prev.slice(end);
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + snippet.length;
+        el.setSelectionRange(pos, pos);
+      });
+      return next;
+    });
   }
 
-  function onPickTextImages(e: React.ChangeEvent<HTMLInputElement>) {
+  async function onPickMarkdownImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
     if (files.length === 0) return;
-    const next = files.map((f) => ({ file: f, previewUrl: URL.createObjectURL(f) }));
-    updateTextImages([...textImagesRef.current, ...next]);
+    setUploadingMd(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const paths = await uploadImages(uid, files);
+      const urls: string[] = [];
+      for (const p of paths) {
+        const { data, error } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(p, 60 * 60 * 24 * 365 * 10);
+        if (error || !data) throw error ?? new Error("Could not sign URL");
+        urls.push(data.signedUrl);
+      }
+      const snippet = urls.map((u) => `\n![](${u})\n`).join("");
+      insertAtCursor(snippet);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setUploadingMd(false);
+    }
   }
 
-  function removeTextImage(idx: number) {
-    const copy = [...textImagesRef.current];
-    const [rm] = copy.splice(idx, 1);
-    if (rm) URL.revokeObjectURL(rm.previewUrl);
-    updateTextImages(copy);
+  function promptInsertLink() {
+    const url = window.prompt("Link URL");
+    if (!url) return;
+    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    try {
+      new URL(normalized);
+    } catch {
+      toast.error("Link doesn't look valid");
+      return;
+    }
+    const label = window.prompt("Link text (optional)", "") || normalized;
+    insertAtCursor(`[${label}](${normalized})`);
   }
 
   function resetTextComposer() {
-    textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-    updateTextImages([]);
     setTextHeading("");
     setTextBody("");
-    setTextLink("");
   }
 
   async function submitText() {
@@ -76,35 +109,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       toast.error("Please add a title");
       return;
     }
-    const rawLink = textLink.trim();
-    let sourceUrl: string | null = null;
-    if (rawLink) {
-      const normalized = /^https?:\/\//i.test(rawLink) ? rawLink : `https://${rawLink}`;
-      try {
-        new URL(normalized);
-        sourceUrl = normalized;
-      } catch {
-        toast.error("Link doesn't look valid");
-        return;
-      }
-    }
-    const attachedImages = textImagesRef.current;
     setTextOpen(false);
     setBusy(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      let imagePaths: string[] = [];
-      if (attachedImages.length > 0) {
-        imagePaths = await uploadImages(uid, attachedImages.map((p) => p.file));
-      }
       await saveTextFn({
         data: {
           heading,
           body: textBody.trim(),
-          imagePaths,
-          sourceUrl,
+          imagePaths: [],
+          sourceUrl: null,
         },
       });
       resetTextComposer();
@@ -159,7 +172,6 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       pendingRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-      textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     },
     [],
   );
@@ -427,55 +439,14 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
             />
             <textarea
-              placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"}
+              ref={textAreaRef}
+              placeholder={"Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task\n\nUse the buttons below to insert images or links."}
               value={textBody}
               onChange={(e) => setTextBody(e.target.value)}
               maxLength={20000}
-              rows={6}
-              className="min-h-[140px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+              rows={8}
+              className="min-h-[200px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
             />
-
-            {textImages.length > 0 && (
-              <div className="flex gap-2 overflow-x-auto pb-1">
-                {textImages.map((p, i) => (
-                  <div key={i} className="relative shrink-0">
-                    <img
-                      src={p.previewUrl}
-                      alt=""
-                      className="h-16 w-16 rounded-xl object-cover ring-1 ring-border"
-                    />
-                    <button
-                      onClick={() => removeTextImage(i)}
-                      className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-foreground text-background shadow"
-                      aria-label="Remove image"
-                    >
-                      <X className="h-3 w-3" strokeWidth={3} />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="flex items-center gap-2 rounded-2xl border border-border bg-muted/30 px-3 py-2">
-              <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <input
-                type="url"
-                inputMode="url"
-                placeholder="Attach a link (optional)"
-                value={textLink}
-                onChange={(e) => setTextLink(e.target.value)}
-                className="flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-              />
-              {textLink && (
-                <button
-                  onClick={() => setTextLink("")}
-                  aria-label="Clear link"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
 
             <input
               ref={textFileRef}
@@ -483,17 +454,27 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               accept="image/*"
               multiple
               className="hidden"
-              onChange={onPickTextImages}
+              onChange={onPickMarkdownImages}
             />
 
             <div className="flex items-center justify-between gap-2">
-              <button
-                onClick={() => textFileRef.current?.click()}
-                className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
-              >
-                <ImagePlus className="h-4 w-4" />
-                Add image
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => textFileRef.current?.click()}
+                  disabled={uploadingMd}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
+                >
+                  {uploadingMd ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
+                  Image
+                </button>
+                <button
+                  onClick={promptInsertLink}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Link
+                </button>
+              </div>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => {
