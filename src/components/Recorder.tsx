@@ -110,21 +110,36 @@ export function Recorder() {
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
 
+  const mmss = `${mm}:${ss}`;
+  const label = busy ? "Uploading…" : recording ? `Recording ${mmss}` : "Tap to record";
+
   return (
-    <div className="flex flex-col items-center gap-3">
+    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-5">
       <button
         onClick={recording ? stop : start}
         disabled={busy}
-        className={`flex h-20 w-20 items-center justify-center rounded-full shadow-lg transition-all ${
-          recording ? "bg-destructive text-destructive-foreground animate-pulse" : "bg-foreground text-background hover:scale-105"
-        } disabled:opacity-50`}
         aria-label={recording ? "Stop recording" : "Start recording"}
+        className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-6 py-4 text-sm font-semibold shadow-xl ring-1 ring-black/5 backdrop-blur transition-all disabled:opacity-60 ${
+          recording
+            ? "bg-destructive text-destructive-foreground animate-pulse"
+            : "bg-foreground text-background hover:scale-[1.02] active:scale-100"
+        }`}
       >
-        {busy ? <Loader2 className="h-7 w-7 animate-spin" /> : recording ? <Square className="h-7 w-7" fill="currentColor" /> : <Mic className="h-8 w-8" />}
+        <span
+          className={`flex h-9 w-9 items-center justify-center rounded-full ${
+            recording ? "bg-destructive-foreground/15" : "bg-background/10"
+          }`}
+        >
+          {busy ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : recording ? (
+            <Square className="h-4 w-4" fill="currentColor" />
+          ) : (
+            <Mic className="h-5 w-5" />
+          )}
+        </span>
+        <span className="tabular-nums">{label}</span>
       </button>
-      <div className="text-sm font-medium tabular-nums text-muted-foreground">
-        {recording ? `${mm}:${ss}` : busy ? "Uploading…" : "Tap to record"}
-      </div>
     </div>
   );
 }
