@@ -74,48 +74,87 @@ function Home() {
     }
   }
 
-  async function load() {
+  // Sign only images we haven't signed yet — cache is keyed by storage path so
+  // task/pin updates don't churn signed URLs.
+  const signedCacheRef = useRef<Map<string, string>>(new Map());
+  const signInFlightRef = useRef<Set<string>>(new Set());
+  const signThumbsFor = useCallback((rows: Note[]) => {
+    const toSign: Array<{ id: string; path: string }> = [];
+    for (const n of rows) {
+      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
+      if (!p) continue;
+      const cached = signedCacheRef.current.get(p);
+      if (cached) {
+        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
+        continue;
+      }
+      if (signInFlightRef.current.has(p)) continue;
+      signInFlightRef.current.add(p);
+      toSign.push({ id: n.id, path: p });
+    }
+    if (toSign.length === 0) return;
+    Promise.all(
+      toSign.map(async ({ id, path }) => {
+        const { data: s } = await supabase.storage
+          .from("voice-notes")
+          .createSignedUrl(path, 3600);
+        return { id, path, url: s?.signedUrl ?? "" };
+      }),
+    ).then((pairs) => {
+      setThumbs((cur) => {
+        const next = { ...cur };
+        for (const { id, path, url } of pairs) {
+          signInFlightRef.current.delete(path);
+          if (url) {
+            signedCacheRef.current.set(path, url);
+            next[id] = url;
+          }
+        }
+        return next;
+      });
+    });
+  }, []);
+
+  const load = useCallback(async () => {
     const { data } = await supabase
       .from("voice_notes")
       .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url,transcript")
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as Note[];
     setNotes(rows);
-    // Sign first image per note that has one, skip already-signed
-    setThumbs((prev) => {
-      const needed = rows.filter(
-        (n) => Array.isArray(n.image_paths) && n.image_paths.length > 0 && !prev[n.id],
-      );
-      if (needed.length === 0) return prev;
-      Promise.all(
-        needed.map(async (n) => {
-          const p = n.image_paths![0];
-          const { data: s } = await supabase.storage
-            .from("voice-notes")
-            .createSignedUrl(p, 3600);
-          return [n.id, s?.signedUrl ?? ""] as const;
-        }),
-      ).then((pairs) => {
-        setThumbs((cur) => {
-          const next = { ...cur };
-          for (const [id, url] of pairs) if (url) next[id] = url;
-          return next;
-        });
-      });
-      return prev;
-    });
-  }
+    signThumbsFor(rows);
+  }, [signThumbsFor]);
 
   useEffect(() => {
     load();
     const channel = supabase
       .channel("voice_notes_home")
-      .on("postgres_changes", { event: "*", schema: "public", table: "voice_notes" }, () => load())
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "voice_notes" },
+        (payload) => {
+          const event = payload.eventType;
+          if (event === "INSERT") {
+            const row = payload.new as Note;
+            setNotes((prev) => (prev ? [row, ...prev.filter((n) => n.id !== row.id)] : [row]));
+            signThumbsFor([row]);
+          } else if (event === "UPDATE") {
+            const row = payload.new as Note;
+            setNotes((prev) => (prev ? prev.map((n) => (n.id === row.id ? row : n)) : prev));
+            signThumbsFor([row]);
+          } else if (event === "DELETE") {
+            const oldRow = payload.old as { id?: string };
+            if (oldRow?.id) {
+              setNotes((prev) => (prev ? prev.filter((n) => n.id !== oldRow.id) : prev));
+            }
+          }
+        },
+      )
       .subscribe();
     return () => {
       supabase.removeChannel(channel);
     };
-  }, []);
+  }, [load, signThumbsFor]);
 
   async function signOut() {
     await supabase.auth.signOut();
