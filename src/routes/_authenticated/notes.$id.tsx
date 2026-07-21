@@ -405,6 +405,8 @@ function NoteDetail() {
                   <img
                     src={url}
                     alt=""
+                    loading={i === 0 ? "eager" : "lazy"}
+                    decoding="async"
                     className="w-full rounded-2xl object-cover shadow-sm"
                   />
                 </a>
