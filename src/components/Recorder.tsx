@@ -670,3 +670,133 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     </div>
   );
 }
+
+const IMG_RE = /!\[[^\]]*\]\(([^)]+)\)/g;
+
+type Block =
+  | { kind: "text"; value: string }
+  | { kind: "image"; src: string; raw: string };
+
+function parseBlocks(md: string): Block[] {
+  const blocks: Block[] = [];
+  let last = 0;
+  const re = new RegExp(IMG_RE.source, "g");
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(md)) !== null) {
+    const before = md.slice(last, m.index);
+    blocks.push({ kind: "text", value: before });
+    blocks.push({ kind: "image", src: m[1], raw: m[0] });
+    last = m.index + m[0].length;
+  }
+  blocks.push({ kind: "text", value: md.slice(last) });
+  return blocks;
+}
+
+function serializeBlocks(blocks: Block[]): string {
+  return blocks
+    .map((b) => (b.kind === "text" ? b.value : b.raw))
+    .join("");
+}
+
+function BlockEditor({
+  value,
+  onChange,
+  textAreaRef,
+  fullscreen,
+  onRemoveImage,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  textAreaRef: React.MutableRefObject<HTMLTextAreaElement | null>;
+  fullscreen: boolean;
+  onRemoveImage: (src: string) => void;
+}) {
+  const blocks = parseBlocks(value);
+  // Ensure trailing text block exists so cursor lands there
+  const hasImages = blocks.some((b) => b.kind === "image");
+
+  function updateTextBlock(idx: number, next: string) {
+    const copy = blocks.slice();
+    copy[idx] = { kind: "text", value: next };
+    onChange(serializeBlocks(copy));
+  }
+
+  // Find index of the last text block for the ref (used by insertAtCursor)
+  const lastTextIdx = (() => {
+    for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].kind === "text") return i;
+    return -1;
+  })();
+
+  return (
+    <div
+      className={`w-full flex-1 space-y-2 overflow-y-auto rounded-2xl border border-border bg-muted/30 p-3 ${
+        fullscreen ? "min-h-0" : "min-h-[200px]"
+      }`}
+    >
+      {blocks.map((b, i) =>
+        b.kind === "image" ? (
+          <div key={`img-${i}`} className="group relative">
+            <img
+              src={b.src}
+              alt=""
+              className="max-h-96 w-auto rounded-xl"
+            />
+            <button
+              type="button"
+              onClick={() => onRemoveImage(b.src)}
+              aria-label="Remove image"
+              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+            >
+              <X className="h-3.5 w-3.5" strokeWidth={3} />
+            </button>
+          </div>
+        ) : (
+          <AutoTextarea
+            key={`txt-${i}`}
+            value={b.value}
+            onChange={(v) => updateTextBlock(i, v)}
+            placeholder={
+              !hasImages && i === 0
+                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
+                : ""
+            }
+            innerRef={i === lastTextIdx ? textAreaRef : undefined}
+          />
+        ),
+      )}
+    </div>
+  );
+}
+
+function AutoTextarea({
+  value,
+  onChange,
+  placeholder,
+  innerRef,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+  innerRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
+  }, [value]);
+  return (
+    <textarea
+      ref={(el) => {
+        ref.current = el;
+        if (innerRef) innerRef.current = el;
+      }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={1}
+      className="w-full resize-none bg-transparent font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none"
+    />
+  );
+}
