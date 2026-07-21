@@ -215,7 +215,16 @@ function Home() {
         ) : (
           <>
             {(() => {
-              const [latest, ...rest] = notes;
+              const displayNotes = notes.filter((n) => n.heading !== "__custom__");
+              if (displayNotes.length === 0 && notes.every((n) => (n.tasks ?? []).length === 0)) {
+                return (
+                  <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+                    <p className="text-sm text-muted-foreground">No notes yet.</p>
+                    <p className="mt-1 text-xs text-muted-foreground">Tap the mic and start talking.</p>
+                  </div>
+                );
+              }
+              const [latest, ...rest] = displayNotes;
               const pinnedRest = rest.filter((n) => n.pinned);
               const unpinnedRest = rest.filter((n) => !n.pinned);
               const stripIds = new Set<string>();
