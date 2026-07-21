@@ -119,40 +119,34 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const disabled = busy || processing;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-8 z-40 flex justify-center px-5">
-      <div className="pointer-events-auto relative w-[85%] max-w-[340px] overflow-hidden rounded-full border border-white/50 bg-white/40 p-1 shadow-[0_20px_40px_-15px_rgba(79,70,229,0.35)] backdrop-blur-2xl backdrop-saturate-150">
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-violet-500/10 opacity-70" />
-        <button
-          onClick={recording ? stop : start}
-          disabled={disabled}
-          aria-label={recording ? "Stop recording" : "Start recording"}
-          className="relative flex w-full items-center justify-between gap-3 pl-6 pr-1 py-1 transition-transform active:scale-[0.98] disabled:cursor-default"
+    <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
+      <button
+        onClick={recording ? stop : start}
+        disabled={disabled}
+        aria-label={recording ? "Stop recording" : "Start recording"}
+        className={`pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all disabled:cursor-default ${
+          recording
+            ? "bg-destructive/80 text-destructive-foreground ring-destructive/20 animate-pulse"
+            : processing
+            ? "bg-foreground/70 text-background ring-black/10"
+            : "bg-foreground/80 text-background ring-black/10 hover:scale-[1.03] active:scale-100"
+        }`}
+      >
+        <span
+          className={`flex h-6 w-6 items-center justify-center rounded-full ${
+            recording ? "bg-destructive-foreground/20" : "bg-background/15"
+          }`}
         >
-          <div className="flex items-center gap-3">
-            <span
-              className={`h-2 w-2 rounded-full ${
-                recording ? "animate-pulse bg-rose-500" : showSpinner ? "bg-indigo-500" : "bg-rose-500 animate-pulse"
-              }`}
-            />
-            <span className="text-sm font-semibold tracking-tight text-slate-800 tabular-nums">
-              {label}
-            </span>
-          </div>
-          <span
-            className={`flex h-10 w-10 items-center justify-center rounded-full text-white shadow-lg transition-colors ${
-              recording ? "bg-rose-500" : "bg-slate-900"
-            }`}
-          >
-            {showSpinner ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : recording ? (
-              <Square className="h-3.5 w-3.5" fill="currentColor" />
-            ) : (
-              <Mic className="h-4 w-4" />
-            )}
-          </span>
-        </button>
-      </div>
+          {showSpinner ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : recording ? (
+            <Square className="h-3 w-3" fill="currentColor" />
+          ) : (
+            <Mic className="h-3.5 w-3.5" />
+          )}
+        </span>
+        <span className="tabular-nums">{label}</span>
+      </button>
     </div>
   );
 }
