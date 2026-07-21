@@ -492,9 +492,7 @@ function NoteCard({
     "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
     (selected
       ? "border-foreground bg-muted shadow-sm"
-      : isLink
-        ? "border-dashed border-foreground/70 bg-card hover:bg-muted/40"
-        : "border-border bg-card hover:bg-muted/50");
+      : "border-border bg-card hover:bg-muted/50");
   const sizing =
     variant === "wide"
       ? "p-4"
