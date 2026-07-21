@@ -98,31 +98,54 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  async function promptInsertLink() {
-    const url = window.prompt("Paste link URL");
-    if (!url) return;
-    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+  async function insertLinkFromComposer() {
+    const raw = composerLinkUrl.trim();
+    if (!raw) return;
+    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
     try {
       new URL(normalized);
     } catch {
       toast.error("Link doesn't look valid");
       return;
     }
-    // Insert with a placeholder label immediately so the user sees the pill,
-    // then swap in the AI-generated title once it arrives.
+    setComposerLinkOpen(false);
+    setComposerLinkUrl("");
     const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
-    const initialLabel = placeholderId;
-    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
+    insertAtCursor(`\n[${placeholderId}](${normalized})\n`);
     try {
       const { label } = await linkLabelFn({ data: { url: normalized } });
       const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${clean}](${normalized})`));
     } catch {
       const hostname = (() => {
         try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
       })();
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${hostname}](${normalized})`));
     }
+  }
+
+  function insertHeading(level: 1 | 2 | 3) {
+    const prefix = "#".repeat(level) + " ";
+    const el = textAreaRef.current;
+    setTextBody((prev) => {
+      if (!el || el.value !== prev) {
+        const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+        return prev + sep + prefix;
+      }
+      const pos = el.selectionStart ?? prev.length;
+      // find start of current line
+      const lineStart = prev.lastIndexOf("\n", pos - 1) + 1;
+      // strip existing heading prefix
+      const rest = prev.slice(lineStart).replace(/^#{1,6}\s+/, "");
+      const next = prev.slice(0, lineStart) + prefix + rest;
+      const delta = prefix.length - (prev.slice(lineStart).length - rest.length);
+      requestAnimationFrame(() => {
+        el.focus();
+        const p = pos + delta;
+        el.setSelectionRange(p, p);
+      });
+      return next;
+    });
   }
 
   function removeImageFromBody(src: string) {
