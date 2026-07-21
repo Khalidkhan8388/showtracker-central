@@ -827,10 +827,8 @@ function BlockEditor({
     onChange(serializeBlocks(copy));
   }
 
-  const lastTextIdx = (() => {
-    for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].kind === "text") return i;
-    return -1;
-  })();
+
+
 
   return (
     <div
