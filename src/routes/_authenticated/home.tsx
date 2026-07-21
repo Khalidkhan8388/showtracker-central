@@ -769,9 +769,9 @@ const NoteCard = memo(function NoteCard({
       )}
     </div>
   );
-}
+});
 
-function TaskRow({
+const TaskRow = memo(function TaskRow({
   selectMode,
   selected,
   done,
