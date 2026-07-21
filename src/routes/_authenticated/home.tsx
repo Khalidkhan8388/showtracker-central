@@ -435,9 +435,14 @@ function NoteCard({
           )}
         </div>
       )}
+      {note.pinned && !selectMode && (
+        <div className="absolute right-2 top-2 z-10 text-muted-foreground">
+          <Pin className="h-3.5 w-3.5 fill-foreground text-foreground" />
+        </div>
+      )}
       {variant === "wide" ? (
         <>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-6">
             <h3 className="truncate text-sm font-semibold">
               {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
             </h3>
@@ -459,7 +464,7 @@ function NoteCard({
         </>
       ) : (
         <>
-          <div className="flex items-start gap-1.5">
+          <div className="flex items-start gap-1.5 pr-5">
             <h3 className="text-xs font-semibold leading-tight break-words">
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
