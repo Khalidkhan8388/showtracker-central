@@ -14,7 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      voice_notes: {
+        Row: {
+          audio_path: string
+          created_at: string
+          duration_seconds: number | null
+          error: string | null
+          heading: string | null
+          id: string
+          status: Database["public"]["Enums"]["note_status"]
+          summary: string | null
+          tasks: Json
+          transcript: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_path: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          heading?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["note_status"]
+          summary?: string | null
+          tasks?: Json
+          transcript?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_path?: string
+          created_at?: string
+          duration_seconds?: number | null
+          error?: string | null
+          heading?: string | null
+          id?: string
+          status?: Database["public"]["Enums"]["note_status"]
+          summary?: string | null
+          tasks?: Json
+          transcript?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -23,7 +67,13 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      note_status:
+        | "recording"
+        | "uploaded"
+        | "transcribing"
+        | "processing"
+        | "ready"
+        | "failed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +200,15 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      note_status: [
+        "recording",
+        "uploaded",
+        "transcribing",
+        "processing",
+        "ready",
+        "failed",
+      ],
+    },
   },
 } as const
