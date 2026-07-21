@@ -9,8 +9,29 @@ export function Markdown({ children, className = "" }: { children: string; class
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
-          a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
+          a: ({ node, children, ...props }) => {
+            const href = (props as any).href as string | undefined;
+            const isExternal = !!href && /^https?:\/\//i.test(href);
+            if (isExternal) {
+              let host = href!;
+              try { host = new URL(href!).hostname.replace(/^www\./, ""); } catch {}
+              const label = typeof children === "string" || (Array.isArray(children) && children.every(c => typeof c === "string")) ? children : host;
+              return (
+                <a
+                  {...props}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="inline-flex items-center gap-1 rounded-full bg-yellow-400/20 px-2.5 py-0.5 text-xs font-medium text-yellow-700 no-underline hover:bg-yellow-400/30"
+                >
+                  <img src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`} alt="" className="h-3 w-3 rounded-sm !my-0" />
+                  <span>{label}</span>
+                </a>
+              );
+            }
+            return <a {...props} target="_blank" rel="noreferrer">{children}</a>;
+          },
         }}
+
       >
         {children}
       </ReactMarkdown>
