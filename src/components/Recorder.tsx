@@ -96,8 +96,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  function promptInsertLink() {
-    const url = window.prompt("Link URL");
+  async function promptInsertLink() {
+    const url = window.prompt("Paste link URL");
     if (!url) return;
     const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
     try {
@@ -106,8 +106,21 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       toast.error("Link doesn't look valid");
       return;
     }
-    const label = window.prompt("Link text (optional)", "") || normalized;
-    insertAtCursor(`[${label}](${normalized})`);
+    // Insert with a placeholder label immediately so the user sees the pill,
+    // then swap in the AI-generated title once it arrives.
+    const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
+    const initialLabel = placeholderId;
+    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
+    try {
+      const { label } = await linkLabelFn({ data: { url: normalized } });
+      const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
+    } catch {
+      const hostname = (() => {
+        try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
+      })();
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
+    }
   }
 
   function removeImageFromBody(src: string) {
@@ -118,6 +131,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       return prev.replace(re, "");
     });
   }
+
+  function removeLinkFromBody(href: string) {
+    setTextBody((prev) => {
+      const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?(?<!!)\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+
 
   function resetTextComposer() {
     setTextHeading("");
