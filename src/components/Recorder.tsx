@@ -28,7 +28,28 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const startRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const processFn = useServerFn(processVoiceNote);
+  const saveLinkFn = useServerFn(saveWebLink);
+
+  async function submitLink() {
+    const url = linkUrl.trim();
+    if (!url) return;
+    setLinkOpen(false);
+    setLinkUrl("");
+    setBusy(true);
+    try {
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      await saveLinkFn({ data: { url: normalized } });
+      onNoteReady?.();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not save link");
+    } finally {
+      setBusy(false);
+    }
+  }
+
 
   useEffect(
     () => () => {
