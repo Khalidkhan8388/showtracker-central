@@ -1,12 +1,11 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask } from "@/lib/notes.functions";
-
+import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -28,9 +27,19 @@ type Note = {
   created_at: string;
 };
 
+type TaskKey = string; // `${noteId}::${taskId}`
+
 function Home() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
+  const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
   const toggleFn = useServerFn(toggleTask);
+  const delNotesFn = useServerFn(deleteNotes);
+  const delTasksFn = useServerFn(deleteTasks);
+  const navigate = useNavigate();
+
+  const noteSelectMode = selectedNotes.size > 0;
+  const taskSelectMode = selectedTasks.size > 0;
 
   async function onToggle(noteId: string, taskId: string) {
     setNotes((prev) =>
@@ -48,8 +57,6 @@ function Home() {
       load();
     }
   }
-
-
 
   async function load() {
     const { data } = await supabase
@@ -74,23 +81,97 @@ function Home() {
     await supabase.auth.signOut();
   }
 
+  function toggleNoteSel(id: string) {
+    setSelectedNotes((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+  function toggleTaskSel(key: TaskKey) {
+    setSelectedTasks((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  async function confirmDeleteNotes() {
+    const ids = Array.from(selectedNotes);
+    if (ids.length === 0) return;
+    setNotes((prev) => (prev ? prev.filter((n) => !selectedNotes.has(n.id)) : prev));
+    setSelectedNotes(new Set());
+    try {
+      await delNotesFn({ data: { noteIds: ids } });
+    } catch {
+      load();
+    }
+  }
+
+  async function confirmDeleteTasks() {
+    const items = Array.from(selectedTasks).map((k) => {
+      const [noteId, taskId] = k.split("::");
+      return { noteId, taskId };
+    });
+    if (items.length === 0) return;
+    const keys = new Set(selectedTasks);
+    setNotes((prev) =>
+      prev
+        ? prev.map((n) => ({
+            ...n,
+            tasks: (n.tasks ?? []).filter((t) => !keys.has(`${n.id}::${t.id}`)),
+          }))
+        : prev,
+    );
+    setSelectedTasks(new Set());
+    try {
+      await delTasksFn({ data: { tasks: items } });
+    } catch {
+      load();
+    }
+  }
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="flex items-center justify-between px-5 pt-8 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-            <Mic className="h-4 w-4" />
+      {(noteSelectMode || taskSelectMode) ? (
+        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
+          <button
+            onClick={() => {
+              setSelectedNotes(new Set());
+              setSelectedTasks(new Set());
+            }}
+            className="flex items-center gap-2 text-sm font-medium"
+          >
+            <X className="h-4 w-4" />
+            <span>{noteSelectMode ? selectedNotes.size : selectedTasks.size} selected</span>
+          </button>
+          <button
+            onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
+            className="flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            Delete
+          </button>
+        </header>
+      ) : (
+        <header className="flex items-center justify-between px-5 pt-8 pb-2">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
+              <Mic className="h-4 w-4" />
+            </div>
+            <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
           </div>
-          <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
-        </div>
-        <button
-          onClick={signOut}
-          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
-      </header>
+          <button
+            onClick={signOut}
+            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+          </button>
+        </header>
+      )}
 
       <section className="flex-1 px-5 pb-32 pt-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -112,70 +193,34 @@ function Home() {
               const [latest, ...rest] = notes;
               return (
                 <div className="space-y-4">
-                  <Link
-                    to="/notes/$id"
-                    params={{ id: latest.id }}
-                    className="block rounded-2xl border border-border bg-card p-4 transition-colors hover:bg-muted/50"
-                  >
-                    <div className="flex items-center gap-2">
-                      <StatusIcon status={latest.status} />
-                      <h3 className="truncate text-sm font-semibold">
-                        {latest.heading ?? (latest.status === "failed" ? "Failed to process" : "Processing…")}
-                      </h3>
-                    </div>
-                    {latest.summary && (
-                      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{latest.summary}</p>
-                    )}
-                    <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
-                      <span>{formatDistanceToNow(new Date(latest.created_at), { addSuffix: true })}</span>
-                      {latest.duration_seconds != null && <span>{formatDur(latest.duration_seconds)}</span>}
-                      {latest.tasks && latest.tasks.length > 0 && (
-                        <span className="flex items-center gap-1">
-                          <CheckCircle2 className="h-3 w-3" />
-                          {latest.tasks.filter((t) => t.done).length}/{latest.tasks.length}
-                        </span>
-                      )}
-                    </div>
-                  </Link>
+                  <NoteCard
+                    note={latest}
+                    variant="wide"
+                    selected={selectedNotes.has(latest.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
+                    onLongPress={() => toggleNoteSel(latest.id)}
+                    onToggleSel={() => toggleNoteSel(latest.id)}
+                  />
 
                   {rest.length > 0 && (
                     <div className="-mx-5 overflow-x-auto pb-2">
                       <div className="flex gap-3 px-5">
                         {rest.map((n) => (
-                          <Link
+                          <NoteCard
                             key={n.id}
-                            to="/notes/$id"
-                            params={{ id: n.id }}
-                            className="flex aspect-square w-40 shrink-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
-                          >
-                            <div className="flex items-start gap-1.5">
-                              <StatusIcon status={n.status} />
-                              <h3 className="text-xs font-semibold leading-tight break-words">
-                                {n.heading ?? (n.status === "failed" ? "Failed" : "Processing…")}
-                              </h3>
-                            </div>
-                            <div className="mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
-                              {n.tasks && n.tasks.length > 0 && (
-                                <span className="flex items-center gap-1">
-                                  <CheckCircle2 className="h-3 w-3" />
-                                  {n.tasks.filter((t) => t.done).length}/{n.tasks.length} tasks
-                                </span>
-                              )}
-                              <div className="flex items-center gap-2">
-                                <span>
-                                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                                </span>
-                                {n.duration_seconds != null && (
-                                  <span className="tabular-nums">{formatDur(n.duration_seconds)}</span>
-                                )}
-                              </div>
-                            </div>
-                          </Link>
+                            note={n}
+                            variant="square"
+                            selected={selectedNotes.has(n.id)}
+                            selectMode={noteSelectMode}
+                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                            onLongPress={() => toggleNoteSel(n.id)}
+                            onToggleSel={() => toggleNoteSel(n.id)}
+                          />
                         ))}
                       </div>
                     </div>
                   )}
-
                 </div>
               );
             })()}
@@ -197,52 +242,252 @@ function Home() {
                     </span>
                   </h2>
                   <ul className="space-y-1.5">
-                    {ordered.map((t) => (
-                      <li key={`${t.noteId}-${t.id}`}>
-                        <div className="flex items-start gap-2 rounded-xl border border-border bg-card p-3">
-                          <button
-                            onClick={() => onToggle(t.noteId, t.id)}
-                            aria-label={t.done ? "Mark as not done" : "Mark as done"}
-                            className="mt-0.5 shrink-0"
-                          >
-                            {t.done ? (
-                              <CheckCircle2 className="h-4 w-4 text-foreground" />
-                            ) : (
-                              <Circle className="h-4 w-4 text-muted-foreground" />
-                            )}
-                          </button>
-                          <div className="min-w-0 flex-1">
-                            <p
-                              className={`text-sm leading-snug ${
-                                t.done ? "text-muted-foreground line-through" : "text-foreground"
-                              }`}
-                            >
-                              {t.text}
-                            </p>
-                            {t.noteHeading && (
-                              <Link
-                                to="/notes/$id"
-                                params={{ id: t.noteId }}
-                                className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
-                              >
-                                {t.noteHeading}
-                              </Link>
-                            )}
-                          </div>
-                        </div>
-                      </li>
-                    ))}
+                    {ordered.map((t) => {
+                      const key: TaskKey = `${t.noteId}::${t.id}`;
+                      const isSel = selectedTasks.has(key);
+                      return (
+                        <li key={key}>
+                          <TaskRow
+                            selectMode={taskSelectMode}
+                            selected={isSel}
+                            done={t.done}
+                            text={t.text}
+                            noteHeading={t.noteHeading}
+                            noteId={t.noteId}
+                            onToggleDone={() => onToggle(t.noteId, t.id)}
+                            onLongPress={() => toggleTaskSel(key)}
+                            onSelectTap={() => toggleTaskSel(key)}
+                          />
+                        </li>
+                      );
+                    })}
                   </ul>
                 </div>
               );
             })()}
           </>
         )}
-
       </section>
 
-
       <Recorder onNoteReady={load} />
+    </div>
+  );
+}
+
+function useLongPress(onLongPress: () => void, ms = 450) {
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const triggered = useRef(false);
+  const start = () => {
+    triggered.current = false;
+    timer.current = setTimeout(() => {
+      triggered.current = true;
+      onLongPress();
+    }, ms);
+  };
+  const clear = () => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = null;
+  };
+  return {
+    handlers: {
+      onPointerDown: start,
+      onPointerUp: clear,
+      onPointerLeave: clear,
+      onPointerCancel: clear,
+      onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    },
+    wasLongPress: () => triggered.current,
+  };
+}
+
+function NoteCard({
+  note,
+  variant,
+  selected,
+  selectMode,
+  onOpen,
+  onLongPress,
+  onToggleSel,
+}: {
+  note: Note;
+  variant: "wide" | "square";
+  selected: boolean;
+  selectMode: boolean;
+  onOpen: () => void;
+  onLongPress: () => void;
+  onToggleSel: () => void;
+}) {
+  const lp = useLongPress(onLongPress);
+  const handleClick = (e: React.MouseEvent) => {
+    if (lp.wasLongPress()) {
+      e.preventDefault();
+      return;
+    }
+    if (selectMode) {
+      e.preventDefault();
+      onToggleSel();
+      return;
+    }
+    onOpen();
+  };
+
+  const base =
+    "relative block rounded-2xl border bg-card p-3 transition-colors " +
+    (selected ? "border-foreground ring-2 ring-foreground/20" : "border-border hover:bg-muted/50");
+  const sizing = variant === "wide" ? "p-4" : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={handleClick}
+      {...lp.handlers}
+      className={`${base} ${sizing} cursor-pointer select-none`}
+    >
+      {selectMode && (
+        <div className="absolute right-2 top-2 z-10">
+          {selected ? (
+            <CheckCircle2 className="h-5 w-5 text-foreground" />
+          ) : (
+            <Circle className="h-5 w-5 text-muted-foreground" />
+          )}
+        </div>
+      )}
+      {variant === "wide" ? (
+        <>
+          <div className="flex items-center gap-2">
+            <StatusIcon status={note.status} />
+            <h3 className="truncate text-sm font-semibold">
+              {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
+            </h3>
+          </div>
+          {note.summary && (
+            <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
+          )}
+          <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+            {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
+            {note.tasks && note.tasks.length > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+              </span>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="flex items-start gap-1.5">
+            <StatusIcon status={note.status} />
+            <h3 className="text-xs font-semibold leading-tight break-words">
+              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+            </h3>
+          </div>
+          <div className="mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
+            {note.tasks && note.tasks.length > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
+              </span>
+            )}
+            <div className="flex items-center gap-2">
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.duration_seconds != null && (
+                <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
+              )}
+            </div>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function TaskRow({
+  selectMode,
+  selected,
+  done,
+  text,
+  noteHeading,
+  noteId,
+  onToggleDone,
+  onLongPress,
+  onSelectTap,
+}: {
+  selectMode: boolean;
+  selected: boolean;
+  done: boolean;
+  text: string;
+  noteHeading: string | null;
+  noteId: string;
+  onToggleDone: () => void;
+  onLongPress: () => void;
+  onSelectTap: () => void;
+}) {
+  const lp = useLongPress(onLongPress);
+  return (
+    <div
+      {...lp.handlers}
+      onClick={(e) => {
+        if (lp.wasLongPress()) {
+          e.preventDefault();
+          return;
+        }
+        if (selectMode) onSelectTap();
+      }}
+      className={`flex items-start gap-2 rounded-xl border bg-card p-3 select-none ${
+        selected ? "border-foreground ring-2 ring-foreground/20" : "border-border"
+      }`}
+    >
+      {selectMode ? (
+        <div className="mt-0.5 shrink-0">
+          {selected ? (
+            <CheckCircle2 className="h-4 w-4 text-foreground" />
+          ) : (
+            <Circle className="h-4 w-4 text-muted-foreground" />
+          )}
+        </div>
+      ) : (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onToggleDone();
+          }}
+          aria-label={done ? "Mark as not done" : "Mark as done"}
+          className="mt-0.5 shrink-0"
+        >
+          {done ? (
+            <CheckCircle2 className="h-4 w-4 text-foreground" />
+          ) : (
+            <Circle className="h-4 w-4 text-muted-foreground" />
+          )}
+        </button>
+      )}
+      <div className="min-w-0 flex-1">
+        <p
+          className={`text-sm leading-snug ${
+            done ? "text-muted-foreground line-through" : "text-foreground"
+          }`}
+        >
+          {text}
+        </p>
+        {noteHeading && (
+          selectMode ? (
+            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+              {noteHeading}
+            </span>
+          ) : (
+            <Link
+              to="/notes/$id"
+              params={{ id: noteId }}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+            >
+              {noteHeading}
+            </Link>
+          )
+        )}
+      </div>
     </div>
   );
 }
