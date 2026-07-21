@@ -10,16 +10,21 @@ export type Block =
   | { kind: "image"; src: string; raw: string; size: ImageSize; alt: string }
   | { kind: "link"; href: string; label: string; raw: string };
 
-export type ImageSize = "small" | "medium" | "full";
+export type ImageSize = "small" | "medium" | "full" | number;
 
 function parseImageLabel(label: string): { alt: string; size: ImageSize } {
   const parts = label.split("|");
   const alt = parts[0] ?? "";
   const rawSize = (parts[1] ?? "").trim().toLowerCase();
-  const size: ImageSize =
-    rawSize === "small" || rawSize === "medium" || rawSize === "full"
-      ? (rawSize as ImageSize)
-      : "full";
+  let size: ImageSize = "full";
+  if (rawSize === "small" || rawSize === "medium" || rawSize === "full") {
+    size = rawSize as ImageSize;
+  } else {
+    const m = rawSize.match(/^(\d{1,3})%?$/);
+    if (m) {
+      size = Math.max(15, Math.min(100, parseInt(m[1]!, 10)));
+    }
+  }
   return { alt, size };
 }
 
@@ -65,15 +70,17 @@ export function hostnameOf(href: string): string {
 }
 
 function buildImageRaw(alt: string, size: ImageSize, src: string): string {
-  const label = size === "full" ? alt : `${alt}|${size}`;
+  const sizeStr = typeof size === "number" ? `${size}%` : size;
+  const label = sizeStr === "full" ? alt : `${alt}|${sizeStr}`;
   return `![${label}](${src})`;
 }
 
-const IMAGE_WIDTH: Record<ImageSize, string> = {
-  small: "40%",
-  medium: "70%",
-  full: "100%",
-};
+function widthFor(size: ImageSize): string {
+  if (typeof size === "number") return `${size}%`;
+  if (size === "small") return "40%";
+  if (size === "medium") return "70%";
+  return "100%";
+}
 
 export function BlockEditor({
   value,
