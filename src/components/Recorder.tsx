@@ -114,28 +114,28 @@ export function Recorder() {
   const label = busy ? "Uploading…" : recording ? `Recording ${mmss}` : "Tap to record";
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-5">
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-5">
       <button
         onClick={recording ? stop : start}
         disabled={busy}
         aria-label={recording ? "Stop recording" : "Start recording"}
-        className={`pointer-events-auto inline-flex items-center gap-3 rounded-full px-6 py-4 text-sm font-semibold shadow-xl ring-1 ring-black/5 backdrop-blur transition-all disabled:opacity-60 ${
+        className={`pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all disabled:opacity-60 ${
           recording
-            ? "bg-destructive text-destructive-foreground animate-pulse"
-            : "bg-foreground text-background hover:scale-[1.02] active:scale-100"
+            ? "bg-destructive/80 text-destructive-foreground ring-destructive/20 animate-pulse"
+            : "bg-foreground/80 text-background ring-black/10 hover:scale-[1.03] active:scale-100"
         }`}
       >
         <span
-          className={`flex h-9 w-9 items-center justify-center rounded-full ${
-            recording ? "bg-destructive-foreground/15" : "bg-background/10"
+          className={`flex h-6 w-6 items-center justify-center rounded-full ${
+            recording ? "bg-destructive-foreground/20" : "bg-background/15"
           }`}
         >
           {busy ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : recording ? (
-            <Square className="h-4 w-4" fill="currentColor" />
+            <Square className="h-3 w-3" fill="currentColor" />
           ) : (
-            <Mic className="h-5 w-5" />
+            <Mic className="h-3.5 w-3.5" />
           )}
         </span>
         <span className="tabular-nums">{label}</span>
@@ -143,3 +143,4 @@ export function Recorder() {
     </div>
   );
 }
+
