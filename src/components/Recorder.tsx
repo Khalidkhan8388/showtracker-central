@@ -13,7 +13,7 @@ function pickMime(): string {
   return "audio/webm";
 }
 
-export function Recorder() {
+export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
