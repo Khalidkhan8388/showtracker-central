@@ -48,12 +48,25 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const linkLabelFn = useServerFn(generateLinkLabel);
 
   function insertAtCursor(snippet: string) {
+    const el = textAreaRef.current;
     setTextBody((prev) => {
-      const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
-      return prev + sep + snippet;
+      // If the textarea's value matches the full body, it's a single block: insert at cursor.
+      // Otherwise (block editor split by images), append to end to avoid corrupting existing markdown.
+      if (!el || el.value !== prev) {
+        const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+        return prev + sep + snippet;
+      }
+      const start = el.selectionStart ?? prev.length;
+      const end = el.selectionEnd ?? prev.length;
+      const next = prev.slice(0, start) + snippet + prev.slice(end);
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + snippet.length;
+        el.setSelectionRange(pos, pos);
+      });
+      return next;
     });
   }
-
 
 
   async function onPickMarkdownImages(e: React.ChangeEvent<HTMLInputElement>) {
@@ -83,35 +96,32 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  const [linkComposerOpen, setLinkComposerOpen] = useState(false);
-  const [linkComposerUrl, setLinkComposerUrl] = useState("");
-
-  async function insertLinkFromComposer() {
-    const raw = linkComposerUrl.trim();
-    if (!raw) return;
-    const normalized = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  async function promptInsertLink() {
+    const url = window.prompt("Paste link URL");
+    if (!url) return;
+    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
     try {
       new URL(normalized);
     } catch {
       toast.error("Link doesn't look valid");
       return;
     }
-    setLinkComposerOpen(false);
-    setLinkComposerUrl("");
+    // Insert with a placeholder label immediately so the user sees the pill,
+    // then swap in the AI-generated title once it arrives.
     const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
-    insertAtCursor(`\n[${placeholderId}](${normalized})\n`);
+    const initialLabel = placeholderId;
+    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
     try {
       const { label } = await linkLabelFn({ data: { url: normalized } });
       const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
-      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${clean}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
     } catch {
       const hostname = (() => {
         try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
       })();
-      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${hostname}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
     }
   }
-
 
   function removeImageFromBody(src: string) {
     setTextBody((prev) => {
@@ -137,15 +147,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextBody("");
     setTextMode("write");
     setTextFullscreen(false);
-    setLinkComposerOpen(false);
-    setLinkComposerUrl("");
   }
 
   async function submitText() {
     const heading = textHeading.trim();
-    const body = textBody.trim();
-    if (!heading && !body) {
-      toast.error("Write something first");
+    if (!heading) {
+      toast.error("Please add a title");
       return;
     }
     setTextOpen(false);
@@ -501,7 +508,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             <input
               autoFocus
               type="text"
-              placeholder="Title (optional — AI will suggest one)"
+              placeholder="Title"
               value={textHeading}
               onChange={(e) => setTextHeading(e.target.value)}
               maxLength={200}
@@ -574,47 +581,6 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
-            {linkComposerOpen && (
-              <div className="flex items-center gap-2 rounded-full border border-border bg-muted/40 p-1 pl-3">
-                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <input
-                  autoFocus
-                  type="url"
-                  inputMode="url"
-                  placeholder="https://…"
-                  value={linkComposerUrl}
-                  onChange={(e) => setLinkComposerUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      insertLinkFromComposer();
-                    }
-                    if (e.key === "Escape") {
-                      setLinkComposerOpen(false);
-                      setLinkComposerUrl("");
-                    }
-                  }}
-                  className="flex-1 bg-transparent px-1 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
-                />
-                <button
-                  onClick={() => {
-                    setLinkComposerOpen(false);
-                    setLinkComposerUrl("");
-                  }}
-                  className="rounded-full px-2 py-1 text-xs text-muted-foreground hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={insertLinkFromComposer}
-                  disabled={!linkComposerUrl.trim()}
-                  className="rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-            )}
-
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <button
@@ -626,10 +592,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   Image
                 </button>
                 <button
-                  onClick={() => setLinkComposerOpen((v) => !v)}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-medium hover:bg-muted ${
-                    linkComposerOpen ? "border-foreground bg-muted text-foreground" : "border-border text-foreground"
-                  }`}
+                  onClick={promptInsertLink}
+                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
                 >
                   <Link2 className="h-4 w-4" />
                   Link
@@ -647,7 +611,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
                 <button
                   onClick={submitText}
-                  disabled={!textHeading.trim() && !textBody.trim()}
+                  disabled={!textHeading.trim()}
                   className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
                 >
                   Save note
@@ -884,13 +848,13 @@ function BlockEditor({
           );
         }
         return (
-          <MarkdownEditor
+          <AutoTextarea
             key={`txt-${i}`}
             value={b.value}
             onChange={(v) => updateTextBlock(i, v)}
             placeholder={
               !hasMedia && i === 0
-                ? "Write in markdown…  Try  # Heading  or  ## Subheading"
+                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
                 : ""
             }
             innerRef={i === lastTextIdx ? textAreaRef : undefined}
@@ -901,73 +865,7 @@ function BlockEditor({
   );
 }
 
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-}
-
-function renderMarkdownHTML(text: string): string {
-  const lines = text.split("\n");
-  const out = lines.map((line) => {
-    if (line.length === 0) return "<div><br></div>";
-    const m = /^(#{1,3})\s+(.*)$/.exec(line);
-    if (m) {
-      const lvl = m[1].length;
-      return `<div class="md-h${lvl}">${escapeHtml(line)}</div>`;
-    }
-    return `<div>${escapeHtml(line)}</div>`;
-  });
-  return out.join("");
-}
-
-function getPlainText(root: HTMLElement): string {
-  // innerText respects block-level newlines from <div> children
-  return (root.innerText ?? "").replace(/\r\n/g, "\n");
-}
-
-function getCaretOffset(root: HTMLElement): number {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return 0;
-  const range = sel.getRangeAt(0);
-  if (!root.contains(range.endContainer)) return 0;
-  const pre = range.cloneRange();
-  pre.selectNodeContents(root);
-  pre.setEnd(range.endContainer, range.endOffset);
-  // toString() counts newlines from block boundaries as it walks — close enough for our purposes
-  return pre.toString().length;
-}
-
-function setCaretOffset(root: HTMLElement, offset: number): void {
-  const sel = window.getSelection();
-  if (!sel) return;
-  const range = document.createRange();
-  let remaining = offset;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node: Node | null = null;
-  let lastText: Text | null = null;
-  while ((node = walker.nextNode())) {
-    const t = node as Text;
-    lastText = t;
-    const len = t.data.length;
-    if (remaining <= len) {
-      range.setStart(t, remaining);
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return;
-    }
-    remaining -= len;
-  }
-  if (lastText) {
-    range.setStart(lastText, lastText.data.length);
-  } else {
-    range.selectNodeContents(root);
-    range.collapse(false);
-  }
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
-
-function MarkdownEditor({
+function AutoTextarea({
   value,
   onChange,
   placeholder,
@@ -978,40 +876,24 @@ function MarkdownEditor({
   placeholder?: string;
   innerRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }) {
-  const ref = useRef<HTMLDivElement | null>(null);
-
-  // Sync external value → DOM when it doesn't match (e.g. after inserting an image/link)
+  const ref = useRef<HTMLTextAreaElement | null>(null);
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    if (getPlainText(el) !== value) {
-      el.innerHTML = renderMarkdownHTML(value);
-    }
+    el.style.height = "auto";
+    el.style.height = `${el.scrollHeight}px`;
   }, [value]);
-
-  useEffect(() => {
-    if (innerRef) innerRef.current = ref.current as unknown as HTMLTextAreaElement;
-  }, [innerRef]);
-
-  function handleInput() {
-    const el = ref.current;
-    if (!el) return;
-    const offset = getCaretOffset(el);
-    const text = getPlainText(el);
-    el.innerHTML = renderMarkdownHTML(text);
-    setCaretOffset(el, offset);
-    onChange(text);
-  }
-
   return (
-    <div
-      ref={ref}
-      contentEditable
-      suppressContentEditableWarning
-      onInput={handleInput}
-      data-placeholder={placeholder ?? ""}
-      className="markdown-editor w-full whitespace-pre-wrap break-words text-base leading-relaxed text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground [&_.md-h1]:my-1 [&_.md-h1]:text-2xl [&_.md-h1]:font-bold [&_.md-h1]:tracking-tight [&_.md-h2]:my-1 [&_.md-h2]:text-xl [&_.md-h2]:font-semibold [&_.md-h3]:my-1 [&_.md-h3]:text-lg [&_.md-h3]:font-semibold"
+    <textarea
+      ref={(el) => {
+        ref.current = el;
+        if (innerRef) innerRef.current = el;
+      }}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      rows={1}
+      className="w-full resize-none bg-transparent font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none"
     />
   );
 }
-
