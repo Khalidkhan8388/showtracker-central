@@ -122,7 +122,7 @@ function Home() {
         )}
       </section>
 
-      <Recorder />
+      <Recorder onNoteReady={load} />
     </div>
   );
 }

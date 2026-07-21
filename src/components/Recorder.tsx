@@ -13,7 +13,7 @@ function pickMime(): string {
   return "audio/webm";
 }
 
-export function Recorder() {
+export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
@@ -91,12 +91,17 @@ export function Recorder() {
       setBusy(false);
       setProcessing(true);
       processFn({ data: { noteId: inserted.id } })
+        .then(() => {
+          onNoteReady?.();
+        })
         .catch((e) => {
           toast.error(e?.message ?? "Processing failed");
+          onNoteReady?.();
         })
         .finally(() => {
           setProcessing(false);
         });
+
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
       setBusy(false);
