@@ -17,7 +17,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [processing, setProcessing] = useState(false);
+  const processing = false;
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -89,17 +89,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
 
       setBusy(false);
-      setProcessing(true);
+      onNoteReady?.();
       processFn({ data: { noteId: inserted.id } })
-        .then(() => {
-          onNoteReady?.();
-        })
+        .then(() => onNoteReady?.())
         .catch((e) => {
           toast.error(e?.message ?? "Processing failed");
           onNoteReady?.();
-        })
-        .finally(() => {
-          setProcessing(false);
         });
 
     } catch (err: any) {
