@@ -77,6 +77,124 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextLink("");
   }
 
+  function resetTextComposer() {
+    textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+    updateTextImages([]);
+    setTextHeading("");
+    setTextBody("");
+    setTextLink("");
+    setLinkFieldOpen(false);
+    setSlashOpen(false);
+    setSlashQuery("");
+  }
+
+  type SlashAction = {
+    key: string;
+    label: string;
+    hint: string;
+    icon: React.ComponentType<{ className?: string }>;
+    // for formatting inserts
+    prefix?: string;
+    // for special actions
+    kind?: "image" | "link" | "divider";
+  };
+  const SLASH_ACTIONS: SlashAction[] = [
+    { key: "h1", label: "Heading", hint: "Big section title", icon: Heading1, prefix: "# " },
+    { key: "h2", label: "Subheading", hint: "Smaller title", icon: Heading2, prefix: "## " },
+    { key: "ul", label: "Bullet list", hint: "Unordered list", icon: List, prefix: "- " },
+    { key: "ol", label: "Numbered list", hint: "Ordered list", icon: ListOrdered, prefix: "1. " },
+    { key: "quote", label: "Quote", hint: "Blockquote", icon: Quote, prefix: "> " },
+    { key: "divider", label: "Divider", hint: "Horizontal rule", icon: Minus, kind: "divider" },
+    { key: "image", label: "Image", hint: "Attach photo(s)", icon: ImagePlus, kind: "image" },
+    { key: "link", label: "Link", hint: "Attach a URL", icon: Link2, kind: "link" },
+  ];
+  const filteredSlash = useMemo(() => {
+    const q = slashQuery.trim().toLowerCase();
+    if (!q) return SLASH_ACTIONS;
+    return SLASH_ACTIONS.filter((a) => a.label.toLowerCase().includes(q) || a.key.includes(q));
+  }, [slashQuery]);
+
+  function onBodyChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
+    const value = e.target.value;
+    const caret = e.target.selectionStart ?? value.length;
+    setTextBody(value);
+    // Detect active "/" trigger: nearest "/" before caret with only word chars after it,
+    // and preceded by start-of-line or whitespace.
+    const before = value.slice(0, caret);
+    const slashPos = before.lastIndexOf("/");
+    if (slashPos >= 0) {
+      const prevChar = slashPos === 0 ? "\n" : before[slashPos - 1];
+      const between = before.slice(slashPos + 1);
+      const validPrev = prevChar === "\n" || /\s/.test(prevChar);
+      const validQuery = /^[a-zA-Z0-9]*$/.test(between);
+      if (validPrev && validQuery) {
+        setSlashOpen(true);
+        setSlashStart(slashPos);
+        setSlashQuery(between);
+        setSlashIdx(0);
+        return;
+      }
+    }
+    if (slashOpen) setSlashOpen(false);
+  }
+
+  function applySlash(action: SlashAction) {
+    const ta = textAreaRef.current;
+    const body = textBody;
+    const caret = ta?.selectionStart ?? body.length;
+    // Remove the "/query" from slashStart..caret
+    const cleaned = body.slice(0, slashStart) + body.slice(caret);
+    setSlashOpen(false);
+    setSlashQuery("");
+
+    if (action.kind === "image") {
+      setTextBody(cleaned);
+      requestAnimationFrame(() => textFileRef.current?.click());
+      return;
+    }
+    if (action.kind === "link") {
+      setTextBody(cleaned);
+      setLinkFieldOpen(true);
+      requestAnimationFrame(() => linkInputRef.current?.focus());
+      return;
+    }
+    // Formatting insert
+    const atLineStart = slashStart === 0 || cleaned[slashStart - 1] === "\n";
+    let insert = "";
+    if (action.kind === "divider") {
+      insert = (atLineStart ? "" : "\n") + "---\n";
+    } else if (action.prefix) {
+      insert = (atLineStart ? "" : "\n") + action.prefix;
+    }
+    const next = cleaned.slice(0, slashStart) + insert + cleaned.slice(slashStart);
+    setTextBody(next);
+    const newCaret = slashStart + insert.length;
+    requestAnimationFrame(() => {
+      const el = textAreaRef.current;
+      if (el) {
+        el.focus();
+        el.setSelectionRange(newCaret, newCaret);
+      }
+    });
+  }
+
+  function onBodyKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    if (!slashOpen || filteredSlash.length === 0) return;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setSlashIdx((i) => (i + 1) % filteredSlash.length);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setSlashIdx((i) => (i - 1 + filteredSlash.length) % filteredSlash.length);
+    } else if (e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault();
+      applySlash(filteredSlash[Math.min(slashIdx, filteredSlash.length - 1)]);
+    } else if (e.key === "Escape") {
+      e.preventDefault();
+      setSlashOpen(false);
+    }
+  }
+
   async function submitText() {
     const heading = textHeading.trim();
     if (!heading) {
