@@ -827,10 +827,8 @@ function BlockEditor({
     onChange(serializeBlocks(copy));
   }
 
-  const lastTextIdx = (() => {
-    for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].kind === "text") return i;
-    return -1;
-  })();
+
+
 
   return (
     <div
@@ -900,16 +898,15 @@ function BlockEditor({
           );
         }
         return (
-          <AutoTextarea
+          <LineEditor
             key={`txt-${i}`}
             value={b.value}
             onChange={(v) => updateTextBlock(i, v)}
             placeholder={
               !hasMedia && i === 0
-                ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
+                ? "Write in markdown… try # Heading, - list, > quote"
                 : ""
             }
-            innerRef={i === lastTextIdx ? textAreaRef : undefined}
           />
         );
       })}
@@ -917,35 +914,110 @@ function BlockEditor({
   );
 }
 
-function AutoTextarea({
+function lineStyleFor(line: string): string {
+  if (/^###\s/.test(line)) return "text-base font-semibold tracking-tight";
+  if (/^##\s/.test(line)) return "text-lg font-semibold tracking-tight";
+  if (/^#\s/.test(line)) return "text-2xl font-bold tracking-tight";
+  if (/^>\s?/.test(line)) return "italic text-muted-foreground border-l-2 border-foreground/30 pl-3";
+  return "text-sm text-foreground";
+}
+
+function LineEditor({
   value,
   onChange,
   placeholder,
-  innerRef,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
-  innerRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }) {
-  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const lines = value.length === 0 ? [""] : value.split("\n");
+  const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
+  const focusPending = useRef<{ index: number; pos: number } | null>(null);
+
   useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    refs.current.forEach((el) => {
+      if (!el) return;
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    });
+    const pending = focusPending.current;
+    if (pending) {
+      const el = refs.current[pending.index];
+      if (el) {
+        el.focus();
+        const pos = Math.min(pending.pos, el.value.length);
+        el.setSelectionRange(pos, pos);
+      }
+      focusPending.current = null;
+    }
   }, [value]);
+
+  function commit(nextLines: string[], focus?: { index: number; pos: number }) {
+    if (focus) focusPending.current = focus;
+    onChange(nextLines.join("\n"));
+  }
+
+  function updateLine(i: number, next: string) {
+    const copy = lines.slice();
+    copy[i] = next;
+    commit(copy);
+  }
+
+  function onKey(i: number, e: React.KeyboardEvent<HTMLTextAreaElement>) {
+    const el = e.currentTarget;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      const line = lines[i] ?? "";
+      const before = line.slice(0, start);
+      const after = line.slice(end);
+      const copy = lines.slice();
+      copy.splice(i, 1, before, after);
+      commit(copy, { index: i + 1, pos: 0 });
+    } else if (e.key === "Backspace" && start === 0 && end === 0 && i > 0) {
+      e.preventDefault();
+      const prev = lines[i - 1] ?? "";
+      const cur = lines[i] ?? "";
+      const copy = lines.slice();
+      copy.splice(i - 1, 2, prev + cur);
+      commit(copy, { index: i - 1, pos: prev.length });
+    } else if (e.key === "ArrowUp" && i > 0) {
+      const prev = refs.current[i - 1];
+      if (prev) {
+        e.preventDefault();
+        prev.focus();
+        const pos = Math.min(start, prev.value.length);
+        prev.setSelectionRange(pos, pos);
+      }
+    } else if (e.key === "ArrowDown" && i < lines.length - 1) {
+      const next = refs.current[i + 1];
+      if (next) {
+        e.preventDefault();
+        next.focus();
+        const pos = Math.min(start, next.value.length);
+        next.setSelectionRange(pos, pos);
+      }
+    }
+  }
+
   return (
-    <textarea
-      ref={(el) => {
-        ref.current = el;
-        if (innerRef) innerRef.current = el;
-      }}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={1}
-      className="w-full resize-none bg-transparent font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none"
-    />
+    <div className="flex flex-col">
+      {lines.map((line, i) => (
+        <textarea
+          key={i}
+          ref={(el) => {
+            refs.current[i] = el;
+          }}
+          value={line}
+          onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
+          onKeyDown={(e) => onKey(i, e)}
+          placeholder={i === 0 ? placeholder : ""}
+          rows={1}
+          className={`w-full resize-none bg-transparent leading-relaxed placeholder:text-muted-foreground outline-none ${lineStyleFor(line)}`}
+        />
+      ))}
+    </div>
   );
 }
