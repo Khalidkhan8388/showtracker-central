@@ -431,53 +431,39 @@ Return a single JSON object with keys: heading, summary, tasks.
 Respond ONLY with valid JSON, no code fences.`;
 
 async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
-  const res = await fetch(url, {
-    redirect: "follow",
+  const lovableKey = process.env.LOVABLE_API_KEY;
+  const fcKey = process.env.FIRECRAWL_API_KEY;
+  if (!lovableKey || !fcKey) throw new Error("Missing Firecrawl credentials");
+
+  const res = await fetch("https://connector-gateway.lovable.dev/firecrawl/v2/scrape", {
+    method: "POST",
     headers: {
-      "User-Agent":
-        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36",
-      Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": fcKey,
     },
+    body: JSON.stringify({
+      url,
+      formats: ["markdown"],
+      onlyMainContent: true,
+    }),
   });
-  if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
-  const ctype = res.headers.get("content-type") ?? "";
-  const raw = await res.text();
-  if (!ctype.includes("html") && !ctype.includes("xml") && !ctype.includes("text")) {
-    return { title: null, text: raw.slice(0, 20000) };
+
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Firecrawl scrape failed (${res.status}): ${body.slice(0, 300)}`);
   }
-  const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
-  const title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim().slice(0, 200) : null;
-
-  const metaOf = (re: RegExp) => {
-    const m = raw.match(re);
-    return m ? m[1].replace(/\s+/g, " ").trim() : "";
-  };
-  const metas = [
-    metaOf(/<meta[^>]+name=["']description["'][^>]+content=["']([^"']+)["']/i),
-    metaOf(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i),
-    metaOf(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i),
-    metaOf(/<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i),
-    metaOf(/<meta[^>]+name=["']twitter:description["'][^>]+content=["']([^"']+)["']/i),
-  ].filter(Boolean);
-
-  const stripped = raw
-    .replace(/<script[\s\S]*?<\/script>/gi, " ")
-    .replace(/<style[\s\S]*?<\/style>/gi, " ")
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
-    .replace(/<!--[\s\S]*?-->/g, " ")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;/g, "'")
-    .replace(/\s+/g, " ")
-    .trim();
-
-  const combined = [metas.join("\n"), stripped].filter(Boolean).join("\n").trim();
-  return { title, text: combined.slice(0, 15000) };
+  const json = (await res.json()) as any;
+  const doc = json?.data ?? json;
+  const markdown: string = doc?.markdown ?? "";
+  const metadata = doc?.metadata ?? {};
+  const title: string | null =
+    (metadata.title as string) ?? (metadata.ogTitle as string) ?? null;
+  const description: string = (metadata.description as string) ?? "";
+  const combined = [description, markdown].filter(Boolean).join("\n\n").trim();
+  return { title: title ? title.slice(0, 200) : null, text: combined.slice(0, 20000) };
 }
+
 
 async function summarizeWebPage(
   url: string,
