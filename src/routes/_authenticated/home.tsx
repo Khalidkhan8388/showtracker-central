@@ -334,8 +334,8 @@ function NoteCard({
   };
 
   const base =
-    "relative block rounded-2xl border bg-card p-3 transition-colors " +
-    (selected ? "border-foreground ring-2 ring-foreground/20" : "border-border hover:bg-muted/50");
+    "relative block rounded-2xl border-2 p-3 transition-colors " +
+    (selected ? "border-foreground bg-muted shadow-sm" : "border-border bg-card hover:bg-muted/50");
   const sizing = variant === "wide" ? "p-4" : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
   return (
