@@ -446,9 +446,11 @@ function TaskRow({
       {selectMode ? (
         <div className="mt-0.5 shrink-0">
           {selected ? (
-            <CheckCircle2 className="h-4 w-4 text-foreground" />
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+              <Check className="h-2.5 w-2.5 text-background" strokeWidth={3.5} />
+            </div>
           ) : (
-            <Circle className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 rounded-full bg-background ring-2 ring-background border border-muted-foreground/40" />
           )}
         </div>
       ) : (
