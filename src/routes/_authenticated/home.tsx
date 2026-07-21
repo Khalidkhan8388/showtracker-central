@@ -28,6 +28,7 @@ type Note = {
   pinned: boolean;
   image_paths: string[] | null;
   source_url: string | null;
+  transcript: string | null;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
@@ -66,7 +67,7 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url,transcript")
       .order("created_at", { ascending: false });
     const rows = (data ?? []) as Note[];
     setNotes(rows);
@@ -482,8 +483,11 @@ function NoteCard({
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
-  const isLink = !!note.source_url;
-  const isText = !isLink && !hasImage && note.duration_seconds == null;
+  const isVoice = note.duration_seconds != null;
+  // A "text note" is user-authored (has transcript/body) and not a voice recording.
+  // Text notes may optionally include a source_url or images; still render as text.
+  const isText = !isVoice && note.transcript != null;
+  const isLink = !!note.source_url && !isText;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
