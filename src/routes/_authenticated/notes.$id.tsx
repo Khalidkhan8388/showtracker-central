@@ -444,15 +444,6 @@ function NoteDetail() {
         {editing ? (
           <section className="mt-4">
             <input
-              ref={editFileRef && undefined}
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={onPickImages}
-              // real ref below
-            />
-            <input
               ref={editFileRef}
               type="file"
               accept="image/*"
@@ -460,6 +451,7 @@ function NoteDetail() {
               hidden
               onChange={onPickImages}
             />
+
 
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <button
