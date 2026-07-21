@@ -299,31 +299,41 @@ function Home() {
                             <ChevronRight className="h-4 w-4" />
                           </Link>
                         </h2>
-                        <ul className="space-y-1.5">
-                          {visible.map((t) => {
-                            const key: TaskKey = `${t.noteId}::${t.id}`;
-                            const isSel = selectedTasks.has(key);
-                            return (
-                              <li key={key}>
-                                <TaskRow
-                                  selectMode={taskSelectMode}
-                                  selected={isSel}
-                                  done={t.done}
-                                  pinned={Boolean((t as any).pinned)}
-                                  text={t.text}
-                                  noteHeading={t.noteHeading}
-                                  noteId={t.noteId}
-                                  onToggleDone={() => onToggle(t.noteId, t.id)}
-                                  onLongPress={() => toggleTaskSel(key)}
-                                  onSelectTap={() => toggleTaskSel(key)}
-                                />
-                              </li>
-                            );
-                          })}
-                        </ul>
+                        {visible.length === 0 ? (
+                          <Link
+                            to="/tasks"
+                            className="flex items-center justify-center rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                          >
+                            + Add a task
+                          </Link>
+                        ) : (
+                          <ul className="space-y-1.5">
+                            {visible.map((t) => {
+                              const key: TaskKey = `${t.noteId}::${t.id}`;
+                              const isSel = selectedTasks.has(key);
+                              return (
+                                <li key={key}>
+                                  <TaskRow
+                                    selectMode={taskSelectMode}
+                                    selected={isSel}
+                                    done={t.done}
+                                    pinned={Boolean((t as any).pinned)}
+                                    text={t.text}
+                                    noteHeading={t.noteHeading}
+                                    noteId={t.noteId}
+                                    onToggleDone={() => onToggle(t.noteId, t.id)}
+                                    onLongPress={() => toggleTaskSel(key)}
+                                    onSelectTap={() => toggleTaskSel(key)}
+                                  />
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        )}
                       </div>
                     );
                   })()}
+
 
                   {grid.length > 0 && (
                     <div className="pt-4">
