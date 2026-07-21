@@ -3,6 +3,8 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ProcessInput = z.object({ noteId: z.string().uuid() });
+const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
+
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into structured notes.
 Return a single JSON object with keys: heading, summary, tasks.
@@ -419,4 +421,124 @@ export const addCustomTask = createServerFn({ method: "POST" })
       .single();
     if (insErr || !created) throw new Error(insErr?.message ?? "Insert failed");
     return { ok: true as const, noteId: created.id, taskId: newTask.id };
+  });
+
+const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
+Return a single JSON object with keys: heading, summary, tasks.
+- heading: one short line (max ~8 words), title case, no trailing punctuation. Prefer the page's own title if it's concise.
+- summary: 2-5 sentences capturing what the page is about and the key takeaways.
+- tasks: array of short actionable to-dos the user could act on based on the page (e.g. "Read chapter on X", "Watch related video", "Buy <item>", "Try <tool>"). Return [] if nothing useful.
+Respond ONLY with valid JSON, no code fences.`;
+
+async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
+  const res = await fetch(url, {
+    redirect: "follow",
+    headers: {
+      "User-Agent": "Mozilla/5.0 (compatible; BraintapeBot/1.0)",
+      Accept: "text/html,application/xhtml+xml,text/plain;q=0.9,*/*;q=0.5",
+    },
+  });
+  if (!res.ok) throw new Error(`Fetch failed (${res.status})`);
+  const ctype = res.headers.get("content-type") ?? "";
+  const raw = await res.text();
+  if (!ctype.includes("html") && !ctype.includes("xml") && !ctype.includes("text")) {
+    return { title: null, text: raw.slice(0, 20000) };
+  }
+  const titleMatch = raw.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const title = titleMatch ? titleMatch[1].replace(/\s+/g, " ").trim().slice(0, 200) : null;
+  const stripped = raw
+    .replace(/<script[\s\S]*?<\/script>/gi, " ")
+    .replace(/<style[\s\S]*?<\/style>/gi, " ")
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, " ")
+    .replace(/<!--[\s\S]*?-->/g, " ")
+    .replace(/<[^>]+>/g, " ")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/\s+/g, " ")
+    .trim();
+  return { title, text: stripped.slice(0, 15000) };
+}
+
+async function summarizeWebPage(
+  url: string,
+  title: string | null,
+  text: string,
+  apiKey: string,
+): Promise<{ heading: string; summary: string; tasks: string[] }> {
+  const userMsg = `URL: ${url}\n${title ? `Page title: ${title}\n` : ""}\nPage content:\n${text}`;
+  const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        { role: "system", content: WEB_SYSTEM_PROMPT },
+        { role: "user", content: userMsg },
+      ],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`AI processing failed (${res.status}): ${body}`);
+  }
+  const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+  const raw = data.choices?.[0]?.message?.content ?? "{}";
+  let parsed: any;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    parsed = JSON.parse(raw.replace(/```json|```/g, "").trim());
+  }
+  const heading = String(parsed.heading ?? title ?? "Saved link").slice(0, 120);
+  const summary = String(parsed.summary ?? "").slice(0, 2000);
+  const tasksArr = Array.isArray(parsed.tasks) ? parsed.tasks : [];
+  const tasks = tasksArr
+    .map((t: unknown) =>
+      typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : "",
+    )
+    .filter((t: string) => t.trim().length > 0)
+    .slice(0, 20);
+  return { heading, summary, tasks };
+}
+
+export const saveWebLink = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => SaveWebLinkInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { supabase, userId } = context;
+
+    const { data: inserted, error: insErr } = await supabase
+      .from("voice_notes")
+      .insert({ user_id: userId, source_url: data.url, status: "processing" })
+      .select("id")
+      .single();
+    if (insErr || !inserted) throw new Error(insErr?.message ?? "Insert failed");
+
+    try {
+      const { title, text } = await fetchWebPageText(data.url);
+      if (!text || text.length < 30) throw new Error("Page has no readable content");
+      const structured = await summarizeWebPage(data.url, title, text, apiKey);
+      const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false }));
+      await supabase
+        .from("voice_notes")
+        .update({
+          status: "ready",
+          heading: structured.heading,
+          summary: structured.summary,
+          tasks: tasksPayload,
+        })
+        .eq("id", inserted.id);
+      return { ok: true as const, noteId: inserted.id };
+    } catch (err: any) {
+      const msg = err?.message ?? String(err);
+      await supabase.from("voice_notes").update({ status: "failed", error: msg }).eq("id", inserted.id);
+      throw new Error(msg);
+    }
   });

@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink } from "@/lib/notes.functions";
 import { toast } from "sonner";
+
 
 function pickMime(): string {
   const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
@@ -27,7 +28,28 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const startRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [linkUrl, setLinkUrl] = useState("");
   const processFn = useServerFn(processVoiceNote);
+  const saveLinkFn = useServerFn(saveWebLink);
+
+  async function submitLink() {
+    const url = linkUrl.trim();
+    if (!url) return;
+    setLinkOpen(false);
+    setLinkUrl("");
+    setBusy(true);
+    try {
+      const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
+      await saveLinkFn({ data: { url: normalized } });
+      onNoteReady?.();
+    } catch (err: any) {
+      toast.error(err?.message ?? "Could not save link");
+    } finally {
+      setBusy(false);
+    }
+  }
+
 
   useEffect(
     () => () => {
@@ -207,10 +229,11 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const mmss = `${mm}:${ss}`;
 
   const label = busy
-    ? "Uploading…"
+    ? "Saving…"
     : recording
       ? `Recording ${mmss}${pending.length > 0 ? ` · ${pending.length} 📷` : ""}`
       : "Tap to record";
+
 
   const showSpinner = busy;
   const disabled = busy;
@@ -238,6 +261,47 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         </div>
       )}
 
+      {linkOpen && (
+        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full bg-foreground/85 p-1 pl-4 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150">
+          <Link2 className="h-4 w-4 shrink-0 text-background/80" />
+          <input
+            autoFocus
+            type="url"
+            inputMode="url"
+            placeholder="Paste a link…"
+            value={linkUrl}
+            onChange={(e) => setLinkUrl(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") submitLink();
+              if (e.key === "Escape") {
+                setLinkOpen(false);
+                setLinkUrl("");
+              }
+            }}
+            className="flex-1 bg-transparent px-2 py-1.5 text-sm text-background placeholder:text-background/50 outline-none"
+          />
+          <button
+            onClick={() => {
+              setLinkOpen(false);
+              setLinkUrl("");
+            }}
+            aria-label="Cancel"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-background/80 hover:bg-background/15"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          <button
+            onClick={submitLink}
+            disabled={!linkUrl.trim()}
+            className="inline-flex items-center rounded-full bg-background px-3 py-1.5 text-xs font-semibold text-foreground disabled:opacity-50"
+          >
+            Save
+          </button>
+        </div>
+      )}
+
+
+
       <div
         className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1 shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all ${
           recording
@@ -261,6 +325,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         >
           <ImagePlus className="h-4 w-4" />
         </button>
+        <button
+          onClick={() => setLinkOpen(true)}
+          disabled={disabled || recording}
+          aria-label="Save web link"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-background/90 hover:bg-background/15 disabled:opacity-50"
+        >
+          <Link2 className="h-4 w-4" />
+        </button>
+
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
