@@ -583,6 +583,55 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
+            {inlineLinkOpen && (
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-1 pl-3">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  placeholder="Paste a link…"
+                  value={inlineLinkUrl}
+                  onChange={(e) => setInlineLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = inlineLinkUrl;
+                      setInlineLinkUrl("");
+                      setInlineLinkOpen(false);
+                      insertLinkFromUrl(v);
+                    } else if (e.key === "Escape") {
+                      setInlineLinkOpen(false);
+                      setInlineLinkUrl("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setInlineLinkOpen(false);
+                    setInlineLinkUrl("");
+                  }}
+                  aria-label="Cancel"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    const v = inlineLinkUrl;
+                    setInlineLinkUrl("");
+                    setInlineLinkOpen(false);
+                    insertLinkFromUrl(v);
+                  }}
+                  disabled={!inlineLinkUrl.trim()}
+                  className="inline-flex items-center rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <button
@@ -594,7 +643,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   Image
                 </button>
                 <button
-                  onClick={promptInsertLink}
+                  onClick={() => setInlineLinkOpen((v) => !v)}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
                 >
                   <Link2 className="h-4 w-4" />
@@ -620,6 +669,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
