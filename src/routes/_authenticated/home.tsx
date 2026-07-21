@@ -279,7 +279,7 @@ function Home() {
                         noteHeading: n.heading === "__custom__" ? null : n.heading,
                       })),
                     );
-                    if (allTasks.length === 0) return null;
+                    
                     const pinnedT = allTasks.filter((t) => (t as any).pinned && !t.done);
                     const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
                     const done = allTasks.filter((t) => t.done);
