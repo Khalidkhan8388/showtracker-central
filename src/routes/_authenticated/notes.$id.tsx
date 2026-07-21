@@ -505,7 +505,9 @@ function NoteDetail() {
               onRemoveImage={removeImageFromBody}
               onRemoveLink={removeLinkFromBody}
               placeholder="Start writing… # for heading, - for list, > for quote"
+              wikiIndex={wikiIndex}
             />
+
 
 {(() => {
               const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
