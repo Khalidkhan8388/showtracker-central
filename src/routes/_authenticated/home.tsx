@@ -41,6 +41,8 @@ function Home() {
   const delNotesFn = useServerFn(deleteNotes);
   const delTasksFn = useServerFn(deleteTasks);
   const pinNoteFn = useServerFn(pinNote);
+  const approveFn = useServerFn(approveTasks);
+  const dismissFn = useServerFn(dismissTasks);
   const navigate = useNavigate();
 
   const noteSelectMode = selectedNotes.size > 0;
