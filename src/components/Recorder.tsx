@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 
 function pickMime(): string {
@@ -37,6 +39,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textBody, setTextBody] = useState("");
   const [textMode, setTextMode] = useState<"write" | "preview">("write");
   const [uploadingMd, setUploadingMd] = useState(false);
+  const [textFullscreen, setTextFullscreen] = useState(false);
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
@@ -100,9 +103,20 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     insertAtCursor(`[${label}](${normalized})`);
   }
 
+  function removeImageFromBody(src: string) {
+    setTextBody((prev) => {
+      // Remove markdown image with matching src: ![...](src) plus surrounding whitespace/newlines
+      const escaped = src.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?!\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
   function resetTextComposer() {
     setTextHeading("");
     setTextBody("");
+    setTextMode("write");
+    setTextFullscreen(false);
   }
 
   async function submitText() {
@@ -420,24 +434,38 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
       {textOpen && (
         <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
-          <div className="flex max-h-[90vh] w-full max-w-lg flex-col gap-3 rounded-t-3xl border border-border bg-background p-5 shadow-2xl sm:rounded-3xl">
+          <div
+            className={`flex w-full flex-col gap-3 border border-border bg-background shadow-2xl ${
+              textFullscreen
+                ? "h-full max-h-none max-w-none rounded-none p-5"
+                : "max-h-[90vh] max-w-lg rounded-t-3xl p-5 sm:rounded-3xl"
+            }`}
+          >
             <div className="flex items-center justify-between">
               <h2 className="text-base font-bold tracking-tight">New note</h2>
               <div className="flex items-center gap-1">
-                <div className="mr-2 flex items-center rounded-full bg-muted p-0.5 text-xs">
-                  <button
-                    onClick={() => setTextMode("write")}
-                    className={`rounded-full px-3 py-1 font-medium transition ${textMode === "write" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    Write
-                  </button>
-                  <button
-                    onClick={() => setTextMode("preview")}
-                    className={`rounded-full px-3 py-1 font-medium transition ${textMode === "preview" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground"}`}
-                  >
-                    Preview
-                  </button>
-                </div>
+                <button
+                  onClick={() => setTextMode(textMode === "write" ? "preview" : "write")}
+                  aria-label={textMode === "write" ? "Switch to preview" : "Switch to edit"}
+                  className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/70"
+                >
+                  {textMode === "write" ? (
+                    <>
+                      <Eye className="h-3.5 w-3.5" /> Preview
+                    </>
+                  ) : (
+                    <>
+                      <Pencil className="h-3.5 w-3.5" /> Edit
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => setTextFullscreen((f) => !f)}
+                  aria-label={textFullscreen ? "Exit fullscreen" : "Fullscreen"}
+                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  {textFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+                </button>
                 <button
                   onClick={() => setTextOpen(false)}
                   aria-label="Close"
@@ -464,17 +492,58 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 onChange={(e) => setTextBody(e.target.value)}
                 maxLength={20000}
                 rows={8}
-                className="min-h-[200px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+                className={`w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40 ${
+                  textFullscreen ? "min-h-0" : "min-h-[200px]"
+                }`}
               />
             ) : (
-              <div className="min-h-[200px] w-full flex-1 overflow-y-auto rounded-2xl border border-border bg-muted/30 p-4">
+              <div
+                className={`w-full flex-1 overflow-y-auto rounded-2xl border border-border bg-muted/30 p-4 ${
+                  textFullscreen ? "min-h-0" : "min-h-[200px]"
+                }`}
+              >
                 {textBody.trim() ? (
-                  <Markdown>{textBody}</Markdown>
+                  <div className="markdown text-sm leading-relaxed text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_p]:my-2 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_a]:underline [&_a]:decoration-foreground/40 [&_a]:underline-offset-2 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-muted [&_pre]:p-3 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm]}
+                      components={{
+                        a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
+                        p: ({ node, children, ...props }) => {
+                          // Unwrap paragraphs that contain only images (avoid <p><div>...</div></p>)
+                          const kids = Array.isArray(children) ? children : [children];
+                          const onlyImg = kids.every(
+                            (c: any) =>
+                              (typeof c === "string" && c.trim() === "") ||
+                              (c && c.type === "img") ||
+                              (c && c.props && c.props.node && c.props.node.tagName === "img"),
+                          );
+                          if (onlyImg) return <>{children}</>;
+                          return <p {...props}>{children}</p>;
+                        },
+                        img: ({ src, alt }) => (
+                          <div className="group relative my-3 inline-block max-w-full">
+                            <img src={src as string} alt={(alt as string) ?? ""} className="max-h-96 rounded-xl" />
+                            <button
+                              type="button"
+                              onClick={() => removeImageFromBody(src as string)}
+                              aria-label="Remove image"
+                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+                            >
+                              <X className="h-3.5 w-3.5" strokeWidth={3} />
+                            </button>
+                          </div>
+                        ),
+                      }}
+                    >
+                      {textBody}
+                    </ReactMarkdown>
+                  </div>
                 ) : (
                   <p className="text-sm text-muted-foreground">Nothing to preview yet.</p>
                 )}
               </div>
             )}
+
 
             <input
               ref={textFileRef}
