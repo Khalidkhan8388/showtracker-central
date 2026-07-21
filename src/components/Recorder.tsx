@@ -20,6 +20,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingImage[]>([]);
+  const pendingRef = useRef<PendingImage[]>([]);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
@@ -32,10 +33,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     () => () => {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
-      pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      pendingRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     },
     [],
   );
+
+  function updatePending(next: PendingImage[]) {
+    pendingRef.current = next;
+    setPending(next);
+  }
 
   async function start() {
     try {
@@ -77,7 +83,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     const next = files.map((f) => ({ file: f, previewUrl: URL.createObjectURL(f) }));
     if (recording) {
       // attach to current recording
-      setPending((p) => [...p, ...next]);
+      updatePending([...pendingRef.current, ...next]);
     } else {
       // create image-only note immediately
       submitImageOnly(files).catch((err: any) => toast.error(err?.message ?? "Upload failed"));
@@ -86,12 +92,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   }
 
   function removePending(idx: number) {
-    setPending((p) => {
-      const copy = [...p];
-      const [rm] = copy.splice(idx, 1);
-      if (rm) URL.revokeObjectURL(rm.previewUrl);
-      return copy;
-    });
+    const copy = [...pendingRef.current];
+    const [rm] = copy.splice(idx, 1);
+    if (rm) URL.revokeObjectURL(rm.previewUrl);
+    updatePending(copy);
   }
 
   async function uploadImages(uid: string, files: File[]): Promise<string[]> {
@@ -139,7 +143,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setBusy(true);
     try {
       const blob = new Blob(chunksRef.current, { type: mime });
-      if (blob.size < 2048 && pending.length === 0) {
+      const attachedImages = pendingRef.current;
+      if (blob.size < 2048 && attachedImages.length === 0) {
         toast.error("Recording was too short — try again.");
         setBusy(false);
         return;
@@ -161,10 +166,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       }
 
       let imagePaths: string[] = [];
-      if (pending.length > 0) {
+      if (attachedImages.length > 0) {
         imagePaths = await uploadImages(
           uid,
-          pending.map((p) => p.file),
+          attachedImages.map((p) => p.file),
         );
       }
 
@@ -181,8 +186,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         .single();
       if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
 
-      pending.forEach((p) => URL.revokeObjectURL(p.previewUrl));
-      setPending([]);
+      attachedImages.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      updatePending([]);
       setBusy(false);
       onNoteReady?.();
       processFn({ data: { noteId: inserted.id } })
