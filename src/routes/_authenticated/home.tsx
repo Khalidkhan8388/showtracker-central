@@ -232,6 +232,7 @@ function Home() {
                   <NoteCard
                     note={latest}
                     variant="wide"
+                    thumbUrl={thumbs[latest.id]}
                     selected={selectedNotes.has(latest.id)}
                     selectMode={noteSelectMode}
                     onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
