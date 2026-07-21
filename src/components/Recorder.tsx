@@ -345,6 +345,55 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         </div>
       )}
 
+      {textOpen && (
+        <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
+          <div className="flex max-h-[90vh] w-full max-w-lg flex-col gap-3 rounded-t-3xl border border-border bg-background p-5 shadow-2xl sm:rounded-3xl">
+            <div className="flex items-center justify-between">
+              <h2 className="text-base font-bold tracking-tight">New note</h2>
+              <button
+                onClick={() => setTextOpen(false)}
+                aria-label="Close"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+            <input
+              autoFocus
+              type="text"
+              placeholder="Title"
+              value={textHeading}
+              onChange={(e) => setTextHeading(e.target.value)}
+              maxLength={200}
+              className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
+            />
+            <textarea
+              placeholder="Write your note… (optional — we'll pull tasks from the body)"
+              value={textBody}
+              onChange={(e) => setTextBody(e.target.value)}
+              maxLength={20000}
+              rows={8}
+              className="min-h-[180px] w-full flex-1 resize-none rounded-2xl border border-border bg-muted/30 p-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-foreground/40"
+            />
+            <div className="flex items-center justify-end gap-2">
+              <button
+                onClick={() => setTextOpen(false)}
+                className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submitText}
+                disabled={!textHeading.trim()}
+                className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
+              >
+                Save note
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
 
 
       <div
