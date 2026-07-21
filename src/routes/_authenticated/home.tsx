@@ -273,7 +273,11 @@ function Home() {
 
                   {(() => {
                     const allTasks = notes.flatMap((n) =>
-                      (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+                      (n.tasks ?? []).map((t) => ({
+                        ...t,
+                        noteId: n.id,
+                        noteHeading: n.heading === "__custom__" ? null : n.heading,
+                      })),
                     );
                     if (allTasks.length === 0) return null;
                     const pinnedT = allTasks.filter((t) => (t as any).pinned && !t.done);
