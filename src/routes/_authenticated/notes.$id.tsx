@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNote, processVoiceNote, pinNote } from "@/lib/notes.functions";
+import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -33,10 +33,15 @@ function NoteDetail() {
   const navigate = useNavigate();
   const [note, setNote] = useState<Note | null>(null);
   const [imageUrls, setImageUrls] = useState<string[]>([]);
+  const [editHeading, setEditHeading] = useState("");
+  const [editBody, setEditBody] = useState("");
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
   const processFn = useServerFn(processVoiceNote);
   const pinFn = useServerFn(pinNote);
+  const updateFn = useServerFn(updateTextNote);
+  const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTextNote = !!note && note.duration_seconds == null && note.transcript != null;
 
   async function load() {
     const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
@@ -66,6 +71,28 @@ function NoteDetail() {
       supabase.removeChannel(channel);
     };
   }, [id]);
+
+  // Sync editor state from server (only when not actively editing / no pending save)
+  const initedRef = useRef(false);
+  useEffect(() => {
+    if (!note) return;
+    if (!initedRef.current) {
+      setEditHeading(note.heading ?? "");
+      setEditBody(note.transcript ?? "");
+      initedRef.current = true;
+    }
+  }, [note]);
+
+  function scheduleSave(next: { heading?: string; body?: string }) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await updateFn({ data: { noteId: id, ...next } });
+      } catch (e: any) {
+        toast.error(e?.message ?? "Failed to save");
+      }
+    }, 600);
+  }
 
   async function onToggle(taskId: string) {
     if (!note) return;
@@ -176,93 +203,151 @@ function NoteDetail() {
           </div>
         )}
 
-        <h1 className="text-[28px] font-bold leading-tight tracking-tight">
-          {note.heading ?? (processing ? "Processing…" : "Untitled")}
-        </h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {new Date(note.created_at).toLocaleString()}
-        </p>
+        {isTextNote ? (
+          <>
+            <input
+              value={editHeading}
+              onChange={(e) => {
+                setEditHeading(e.target.value);
+                scheduleSave({ heading: e.target.value });
+              }}
+              placeholder="Title"
+              className="w-full border-0 bg-transparent p-0 text-[28px] font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground/40 focus:outline-none focus:ring-0"
+            />
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {new Date(note.created_at).toLocaleString()}
+            </p>
 
-        {note.source_url && (
-          <a
-            href={note.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
-          >
-            <Link2 className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">{linkHost ?? note.source_url}</span>
-          </a>
-        )}
+            {note.source_url && (
+              <a
+                href={note.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
+              >
+                <Link2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{linkHost ?? note.source_url}</span>
+              </a>
+            )}
 
-        {imageUrls.length > 0 && (
-          <section className="mt-6">
-            <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-              {imageUrls.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
-                  <img
-                    src={url}
-                    alt=""
-                    className="w-full rounded-2xl object-cover shadow-sm"
-                  />
-                </a>
-              ))}
-            </div>
-          </section>
-        )}
+            {imageUrls.length > 0 && (
+              <section className="mt-6">
+                <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                  {imageUrls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+                      <img src={url} alt="" className="w-full rounded-2xl object-cover" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
 
-        {note.summary && (
-          <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-              Summary
-            </h2>
-            <div className="rounded-2xl bg-card px-4 py-3 shadow-sm">
-              <Markdown>{note.summary}</Markdown>
-            </div>
-          </section>
-        )}
+            <textarea
+              value={editBody}
+              onChange={(e) => {
+                setEditBody(e.target.value);
+                scheduleSave({ body: e.target.value });
+                // autosize
+                e.currentTarget.style.height = "auto";
+                e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+              }}
+              ref={(el) => {
+                if (el) {
+                  el.style.height = "auto";
+                  el.style.height = `${el.scrollHeight}px`;
+                }
+              }}
+              placeholder="Start writing…"
+              className="mt-4 w-full resize-none border-0 bg-transparent p-0 text-[17px] leading-relaxed text-foreground outline-none placeholder:text-muted-foreground/40 focus:outline-none focus:ring-0"
+            />
+          </>
+        ) : (
+          <>
+            <h1 className="text-[28px] font-bold leading-tight tracking-tight">
+              {note.heading ?? (processing ? "Processing…" : "Untitled")}
+            </h1>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              {new Date(note.created_at).toLocaleString()}
+            </p>
 
-        {note.tasks && note.tasks.length > 0 && (
-          <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-              Tasks
-            </h2>
-            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-              {note.tasks.map((t, i) => (
-                <li key={t.id}>
-                  <button
-                    onClick={() => onToggle(t.id)}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-muted"
-                  >
-                    {t.done ? (
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    ) : (
-                      <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                    )}
-                    <span
-                      className={`text-[17px] leading-tight ${
-                        t.done ? "text-muted-foreground line-through" : "text-foreground"
-                      }`}
-                    >
-                      {t.text}
-                    </span>
-                  </button>
-                  {i < note.tasks!.length - 1 && <div className="ml-12 h-px bg-border" />}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
+            {note.source_url && (
+              <a
+                href={note.source_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
+              >
+                <Link2 className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate">{linkHost ?? note.source_url}</span>
+              </a>
+            )}
 
-        {note.transcript && (
-          <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-              Note
-            </h2>
-            <div className="rounded-2xl bg-card px-4 py-3 shadow-sm">
-              <Markdown className="text-foreground">{note.transcript}</Markdown>
-            </div>
-          </section>
+            {imageUrls.length > 0 && (
+              <section className="mt-6">
+                <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                  {imageUrls.map((url, i) => (
+                    <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+                      <img src={url} alt="" className="w-full rounded-2xl object-cover shadow-sm" />
+                    </a>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {note.summary && (
+              <section className="mt-6">
+                <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                  Summary
+                </h2>
+                <div className="rounded-2xl bg-card px-4 py-3 shadow-sm">
+                  <Markdown>{note.summary}</Markdown>
+                </div>
+              </section>
+            )}
+
+            {note.tasks && note.tasks.length > 0 && (
+              <section className="mt-6">
+                <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                  Tasks
+                </h2>
+                <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                  {note.tasks.map((t, i) => (
+                    <li key={t.id}>
+                      <button
+                        onClick={() => onToggle(t.id)}
+                        className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-muted"
+                      >
+                        {t.done ? (
+                          <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+                        ) : (
+                          <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
+                        )}
+                        <span
+                          className={`text-[17px] leading-tight ${
+                            t.done ? "text-muted-foreground line-through" : "text-foreground"
+                          }`}
+                        >
+                          {t.text}
+                        </span>
+                      </button>
+                      {i < note.tasks!.length - 1 && <div className="ml-12 h-px bg-border" />}
+                    </li>
+                  ))}
+                </ul>
+              </section>
+            )}
+
+            {note.transcript && (
+              <section className="mt-6">
+                <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                  Note
+                </h2>
+                <div className="rounded-2xl bg-card px-4 py-3 shadow-sm">
+                  <Markdown className="text-foreground">{note.transcript}</Markdown>
+                </div>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>
