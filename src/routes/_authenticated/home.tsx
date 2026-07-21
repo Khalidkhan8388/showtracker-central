@@ -210,9 +210,10 @@ function Home() {
                 (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
               );
               if (allTasks.length === 0) return null;
-              const open = allTasks.filter((t) => !t.done);
+              const pinned = allTasks.filter((t) => (t as any).pinned && !t.done);
+              const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
               const done = allTasks.filter((t) => t.done);
-              const ordered = [...open, ...done];
+              const ordered = [...pinned, ...open, ...done];
               const visible = ordered.slice(0, 3);
               return (
                 <div className="mt-8">
