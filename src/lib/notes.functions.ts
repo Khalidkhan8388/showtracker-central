@@ -703,27 +703,14 @@ export const saveTextNote = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
 
-    let summary = "";
-    let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
-    let tags: string[] = [];
     let finalHeading = data.heading.trim();
-    if (apiKey && data.body.trim().length >= 20) {
-      try {
-        const structured = await extractFromText(finalHeading, data.body, apiKey);
-        summary = structured.summary;
-        tags = structured.tags;
-        if (!finalHeading && structured.heading) finalHeading = structured.heading;
-        tasksPayload = structured.tasks.map((t, i) => ({
-          id: `t${i}`, text: t, done: false, pending: true,
-        }));
-      } catch {
-        // non-fatal: still save the note
-      }
-    }
     if (!finalHeading) {
       const fallback = data.body.trim().split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
       finalHeading = fallback || "Untitled note";
     }
+    const summary = "";
+    const tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
+    const tags: string[] = [];
 
     const { data: inserted, error: insErr } = await supabase
       .from("voice_notes")
