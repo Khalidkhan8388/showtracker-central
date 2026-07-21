@@ -901,7 +901,73 @@ function BlockEditor({
   );
 }
 
-function AutoTextarea({
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function renderMarkdownHTML(text: string): string {
+  const lines = text.split("\n");
+  const out = lines.map((line) => {
+    if (line.length === 0) return "<div><br></div>";
+    const m = /^(#{1,3})\s+(.*)$/.exec(line);
+    if (m) {
+      const lvl = m[1].length;
+      return `<div class="md-h${lvl}">${escapeHtml(line)}</div>`;
+    }
+    return `<div>${escapeHtml(line)}</div>`;
+  });
+  return out.join("");
+}
+
+function getPlainText(root: HTMLElement): string {
+  // innerText respects block-level newlines from <div> children
+  return (root.innerText ?? "").replace(/\r\n/g, "\n");
+}
+
+function getCaretOffset(root: HTMLElement): number {
+  const sel = window.getSelection();
+  if (!sel || sel.rangeCount === 0) return 0;
+  const range = sel.getRangeAt(0);
+  if (!root.contains(range.endContainer)) return 0;
+  const pre = range.cloneRange();
+  pre.selectNodeContents(root);
+  pre.setEnd(range.endContainer, range.endOffset);
+  // toString() counts newlines from block boundaries as it walks — close enough for our purposes
+  return pre.toString().length;
+}
+
+function setCaretOffset(root: HTMLElement, offset: number): void {
+  const sel = window.getSelection();
+  if (!sel) return;
+  const range = document.createRange();
+  let remaining = offset;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+  let node: Node | null = null;
+  let lastText: Text | null = null;
+  while ((node = walker.nextNode())) {
+    const t = node as Text;
+    lastText = t;
+    const len = t.data.length;
+    if (remaining <= len) {
+      range.setStart(t, remaining);
+      range.collapse(true);
+      sel.removeAllRanges();
+      sel.addRange(range);
+      return;
+    }
+    remaining -= len;
+  }
+  if (lastText) {
+    range.setStart(lastText, lastText.data.length);
+  } else {
+    range.selectNodeContents(root);
+    range.collapse(false);
+  }
+  sel.removeAllRanges();
+  sel.addRange(range);
+}
+
+function MarkdownEditor({
   value,
   onChange,
   placeholder,
@@ -912,24 +978,40 @@ function AutoTextarea({
   placeholder?: string;
   innerRef?: React.MutableRefObject<HTMLTextAreaElement | null>;
 }) {
-  const ref = useRef<HTMLTextAreaElement | null>(null);
+  const ref = useRef<HTMLDivElement | null>(null);
+
+  // Sync external value → DOM when it doesn't match (e.g. after inserting an image/link)
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    el.style.height = "auto";
-    el.style.height = `${el.scrollHeight}px`;
+    if (getPlainText(el) !== value) {
+      el.innerHTML = renderMarkdownHTML(value);
+    }
   }, [value]);
+
+  useEffect(() => {
+    if (innerRef) innerRef.current = ref.current as unknown as HTMLTextAreaElement;
+  }, [innerRef]);
+
+  function handleInput() {
+    const el = ref.current;
+    if (!el) return;
+    const offset = getCaretOffset(el);
+    const text = getPlainText(el);
+    el.innerHTML = renderMarkdownHTML(text);
+    setCaretOffset(el, offset);
+    onChange(text);
+  }
+
   return (
-    <textarea
-      ref={(el) => {
-        ref.current = el;
-        if (innerRef) innerRef.current = el;
-      }}
-      value={value}
-      onChange={(e) => onChange(e.target.value)}
-      placeholder={placeholder}
-      rows={1}
-      className="w-full resize-none bg-transparent font-mono text-sm text-foreground placeholder:text-muted-foreground outline-none"
+    <div
+      ref={ref}
+      contentEditable
+      suppressContentEditableWarning
+      onInput={handleInput}
+      data-placeholder={placeholder ?? ""}
+      className="markdown-editor w-full whitespace-pre-wrap break-words text-base leading-relaxed text-foreground outline-none empty:before:content-[attr(data-placeholder)] empty:before:text-muted-foreground [&_.md-h1]:my-1 [&_.md-h1]:text-2xl [&_.md-h1]:font-bold [&_.md-h1]:tracking-tight [&_.md-h2]:my-1 [&_.md-h2]:text-xl [&_.md-h2]:font-semibold [&_.md-h3]:my-1 [&_.md-h3]:text-lg [&_.md-h3]:font-semibold"
     />
   );
 }
+
