@@ -635,6 +635,8 @@ const NoteCard = memo(function NoteCard({
           <img
             src={thumbUrl}
             alt=""
+            loading="lazy"
+            decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
