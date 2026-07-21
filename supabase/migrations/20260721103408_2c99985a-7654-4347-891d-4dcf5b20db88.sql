@@ -1,0 +1,1 @@
+ALTER TABLE public.voice_notes ADD COLUMN IF NOT EXISTS source_url text;

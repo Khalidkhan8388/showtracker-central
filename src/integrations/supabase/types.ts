@@ -24,6 +24,7 @@ export type Database = {
           id: string
           image_paths: Json
           pinned: boolean
+          source_url: string | null
           status: Database["public"]["Enums"]["note_status"]
           summary: string | null
           tasks: Json
@@ -40,6 +41,7 @@ export type Database = {
           id?: string
           image_paths?: Json
           pinned?: boolean
+          source_url?: string | null
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
           tasks?: Json
@@ -56,6 +58,7 @@ export type Database = {
           id?: string
           image_paths?: Json
           pinned?: boolean
+          source_url?: string | null
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
           tasks?: Json
