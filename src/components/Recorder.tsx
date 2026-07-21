@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import ReactMarkdown from "react-markdown";
