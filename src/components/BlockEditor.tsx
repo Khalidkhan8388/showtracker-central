@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Loader2, X, Minus, Square, Maximize2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2, X } from "lucide-react";
 
 // Match either an image (!...) or a plain markdown link ([label](url)).
 // Group 1 = "!" if image, empty for links; Group 2 = label; Group 3 = url.
@@ -200,10 +200,8 @@ function ResizableImage({
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const dragRef = useRef<{ containerW: number } | null>(null);
-
-  function setPreset(s: ImageSize) {
-    onResize(s);
-  }
+  const holdTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     const container = containerRef.current;
@@ -228,12 +226,35 @@ function ResizableImage({
     dragRef.current = null;
   }
 
+  function clearHold() {
+    if (holdTimerRef.current) {
+      clearTimeout(holdTimerRef.current);
+      holdTimerRef.current = null;
+    }
+  }
+  function onImgPointerDown() {
+    clearHold();
+    holdTimerRef.current = setTimeout(() => {
+      setConfirmDelete(true);
+      if (navigator.vibrate) navigator.vibrate(30);
+    }, 500);
+  }
+
   const currentWidth = widthFor(block.size);
 
   return (
     <div ref={containerRef} className="group relative w-full">
       <div className="relative" style={{ width: currentWidth, maxWidth: "100%" }}>
-        <img src={block.src} alt={block.alt} className="h-auto w-full rounded-xl" />
+        <img
+          src={block.src}
+          alt={block.alt}
+          className="h-auto w-full select-none rounded-xl"
+          draggable={false}
+          onPointerDown={onImgPointerDown}
+          onPointerUp={clearHold}
+          onPointerLeave={clearHold}
+          onPointerCancel={clearHold}
+        />
         <div
           role="slider"
           aria-label="Resize image"
@@ -246,41 +267,29 @@ function ResizableImage({
         >
           <div className="h-12 w-1.5 rounded-full bg-black/70 shadow-lg ring-1 ring-white/30" />
         </div>
-        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 p-0.5 text-white shadow-lg">
-          <button
-            type="button"
-            onClick={() => setPreset("small")}
-            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "small" ? "bg-white/25" : ""}`}
-            aria-label="Small"
-          >
-            <Minus className="h-3 w-3" strokeWidth={3} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreset("medium")}
-            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "medium" ? "bg-white/25" : ""}`}
-            aria-label="Medium"
-          >
-            <Square className="h-3 w-3" strokeWidth={3} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setPreset("full")}
-            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "full" ? "bg-white/25" : ""}`}
-            aria-label="Full width"
-          >
-            <Maximize2 className="h-3 w-3" strokeWidth={3} />
-          </button>
-          <div className="mx-0.5 h-4 w-px bg-white/30" />
-          <button
-            type="button"
-            onClick={onRemove}
-            aria-label="Remove image"
-            className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/25"
-          >
-            <X className="h-3 w-3" strokeWidth={3} />
-          </button>
-        </div>
+        {confirmDelete && (
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
+            <div className="flex items-center gap-2 rounded-full bg-white p-1 shadow-xl">
+              <button
+                type="button"
+                onClick={() => setConfirmDelete(false)}
+                className="rounded-full px-3 py-1.5 text-sm font-medium text-foreground"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmDelete(false);
+                  onRemove();
+                }}
+                className="rounded-full bg-red-500 px-3 py-1.5 text-sm font-semibold text-white"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
