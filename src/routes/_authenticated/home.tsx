@@ -325,184 +325,142 @@ function Home() {
             <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
             <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
+        ) : !derived || !derived.hasAnyContent ? (
+          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
+          </div>
         ) : (
-          <>
-            {(() => {
-              const displayNotes = notes.filter((n) => n.heading !== "__custom__");
-              if (displayNotes.length === 0 && notes.every((n) => (n.tasks ?? []).length === 0)) {
-                return (
-                  <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-                      <Mic className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                    <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-                    <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-                  </div>
-                );
-              }
-              const [latest, ...rest] = displayNotes;
-              const pinnedRest = rest.filter((n) => n.pinned);
-              const unpinnedRest = rest.filter((n) => !n.pinned);
-              const stripIds = new Set<string>();
-              const strip: Note[] = [];
-              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
-                if (!stripIds.has(n.id)) {
-                  stripIds.add(n.id);
-                  strip.push(n);
-                }
-              }
-              const grid = unpinnedRest.slice(5);
-              return (
-                <div className="space-y-6">
-                  {latest && (
-                    <div>
-                      <SectionHeader>Latest</SectionHeader>
+          <div className="space-y-6">
+            {derived.latest && (
+              <div>
+                <SectionHeader>Latest</SectionHeader>
+                <NoteCard
+                  note={derived.latest}
+                  variant="wide"
+                  thumbUrl={thumbs[derived.latest.id]}
+                  selected={selectedNotes.has(derived.latest.id)}
+                  selectMode={noteSelectMode}
+                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                  onLongPress={() => toggleNoteSel(derived.latest.id)}
+                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                />
+              </div>
+            )}
+
+            {derived.strip.length > 0 && (
+              <div>
+                <SectionHeader>Pinned & Recent</SectionHeader>
+                <div className="-mx-4 overflow-x-auto pb-1">
+                  <div className="flex gap-3 px-4">
+                    {derived.strip.map((n) => (
                       <NoteCard
-                        note={latest}
-                        variant="wide"
-                        thumbUrl={thumbs[latest.id]}
-                        selected={selectedNotes.has(latest.id)}
+                        key={n.id}
+                        note={n}
+                        variant="square"
+                        thumbUrl={thumbs[n.id]}
+                        selected={selectedNotes.has(n.id)}
                         selectMode={noteSelectMode}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
-                        onLongPress={() => toggleNoteSel(latest.id)}
-                        onToggleSel={() => toggleNoteSel(latest.id)}
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => toggleNoteSel(n.id)}
+                        onToggleSel={() => toggleNoteSel(n.id)}
                       />
-                    </div>
-                  )}
-
-                  {strip.length > 0 && (
-                    <div>
-                      <SectionHeader>Pinned & Recent</SectionHeader>
-                      <div className="-mx-4 overflow-x-auto pb-1">
-                        <div className="flex gap-3 px-4">
-                          {strip.map((n) => (
-                            <NoteCard
-                              key={n.id}
-                              note={n}
-                              variant="square"
-                              thumbUrl={thumbs[n.id]}
-                              selected={selectedNotes.has(n.id)}
-                              selectMode={noteSelectMode}
-                              onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                              onLongPress={() => toggleNoteSel(n.id)}
-                              onToggleSel={() => toggleNoteSel(n.id)}
-                            />
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  )}
-
-                  {(() => {
-                    const allTasksRaw = notes.flatMap((n) =>
-                      (n.tasks ?? []).map((t) => ({
-                        ...t,
-                        noteId: n.id,
-                        noteHeading: n.heading === "__custom__" ? null : n.heading,
-                      })),
-                    );
-                    const suggested = allTasksRaw.filter((t) => t.pending);
-                    const allTasks = allTasksRaw.filter((t) => !t.pending);
-                    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
-                    const open = allTasks.filter((t) => !t.pinned && !t.done);
-                    const done = allTasks.filter((t) => t.done);
-                    const ordered = [...pinnedT, ...open, ...done];
-                    const visible = ordered.slice(0, 3);
-
-                    return (
-                      <>
-                        {suggested.length > 0 && (
-                          <Link
-                            to="/tasks/review"
-                            className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
-                          >
-                            <div className="flex items-center gap-2">
-                              <Sparkles className="h-4 w-4 text-primary-foreground" />
-                              <span className="text-[15px] font-semibold text-primary-foreground">
-                                {suggested.length} suggested task{suggested.length === 1 ? "" : "s"}
-                              </span>
-                            </div>
-                            <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-                          </Link>
-                        )}
-                        <div>
-                          <div className="mb-2 flex items-baseline justify-between px-1">
-                            <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-                              Tasks
-                            </h2>
-                            <Link
-                              to="/tasks"
-                              className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
-                            >
-                              <span className="tabular-nums">{done.length}/{allTasks.length}</span>
-                              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                            </Link>
-                          </div>
-                          {visible.length === 0 ? (
-                            <Link
-                              to="/tasks"
-                              className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
-                            >
-                              + Add a task
-                            </Link>
-                          ) : (
-                            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-                              {visible.map((t, i) => {
-                                const key: TaskKey = `${t.noteId}::${t.id}`;
-                                const isSel = selectedTasks.has(key);
-                                return (
-                                  <li key={key}>
-                                    <TaskRow
-                                      selectMode={taskSelectMode}
-                                      selected={isSel}
-                                      done={t.done}
-                                      pinned={Boolean(t.pinned)}
-                                      text={t.text}
-                                      noteHeading={t.noteHeading}
-                                      noteId={t.noteId}
-                                      onToggleDone={() => onToggle(t.noteId, t.id)}
-                                      onLongPress={() => toggleTaskSel(key)}
-                                      onSelectTap={() => toggleTaskSel(key)}
-                                    />
-                                    {i < visible.length - 1 && <div className="ml-12 h-px bg-border" />}
-                                  </li>
-                                );
-                              })}
-                            </ul>
-                          )}
-                        </div>
-                      </>
-                    );
-                  })()}
-
-
-                  {grid.length > 0 && (
-                    <div>
-                      <SectionHeader>More Notes</SectionHeader>
-                      <div className="grid grid-cols-2 gap-3">
-                        {grid.map((n) => (
-                          <NoteCard
-                            key={n.id}
-                            note={n}
-                            variant="square"
-                            fullWidth
-                            thumbUrl={thumbs[n.id]}
-                            selected={selectedNotes.has(n.id)}
-                            selectMode={noteSelectMode}
-                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                            onLongPress={() => toggleNoteSel(n.id)}
-                            onToggleSel={() => toggleNoteSel(n.id)}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                    ))}
+                  </div>
                 </div>
-              );
-            })()}
-          </>
+              </div>
+            )}
+
+            {derived.suggested.length > 0 && (
+              <Link
+                to="/tasks/review"
+                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
+              >
+                <div className="flex items-center gap-2">
+                  <Sparkles className="h-4 w-4 text-primary-foreground" />
+                  <span className="text-[15px] font-semibold text-primary-foreground">
+                    {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+              </Link>
+            )}
+
+            <div>
+              <div className="mb-2 flex items-baseline justify-between px-1">
+                <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                  Tasks
+                </h2>
+                <Link
+                  to="/tasks"
+                  className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
+                >
+                  <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                </Link>
+              </div>
+              {derived.visible.length === 0 ? (
+                <Link
+                  to="/tasks"
+                  className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
+                >
+                  + Add a task
+                </Link>
+              ) : (
+                <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                  {derived.visible.map((t, i) => {
+                    const key: TaskKey = `${t.noteId}::${t.id}`;
+                    const isSel = selectedTasks.has(key);
+                    return (
+                      <li key={key}>
+                        <TaskRow
+                          selectMode={taskSelectMode}
+                          selected={isSel}
+                          done={t.done}
+                          pinned={Boolean(t.pinned)}
+                          text={t.text}
+                          noteHeading={t.noteHeading}
+                          noteId={t.noteId}
+                          onToggleDone={() => onToggle(t.noteId, t.id)}
+                          onLongPress={() => toggleTaskSel(key)}
+                          onSelectTap={() => toggleTaskSel(key)}
+                        />
+                        {i < derived.visible.length - 1 && <div className="ml-12 h-px bg-border" />}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </div>
+
+            {derived.grid.length > 0 && (
+              <div>
+                <SectionHeader>More Notes</SectionHeader>
+                <div className="grid grid-cols-2 gap-3">
+                  {derived.grid.map((n) => (
+                    <NoteCard
+                      key={n.id}
+                      note={n}
+                      variant="square"
+                      fullWidth
+                      thumbUrl={thumbs[n.id]}
+                      selected={selectedNotes.has(n.id)}
+                      selectMode={noteSelectMode}
+                      onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                      onLongPress={() => toggleNoteSel(n.id)}
+                      onToggleSel={() => toggleNoteSel(n.id)}
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         )}
       </section>
+
 
 
       {selectMode ? (
