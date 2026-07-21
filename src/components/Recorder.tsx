@@ -45,6 +45,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
+  const linkLabelFn = useServerFn(generateLinkLabel);
 
   function insertAtCursor(snippet: string) {
     const el = textAreaRef.current;
