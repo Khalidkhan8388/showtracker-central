@@ -527,7 +527,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                               type="button"
                               onClick={() => removeImageFromBody(src as string)}
                               aria-label="Remove image"
-                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white opacity-0 shadow-lg transition group-hover:opacity-100"
+                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
                             >
                               <X className="h-3.5 w-3.5" strokeWidth={3} />
                             </button>
