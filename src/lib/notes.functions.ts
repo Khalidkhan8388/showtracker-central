@@ -187,3 +187,52 @@ export const deleteNote = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
+
+const DeleteNotesInput = z.object({ noteIds: z.array(z.string().uuid()).min(1) });
+
+export const deleteNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => DeleteNotesInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows } = await supabase
+      .from("voice_notes")
+      .select("audio_path")
+      .in("id", data.noteIds);
+    const paths = (rows ?? []).map((r: any) => r.audio_path).filter(Boolean) as string[];
+    if (paths.length > 0) {
+      const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+      await supabaseAdmin.storage.from("voice-notes").remove(paths);
+    }
+    const { error } = await supabase.from("voice_notes").delete().in("id", data.noteIds);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+const DeleteTasksInput = z.object({
+  tasks: z.array(z.object({ noteId: z.string().uuid(), taskId: z.string() })).min(1),
+});
+
+export const deleteTasks = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => DeleteTasksInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const byNote = new Map<string, Set<string>>();
+    for (const t of data.tasks) {
+      if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+      byNote.get(t.noteId)!.add(t.taskId);
+    }
+    for (const [noteId, taskIds] of byNote) {
+      const { data: note } = await supabase
+        .from("voice_notes")
+        .select("tasks")
+        .eq("id", noteId)
+        .single();
+      if (!note) continue;
+      const tasks = (Array.isArray(note.tasks) ? note.tasks : []) as Array<{ id: string; text: string; done: boolean }>;
+      const next = tasks.filter((t) => !taskIds.has(t.id));
+      await supabase.from("voice_notes").update({ tasks: next }).eq("id", noteId);
+    }
+    return { ok: true as const };
+  });
