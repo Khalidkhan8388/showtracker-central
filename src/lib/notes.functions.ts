@@ -673,11 +673,15 @@ export const saveTextNote = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
 
+    let heading = data.heading?.trim() ?? "";
     let summary = "";
     let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
-    if (apiKey && data.body.trim().length >= 20) {
+    const bodyText = data.body?.trim() ?? "";
+    const needsAi = apiKey && (bodyText.length >= 5 || !heading);
+    if (needsAi) {
       try {
-        const structured = await extractFromText(data.heading, data.body, apiKey);
+        const structured = await extractFromText(heading, bodyText, apiKey);
+        if (!heading && structured.heading) heading = structured.heading;
         summary = structured.summary;
         tasksPayload = structured.tasks.map((t, i) => ({
           id: `t${i}`, text: t, done: false, pending: true,
@@ -687,13 +691,18 @@ export const saveTextNote = createServerFn({ method: "POST" })
       }
     }
 
+    if (!heading) {
+      const firstLine = bodyText.split(/\n/).find((l) => l.trim().length > 0) ?? "";
+      heading = firstLine.replace(/^#+\s*/, "").trim().slice(0, 80) || "Untitled note";
+    }
+
     const { data: inserted, error: insErr } = await supabase
       .from("voice_notes")
       .insert({
         user_id: userId,
-        heading: data.heading,
-        transcript: data.body || null,
-        summary: summary || (data.body ? data.body.slice(0, 500) : ""),
+        heading,
+        transcript: bodyText || null,
+        summary: summary || (bodyText ? bodyText.slice(0, 500) : ""),
         tasks: tasksPayload,
         image_paths: data.imagePaths ?? [],
         source_url: data.sourceUrl ?? null,
