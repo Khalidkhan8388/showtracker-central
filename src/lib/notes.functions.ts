@@ -5,7 +5,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 const ProcessInput = z.object({ noteId: z.string().uuid() });
 const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
 const SaveTextNoteInput = z.object({
-  heading: z.string().trim().min(1).max(200),
+  heading: z.string().trim().max(200).optional().default(""),
   body: z.string().trim().max(20000).optional().default(""),
   imagePaths: z.array(z.string().min(1)).max(20).optional().default([]),
   sourceUrl: z.string().trim().url().max(2000).optional().nullable(),
@@ -622,10 +622,11 @@ export const dismissTasks = createServerFn({ method: "POST" })
   });
 
 const TEXT_SYSTEM_PROMPT = `You are analyzing a user's written note.
-Return ONE JSON object with keys: summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
-- summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short to summarize meaningfully.
-- tasks: array of clear, actionable to-dos extracted from the note (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
+- heading: a short, specific title (max ~8 words, title case, no trailing punctuation) that reflects the actual topic. Never "Untitled" or "Note". If the user already supplied a title you like, echo it back; otherwise invent one from the body.
+- summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short.
+- tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -633,8 +634,8 @@ async function extractFromText(
   heading: string,
   body: string,
   apiKey: string,
-): Promise<{ summary: string; tasks: string[] }> {
-  if (!body || body.trim().length < 20) return { summary: "", tasks: [] };
+): Promise<{ heading: string; summary: string; tasks: string[] }> {
+  if (!body || body.trim().length < 5) return { heading: "", summary: "", tasks: [] };
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -642,16 +643,17 @@ async function extractFromText(
       model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: TEXT_SYSTEM_PROMPT },
-        { role: "user", content: `Title: ${heading}\n\nNote:\n${body}` },
+        { role: "user", content: `Title (may be empty): ${heading}\n\nNote:\n${body}` },
       ],
       response_format: { type: "json_object" },
     }),
   });
-  if (!res.ok) return { summary: "", tasks: [] };
+  if (!res.ok) return { heading: "", summary: "", tasks: [] };
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const raw = data.choices?.[0]?.message?.content ?? "{}";
   let parsed: any;
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+  const outHeading = String(parsed.heading ?? "").trim().slice(0, 200);
   const summary = String(parsed.summary ?? "").slice(0, 2000);
   const tasksArr = Array.isArray(parsed.tasks) ? parsed.tasks : [];
   const tasks = tasksArr
@@ -660,8 +662,9 @@ async function extractFromText(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { summary, tasks };
+  return { heading: outHeading, summary, tasks };
 }
+
 
 export const saveTextNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -670,11 +673,15 @@ export const saveTextNote = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     const apiKey = process.env.LOVABLE_API_KEY;
 
+    let heading = data.heading?.trim() ?? "";
     let summary = "";
     let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
-    if (apiKey && data.body.trim().length >= 20) {
+    const bodyText = data.body?.trim() ?? "";
+    const needsAi = apiKey && (bodyText.length >= 5 || !heading);
+    if (needsAi) {
       try {
-        const structured = await extractFromText(data.heading, data.body, apiKey);
+        const structured = await extractFromText(heading, bodyText, apiKey);
+        if (!heading && structured.heading) heading = structured.heading;
         summary = structured.summary;
         tasksPayload = structured.tasks.map((t, i) => ({
           id: `t${i}`, text: t, done: false, pending: true,
@@ -684,13 +691,18 @@ export const saveTextNote = createServerFn({ method: "POST" })
       }
     }
 
+    if (!heading) {
+      const firstLine = bodyText.split(/\n/).find((l) => l.trim().length > 0) ?? "";
+      heading = firstLine.replace(/^#+\s*/, "").trim().slice(0, 80) || "Untitled note";
+    }
+
     const { data: inserted, error: insErr } = await supabase
       .from("voice_notes")
       .insert({
         user_id: userId,
-        heading: data.heading,
-        transcript: data.body || null,
-        summary: summary || (data.body ? data.body.slice(0, 500) : ""),
+        heading,
+        transcript: bodyText || null,
+        summary: summary || (bodyText ? bodyText.slice(0, 500) : ""),
         tasks: tasksPayload,
         image_paths: data.imagePaths ?? [],
         source_url: data.sourceUrl ?? null,
