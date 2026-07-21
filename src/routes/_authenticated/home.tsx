@@ -726,8 +726,8 @@ function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-2 rounded-xl border-2 p-3 select-none transition-colors ${
-        selected ? "border-foreground bg-muted" : "border-border bg-card"
+      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+        selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
       <button
@@ -743,23 +743,23 @@ function TaskRow({
         className="mt-0.5 shrink-0"
       >
         {done ? (
-          <CheckCircle2 className="h-4 w-4 text-foreground" />
+          <CheckCircle2 className="h-5 w-5 text-primary" />
         ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
+          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-sm leading-snug ${
+          className={`text-[17px] leading-tight ${
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
-          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-foreground text-foreground" />}
+          {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
         {noteHeading && (
           selectMode ? (
-            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {noteHeading}
             </span>
           ) : (
@@ -767,7 +767,7 @@ function TaskRow({
               to="/notes/$id"
               params={{ id: noteId }}
               onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
             >
               {noteHeading}
             </Link>
@@ -777,6 +777,7 @@ function TaskRow({
     </div>
   );
 }
+
 
 function StatusIcon({ status }: { status: Note["status"] }) {
   if (status === "ready") return <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />;
