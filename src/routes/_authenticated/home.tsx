@@ -133,45 +133,25 @@ function Home() {
     }
   }
 
+  const selectMode = noteSelectMode || taskSelectMode;
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      {(noteSelectMode || taskSelectMode) ? (
-        <header className="sticky top-0 z-20 flex items-center justify-between border-b border-border bg-background/95 px-5 py-3 backdrop-blur">
-          <button
-            onClick={() => {
-              setSelectedNotes(new Set());
-              setSelectedTasks(new Set());
-            }}
-            className="flex items-center gap-2 text-sm font-medium"
-          >
-            <X className="h-4 w-4" />
-            <span>{noteSelectMode ? selectedNotes.size : selectedTasks.size} selected</span>
-          </button>
-          <button
-            onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
-            className="flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-xs font-semibold text-destructive-foreground"
-          >
-            <Trash2 className="h-3.5 w-3.5" />
-            Delete
-          </button>
-        </header>
-      ) : (
-        <header className="flex items-center justify-between px-5 pt-8 pb-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-              <Mic className="h-4 w-4" />
-            </div>
-            <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
+      <header className="flex items-center justify-between px-5 pt-8 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
+            <Mic className="h-4 w-4" />
           </div>
-          <button
-            onClick={signOut}
-            className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-            aria-label="Sign out"
-          >
-            <LogOut className="h-4 w-4" />
-          </button>
-        </header>
-      )}
+          <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
+        </div>
+        <button
+          onClick={signOut}
+          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+          aria-label="Sign out"
+        >
+          <LogOut className="h-4 w-4" />
+        </button>
+      </header>
 
       <section className="flex-1 px-5 pb-32 pt-4">
         <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
