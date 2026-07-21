@@ -7,7 +7,7 @@ import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@
 
 const CUSTOM_HEADING = "__custom__";
 
-export const Route = createFileRoute("/_authenticated/tasks")({
+export const Route = createFileRoute("/_authenticated/tasks/")({
   head: () => ({
     meta: [
       { title: "Tasks — Braintape" },

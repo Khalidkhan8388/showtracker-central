@@ -12,9 +12,9 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as AuthenticatedTasksRouteImport } from './routes/_authenticated/tasks'
 import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 
@@ -32,11 +32,6 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedTasksRoute = AuthenticatedTasksRouteImport.update({
-  id: '/tasks',
-  path: '/tasks',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
   id: '/share',
   path: '/share',
@@ -47,11 +42,16 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTasksReviewRoute =
   AuthenticatedTasksReviewRouteImport.update({
-    id: '/review',
-    path: '/review',
-    getParentRoute: () => AuthenticatedTasksRoute,
+    id: '/tasks/review',
+    path: '/tasks/review',
+    getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
   id: '/notes/$id',
@@ -64,18 +64,18 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/share': typeof AuthenticatedShareRoute
-  '/tasks': typeof AuthenticatedTasksRouteWithChildren
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/home': typeof AuthenticatedHomeRoute
   '/share': typeof AuthenticatedShareRoute
-  '/tasks': typeof AuthenticatedTasksRouteWithChildren
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/tasks': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -84,9 +84,9 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
-  '/_authenticated/tasks': typeof AuthenticatedTasksRouteWithChildren
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -95,18 +95,18 @@ export interface FileRouteTypes {
     | '/auth'
     | '/home'
     | '/share'
-    | '/tasks'
     | '/notes/$id'
     | '/tasks/review'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
     | '/home'
     | '/share'
-    | '/tasks'
     | '/notes/$id'
     | '/tasks/review'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
@@ -114,9 +114,9 @@ export interface FileRouteTypes {
     | '/auth'
     | '/_authenticated/home'
     | '/_authenticated/share'
-    | '/_authenticated/tasks'
     | '/_authenticated/notes/$id'
     | '/_authenticated/tasks/review'
+    | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -148,13 +148,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/tasks': {
-      id: '/_authenticated/tasks'
-      path: '/tasks'
-      fullPath: '/tasks'
-      preLoaderRoute: typeof AuthenticatedTasksRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/share': {
       id: '/_authenticated/share'
       path: '/share'
@@ -169,12 +162,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/tasks/': {
+      id: '/_authenticated/tasks/'
+      path: '/tasks'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/tasks/review': {
       id: '/_authenticated/tasks/review'
-      path: '/review'
+      path: '/tasks/review'
       fullPath: '/tasks/review'
       preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
-      parentRoute: typeof AuthenticatedTasksRoute
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/notes/$id': {
       id: '/_authenticated/notes/$id'
@@ -186,29 +186,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
-interface AuthenticatedTasksRouteChildren {
-  AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
-}
-
-const AuthenticatedTasksRouteChildren: AuthenticatedTasksRouteChildren = {
-  AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
-}
-
-const AuthenticatedTasksRouteWithChildren =
-  AuthenticatedTasksRoute._addFileChildren(AuthenticatedTasksRouteChildren)
-
 interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
-  AuthenticatedTasksRoute: typeof AuthenticatedTasksRouteWithChildren
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
+  AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
+  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
-  AuthenticatedTasksRoute: AuthenticatedTasksRouteWithChildren,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
+  AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
+  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
