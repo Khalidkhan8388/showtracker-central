@@ -648,11 +648,12 @@ export const dismissTasks = createServerFn({ method: "POST" })
   });
 
 const TEXT_SYSTEM_PROMPT = `You are analyzing a user's written note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation, reflecting the note's actual topic. Never use "Untitled" or generic filler.
 - summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short to summarize meaningfully.
 - tasks: array of clear, actionable to-dos extracted from the note (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
+- tags: 3-6 short lowercase tags (kebab-case, no #) categorizing the note by topic, project, person, or type.
 
 Respond with ONLY the JSON object.`;
 
@@ -660,8 +661,8 @@ async function extractFromText(
   heading: string,
   body: string,
   apiKey: string,
-): Promise<{ heading: string; summary: string; tasks: string[] }> {
-  if (!body || body.trim().length < 20) return { heading: "", summary: "", tasks: [] };
+): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
+  if (!body || body.trim().length < 20) return { heading: "", summary: "", tasks: [], tags: [] };
   const userContent = heading
     ? `Title: ${heading}\n\nNote:\n${body}`
     : `Note:\n${body}\n\n(No title provided — generate one.)`;
@@ -677,7 +678,7 @@ async function extractFromText(
       response_format: { type: "json_object" },
     }),
   });
-  if (!res.ok) return { heading: "", summary: "", tasks: [] };
+  if (!res.ok) return { heading: "", summary: "", tasks: [], tags: [] };
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const raw = data.choices?.[0]?.message?.content ?? "{}";
   let parsed: any;
@@ -691,7 +692,8 @@ async function extractFromText(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { heading: outHeading, summary, tasks };
+  const tags = parseTags(parsed.tags);
+  return { heading: outHeading, summary, tasks, tags };
 }
 
 export const saveTextNote = createServerFn({ method: "POST" })
@@ -703,11 +705,13 @@ export const saveTextNote = createServerFn({ method: "POST" })
 
     let summary = "";
     let tasksPayload: Array<{ id: string; text: string; done: boolean; pending: boolean }> = [];
+    let tags: string[] = [];
     let finalHeading = data.heading.trim();
     if (apiKey && data.body.trim().length >= 20) {
       try {
         const structured = await extractFromText(finalHeading, data.body, apiKey);
         summary = structured.summary;
+        tags = structured.tags;
         if (!finalHeading && structured.heading) finalHeading = structured.heading;
         tasksPayload = structured.tasks.map((t, i) => ({
           id: `t${i}`, text: t, done: false, pending: true,
@@ -729,6 +733,7 @@ export const saveTextNote = createServerFn({ method: "POST" })
         transcript: data.body || null,
         summary: summary || (data.body ? data.body.slice(0, 500) : ""),
         tasks: tasksPayload,
+        tags,
         image_paths: data.imagePaths ?? [],
         source_url: data.sourceUrl ?? null,
         status: "ready",
