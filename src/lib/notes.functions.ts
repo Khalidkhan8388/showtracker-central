@@ -701,3 +701,59 @@ export const saveTextNote = createServerFn({ method: "POST" })
     if (insErr || !inserted) throw new Error(insErr?.message ?? "Insert failed");
     return { ok: true as const, noteId: inserted.id };
   });
+
+const GenerateLinkLabelInput = z.object({ url: z.string().trim().url().max(2000) });
+
+export const generateLinkLabel = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => GenerateLinkLabelInput.parse(data))
+  .handler(async ({ data }) => {
+    const url = data.url;
+    let hostname = "";
+    try {
+      hostname = new URL(url).hostname.replace(/^www\./, "");
+    } catch {}
+    // Try a lightweight fetch of the page and extract <title> / og:title.
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 6000);
+      const res = await fetch(url, {
+        method: "GET",
+        redirect: "follow",
+        signal: controller.signal,
+        headers: {
+          "User-Agent":
+            "Mozilla/5.0 (compatible; BraintapeBot/1.0; +https://braintape.app)",
+          Accept: "text/html,application/xhtml+xml",
+        },
+      }).finally(() => clearTimeout(timeout));
+      if (res.ok) {
+        const ct = res.headers.get("content-type") ?? "";
+        if (ct.includes("text/html") || ct.includes("application/xhtml")) {
+          const html = (await res.text()).slice(0, 200000);
+          const og = html.match(
+            /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i,
+          )?.[1];
+          const tw = html.match(
+            /<meta[^>]+name=["']twitter:title["'][^>]+content=["']([^"']+)["']/i,
+          )?.[1];
+          const title = html.match(/<title[^>]*>([^<]+)<\/title>/i)?.[1];
+          const raw = (og || tw || title || "").trim();
+          if (raw) {
+            const decoded = raw
+              .replace(/&amp;/g, "&")
+              .replace(/&lt;/g, "<")
+              .replace(/&gt;/g, ">")
+              .replace(/&quot;/g, '"')
+              .replace(/&#39;/g, "'")
+              .replace(/\s+/g, " ")
+              .trim()
+              .slice(0, 120);
+            return { label: decoded, hostname };
+          }
+        }
+      }
+    } catch {
+      // fall through to hostname
+    }
+    return { label: hostname || url, hostname };
+  });

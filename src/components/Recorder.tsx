@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
+import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import ReactMarkdown from "react-markdown";
@@ -45,6 +45,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
+  const linkLabelFn = useServerFn(generateLinkLabel);
 
   function insertAtCursor(snippet: string) {
     const el = textAreaRef.current;
@@ -95,8 +96,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  function promptInsertLink() {
-    const url = window.prompt("Link URL");
+  async function promptInsertLink() {
+    const url = window.prompt("Paste link URL");
     if (!url) return;
     const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
     try {
@@ -105,8 +106,21 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       toast.error("Link doesn't look valid");
       return;
     }
-    const label = window.prompt("Link text (optional)", "") || normalized;
-    insertAtCursor(`[${label}](${normalized})`);
+    // Insert with a placeholder label immediately so the user sees the pill,
+    // then swap in the AI-generated title once it arrives.
+    const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
+    const initialLabel = placeholderId;
+    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
+    try {
+      const { label } = await linkLabelFn({ data: { url: normalized } });
+      const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
+    } catch {
+      const hostname = (() => {
+        try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
+      })();
+      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
+    }
   }
 
   function removeImageFromBody(src: string) {
@@ -117,6 +131,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       return prev.replace(re, "");
     });
   }
+
+  function removeLinkFromBody(href: string) {
+    setTextBody((prev) => {
+      const escaped = href.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const re = new RegExp(`\\n?(?<!!)\\[[^\\]]*\\]\\(${escaped}\\)\\n?`, "g");
+      return prev.replace(re, "");
+    });
+  }
+
+
 
   function resetTextComposer() {
     setTextHeading("");
@@ -497,6 +521,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 textAreaRef={textAreaRef}
                 fullscreen={textFullscreen}
                 onRemoveImage={removeImageFromBody}
+                onRemoveLink={removeLinkFromBody}
               />
             ) : (
               <div
@@ -677,21 +702,28 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   );
 }
 
-const IMG_RE = /!\[[^\]]*\]\(([^)]+)\)/g;
+// Match either an image (!...) or a plain markdown link ([label](url)).
+// Group 1 = "!" if image, empty for links; Group 2 = label; Group 3 = url.
+const MEDIA_RE = /(!?)\[([^\]]*)\]\(([^)\s]+)\)/g;
 
 type Block =
   | { kind: "text"; value: string }
-  | { kind: "image"; src: string; raw: string };
+  | { kind: "image"; src: string; raw: string }
+  | { kind: "link"; href: string; label: string; raw: string };
 
 function parseBlocks(md: string): Block[] {
   const blocks: Block[] = [];
   let last = 0;
-  const re = new RegExp(IMG_RE.source, "g");
+  const re = new RegExp(MEDIA_RE.source, "g");
   let m: RegExpExecArray | null;
   while ((m = re.exec(md)) !== null) {
     const before = md.slice(last, m.index);
     blocks.push({ kind: "text", value: before });
-    blocks.push({ kind: "image", src: m[1], raw: m[0] });
+    if (m[1] === "!") {
+      blocks.push({ kind: "image", src: m[3], raw: m[0] });
+    } else {
+      blocks.push({ kind: "link", href: m[3], label: m[2] || m[3], raw: m[0] });
+    }
     last = m.index + m[0].length;
   }
   blocks.push({ kind: "text", value: md.slice(last) });
@@ -699,9 +731,24 @@ function parseBlocks(md: string): Block[] {
 }
 
 function serializeBlocks(blocks: Block[]): string {
-  return blocks
-    .map((b) => (b.kind === "text" ? b.value : b.raw))
-    .join("");
+  return blocks.map((b) => (b.kind === "text" ? b.value : b.raw)).join("");
+}
+
+function faviconFor(href: string): string | null {
+  try {
+    const u = new URL(href);
+    return `https://www.google.com/s2/favicons?domain=${u.hostname}&sz=64`;
+  } catch {
+    return null;
+  }
+}
+
+function hostnameOf(href: string): string {
+  try {
+    return new URL(href).hostname.replace(/^www\./, "");
+  } catch {
+    return href;
+  }
 }
 
 function BlockEditor({
@@ -710,16 +757,17 @@ function BlockEditor({
   textAreaRef,
   fullscreen,
   onRemoveImage,
+  onRemoveLink,
 }: {
   value: string;
   onChange: (v: string) => void;
   textAreaRef: React.MutableRefObject<HTMLTextAreaElement | null>;
   fullscreen: boolean;
   onRemoveImage: (src: string) => void;
+  onRemoveLink: (href: string) => void;
 }) {
   const blocks = parseBlocks(value);
-  // Ensure trailing text block exists so cursor lands there
-  const hasImages = blocks.some((b) => b.kind === "image");
+  const hasMedia = blocks.some((b) => b.kind !== "text");
 
   function updateTextBlock(idx: number, next: string) {
     const copy = blocks.slice();
@@ -727,7 +775,6 @@ function BlockEditor({
     onChange(serializeBlocks(copy));
   }
 
-  // Find index of the last text block for the ref (used by insertAtCursor)
   const lastTextIdx = (() => {
     for (let i = blocks.length - 1; i >= 0; i--) if (blocks[i].kind === "text") return i;
     return -1;
@@ -739,37 +786,81 @@ function BlockEditor({
         fullscreen ? "min-h-0" : "min-h-[200px]"
       }`}
     >
-      {blocks.map((b, i) =>
-        b.kind === "image" ? (
-          <div key={`img-${i}`} className="group relative">
-            <img
-              src={b.src}
-              alt=""
-              className="max-h-96 w-auto rounded-xl"
-            />
-            <button
-              type="button"
-              onClick={() => onRemoveImage(b.src)}
-              aria-label="Remove image"
-              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+      {blocks.map((b, i) => {
+        if (b.kind === "image") {
+          return (
+            <div key={`img-${i}`} className="group relative">
+              <img src={b.src} alt="" className="max-h-96 w-auto rounded-xl" />
+              <button
+                type="button"
+                onClick={() => onRemoveImage(b.src)}
+                aria-label="Remove image"
+                className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={3} />
+              </button>
+            </div>
+          );
+        }
+        if (b.kind === "link") {
+          const loading = /^__linking_.*__$/.test(b.label);
+          const favicon = faviconFor(b.href);
+          const host = hostnameOf(b.href);
+          return (
+            <div
+              key={`link-${i}`}
+              className="group relative flex items-center gap-3 rounded-xl border border-border bg-background px-3 py-2"
             >
-              <X className="h-3.5 w-3.5" strokeWidth={3} />
-            </button>
-          </div>
-        ) : (
+              {favicon ? (
+                <img src={favicon} alt="" className="h-6 w-6 flex-shrink-0 rounded" />
+              ) : (
+                <div className="h-6 w-6 flex-shrink-0 rounded bg-muted" />
+              )}
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-sm font-medium text-foreground">
+                  {loading ? (
+                    <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                      Fetching title…
+                    </span>
+                  ) : (
+                    b.label
+                  )}
+                </div>
+                <a
+                  href={b.href}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block truncate text-xs text-muted-foreground hover:underline"
+                >
+                  {host}
+                </a>
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemoveLink(b.href)}
+                aria-label="Remove link"
+                className="inline-flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
+              >
+                <X className="h-3.5 w-3.5" strokeWidth={3} />
+              </button>
+            </div>
+          );
+        }
+        return (
           <AutoTextarea
             key={`txt-${i}`}
             value={b.value}
             onChange={(v) => updateTextBlock(i, v)}
             placeholder={
-              !hasImages && i === 0
+              !hasMedia && i === 0
                 ? "Write in markdown…\n\n# Heading\n**bold**, *italic*, `code`\n- bullet list\n- [ ] task"
                 : ""
             }
             innerRef={i === lastTextIdx ? textAreaRef : undefined}
           />
-        ),
-      )}
+        );
+      })}
     </div>
   );
 }
