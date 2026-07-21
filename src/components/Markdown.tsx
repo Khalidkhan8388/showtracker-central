@@ -12,6 +12,8 @@ export function Markdown({ children, className = "" }: { children: string; class
           a: ({ node, children, ...props }) => {
             const href = (props as any).href as string | undefined;
             const isExternal = !!href && /^https?:\/\//i.test(href);
+            const isResolvedWiki = !!href && /^\/notes\//.test(href);
+            const isUnresolvedWiki = !!href && /^\/search\?q=/.test(href);
             if (isExternal) {
               let host = href!;
               try { host = new URL(href!).hostname.replace(/^www\./, ""); } catch {}
@@ -25,6 +27,26 @@ export function Markdown({ children, className = "" }: { children: string; class
                 >
                   <img src={`https://www.google.com/s2/favicons?domain=${host}&sz=32`} alt="" className="h-3 w-3 rounded-sm !my-0" />
                   <span>{label}</span>
+                </a>
+              );
+            }
+            if (isResolvedWiki) {
+              return (
+                <a
+                  {...props}
+                  className="inline-flex items-center rounded-full bg-yellow-400/25 px-2.5 py-0.5 text-xs font-medium text-yellow-800 no-underline ring-1 ring-yellow-400/60 shadow-[0_0_12px_rgba(250,204,21,0.55)] hover:bg-yellow-400/35"
+                >
+                  {children}
+                </a>
+              );
+            }
+            if (isUnresolvedWiki) {
+              return (
+                <a
+                  {...props}
+                  className="inline-flex items-center rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground no-underline ring-1 ring-border hover:bg-muted/80"
+                >
+                  {children}
                 </a>
               );
             }
