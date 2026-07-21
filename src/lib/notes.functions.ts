@@ -622,10 +622,11 @@ export const dismissTasks = createServerFn({ method: "POST" })
   });
 
 const TEXT_SYSTEM_PROMPT = `You are analyzing a user's written note.
-Return ONE JSON object with keys: summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
-- summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short to summarize meaningfully.
-- tasks: array of clear, actionable to-dos extracted from the note (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
+- heading: a short, specific title (max ~8 words, title case, no trailing punctuation) that reflects the actual topic. Never "Untitled" or "Note". If the user already supplied a title you like, echo it back; otherwise invent one from the body.
+- summary: 1-3 sentence recap of the note's key points. Leave "" if the note is too short.
+- tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -633,8 +634,8 @@ async function extractFromText(
   heading: string,
   body: string,
   apiKey: string,
-): Promise<{ summary: string; tasks: string[] }> {
-  if (!body || body.trim().length < 20) return { summary: "", tasks: [] };
+): Promise<{ heading: string; summary: string; tasks: string[] }> {
+  if (!body || body.trim().length < 5) return { heading: "", summary: "", tasks: [] };
   const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
@@ -642,16 +643,17 @@ async function extractFromText(
       model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: TEXT_SYSTEM_PROMPT },
-        { role: "user", content: `Title: ${heading}\n\nNote:\n${body}` },
+        { role: "user", content: `Title (may be empty): ${heading}\n\nNote:\n${body}` },
       ],
       response_format: { type: "json_object" },
     }),
   });
-  if (!res.ok) return { summary: "", tasks: [] };
+  if (!res.ok) return { heading: "", summary: "", tasks: [] };
   const data = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
   const raw = data.choices?.[0]?.message?.content ?? "{}";
   let parsed: any;
   try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+  const outHeading = String(parsed.heading ?? "").trim().slice(0, 200);
   const summary = String(parsed.summary ?? "").slice(0, 2000);
   const tasksArr = Array.isArray(parsed.tasks) ? parsed.tasks : [];
   const tasks = tasksArr
@@ -660,8 +662,9 @@ async function extractFromText(
     )
     .filter((t: string) => t.trim().length > 0)
     .slice(0, 20);
-  return { summary, tasks };
+  return { heading: outHeading, summary, tasks };
 }
+
 
 export const saveTextNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
