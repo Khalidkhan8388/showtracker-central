@@ -521,6 +521,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 textAreaRef={textAreaRef}
                 fullscreen={textFullscreen}
                 onRemoveImage={removeImageFromBody}
+                onRemoveLink={removeLinkFromBody}
               />
             ) : (
               <div
