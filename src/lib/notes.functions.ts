@@ -539,8 +539,11 @@ export const saveWebLink = createServerFn({ method: "POST" })
 
     try {
       const { title, text } = await fetchWebPageText(data.url);
-      if (!text || text.length < 30) throw new Error("Page has no readable content");
-      const structured = await summarizeWebPage(data.url, title, text, apiKey);
+      const effectiveText =
+        text && text.length >= 30
+          ? text
+          : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable server-rendered content; summarize based on the URL and title alone.)`;
+      const structured = await summarizeWebPage(data.url, title, effectiveText, apiKey);
       const tasksPayload = structured.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false }));
       await supabase
         .from("voice_notes")
