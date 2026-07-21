@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
@@ -184,35 +184,40 @@ function Home() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="flex items-center justify-between px-5 pt-8 pb-2">
-        <div className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground text-background">
-            <Mic className="h-4 w-4" />
-          </div>
-          <h1 className="text-xl font-bold tracking-tight">Braintape</h1>
+      {/* iOS large-title header */}
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+        <div className="flex items-center justify-end px-2 pt-3 pb-1">
+          <button
+            onClick={signOut}
+            className="inline-flex items-center gap-1 rounded-full px-3 py-1 text-[17px] text-primary active:opacity-60"
+            aria-label="Sign out"
+          >
+            <LogOut className="h-4 w-4" />
+            <span>Sign out</span>
+          </button>
         </div>
-        <button
-          onClick={signOut}
-          className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-foreground"
-          aria-label="Sign out"
-        >
-          <LogOut className="h-4 w-4" />
-        </button>
+        <div className="px-4 pt-1 pb-3">
+          <h1 className="text-[34px] font-bold tracking-tight leading-tight">Braintape</h1>
+          {notes && notes.length > 0 && (
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
+            </p>
+          )}
+        </div>
       </header>
 
-      <section className="flex-1 px-5 pb-32 pt-4">
-        <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Pinned & Recent
-        </h2>
-
+      <section className="flex-1 px-4 pb-32 pt-2">
         {notes === null ? (
-          <div className="flex justify-center py-8">
+          <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : notes.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-            <p className="text-sm text-muted-foreground">No notes yet.</p>
-            <p className="mt-1 text-xs text-muted-foreground">Tap the mic and start talking.</p>
+          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+              <Mic className="h-5 w-5 text-muted-foreground" />
+            </div>
+            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
         ) : (
           <>
@@ -220,9 +225,12 @@ function Home() {
               const displayNotes = notes.filter((n) => n.heading !== "__custom__");
               if (displayNotes.length === 0 && notes.every((n) => (n.tasks ?? []).length === 0)) {
                 return (
-                  <div className="rounded-2xl border border-dashed border-border p-8 text-center">
-                    <p className="text-sm text-muted-foreground">No notes yet.</p>
-                    <p className="mt-1 text-xs text-muted-foreground">Tap the mic and start talking.</p>
+                  <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+                    <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
+                      <Mic className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
+                    <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
                   </div>
                 );
               }
@@ -239,36 +247,42 @@ function Home() {
               }
               const grid = unpinnedRest.slice(5);
               return (
-                <div className="space-y-4">
+                <div className="space-y-6">
                   {latest && (
-                    <NoteCard
-                      note={latest}
-                      variant="wide"
-                      thumbUrl={thumbs[latest.id]}
-                      selected={selectedNotes.has(latest.id)}
-                      selectMode={noteSelectMode}
-                      onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
-                      onLongPress={() => toggleNoteSel(latest.id)}
-                      onToggleSel={() => toggleNoteSel(latest.id)}
-                    />
+                    <div>
+                      <SectionHeader>Latest</SectionHeader>
+                      <NoteCard
+                        note={latest}
+                        variant="wide"
+                        thumbUrl={thumbs[latest.id]}
+                        selected={selectedNotes.has(latest.id)}
+                        selectMode={noteSelectMode}
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: latest.id } })}
+                        onLongPress={() => toggleNoteSel(latest.id)}
+                        onToggleSel={() => toggleNoteSel(latest.id)}
+                      />
+                    </div>
                   )}
 
                   {strip.length > 0 && (
-                    <div className="-mx-5 overflow-x-auto pb-2">
-                      <div className="flex gap-3 px-5">
-                        {strip.map((n) => (
-                          <NoteCard
-                            key={n.id}
-                            note={n}
-                            variant="square"
-                            thumbUrl={thumbs[n.id]}
-                            selected={selectedNotes.has(n.id)}
-                            selectMode={noteSelectMode}
-                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                            onLongPress={() => toggleNoteSel(n.id)}
-                            onToggleSel={() => toggleNoteSel(n.id)}
-                          />
-                        ))}
+                    <div>
+                      <SectionHeader>Pinned & Recent</SectionHeader>
+                      <div className="-mx-4 overflow-x-auto pb-1">
+                        <div className="flex gap-3 px-4">
+                          {strip.map((n) => (
+                            <NoteCard
+                              key={n.id}
+                              note={n}
+                              variant="square"
+                              thumbUrl={thumbs[n.id]}
+                              selected={selectedNotes.has(n.id)}
+                              selectMode={noteSelectMode}
+                              onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                              onLongPress={() => toggleNoteSel(n.id)}
+                              onToggleSel={() => toggleNoteSel(n.id)}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   )}
@@ -292,41 +306,42 @@ function Home() {
                     return (
                       <>
                         {suggested.length > 0 && (
-                          <div className="pt-4">
-                            <Link
-                              to="/tasks/review"
-                              className="flex items-center justify-between rounded-full bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity"
-                            >
-                              <span>
-                                {suggested.length} suggested task{suggested.length === 1 ? "" : "s"} to review
+                          <Link
+                            to="/tasks/review"
+                            className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
+                          >
+                            <div className="flex items-center gap-2">
+                              <Sparkles className="h-4 w-4 text-primary-foreground" />
+                              <span className="text-[15px] font-semibold text-primary-foreground">
+                                {suggested.length} suggested task{suggested.length === 1 ? "" : "s"}
                               </span>
-                              <ChevronRight className="h-4 w-4" />
-                            </Link>
-                          </div>
+                            </div>
+                            <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+                          </Link>
                         )}
-                        <div className="pt-4">
-                          <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                            <span>Tasks</span>
+                        <div>
+                          <div className="mb-2 flex items-baseline justify-between px-1">
+                            <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+                              Tasks
+                            </h2>
                             <Link
                               to="/tasks"
-                              className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+                              className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
                             >
-                              <span>
-                                {done.length}/{allTasks.length}
-                              </span>
-                              <ChevronRight className="h-4 w-4" />
+                              <span className="tabular-nums">{done.length}/{allTasks.length}</span>
+                              <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
                             </Link>
-                          </h2>
+                          </div>
                           {visible.length === 0 ? (
                             <Link
                               to="/tasks"
-                              className="flex items-center justify-center rounded-2xl border border-dashed border-border px-4 py-6 text-sm text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                              className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
                             >
                               + Add a task
                             </Link>
                           ) : (
-                            <ul className="space-y-1.5">
-                              {visible.map((t) => {
+                            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+                              {visible.map((t, i) => {
                                 const key: TaskKey = `${t.noteId}::${t.id}`;
                                 const isSel = selectedTasks.has(key);
                                 return (
@@ -343,6 +358,7 @@ function Home() {
                                       onLongPress={() => toggleTaskSel(key)}
                                       onSelectTap={() => toggleTaskSel(key)}
                                     />
+                                    {i < visible.length - 1 && <div className="ml-12 h-px bg-border" />}
                                   </li>
                                 );
                               })}
@@ -355,10 +371,8 @@ function Home() {
 
 
                   {grid.length > 0 && (
-                    <div className="pt-4">
-                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        More notes
-                      </h2>
+                    <div>
+                      <SectionHeader>More Notes</SectionHeader>
                       <div className="grid grid-cols-2 gap-3">
                         {grid.map((n) => (
                           <NoteCard
@@ -383,6 +397,7 @@ function Home() {
           </>
         )}
       </section>
+
 
       {selectMode ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center gap-2 px-5">
@@ -419,6 +434,15 @@ function Home() {
     </div>
   );
 }
+
+function SectionHeader({ children }: { children: React.ReactNode }) {
+  return (
+    <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+      {children}
+    </h2>
+  );
+}
+
 
 function useLongPress(onLongPress: () => void, ms = 450) {
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -702,8 +726,8 @@ function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-2 rounded-xl border-2 p-3 select-none transition-colors ${
-        selected ? "border-foreground bg-muted" : "border-border bg-card"
+      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+        selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
       <button
@@ -719,23 +743,23 @@ function TaskRow({
         className="mt-0.5 shrink-0"
       >
         {done ? (
-          <CheckCircle2 className="h-4 w-4 text-foreground" />
+          <CheckCircle2 className="h-5 w-5 text-primary" />
         ) : (
-          <Circle className="h-4 w-4 text-muted-foreground" />
+          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-sm leading-snug ${
+          className={`text-[17px] leading-tight ${
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
-          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-foreground text-foreground" />}
+          {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
         {noteHeading && (
           selectMode ? (
-            <span className="mt-0.5 block truncate text-[10px] text-muted-foreground">
+            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {noteHeading}
             </span>
           ) : (
@@ -743,7 +767,7 @@ function TaskRow({
               to="/notes/$id"
               params={{ id: noteId }}
               onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[10px] text-muted-foreground hover:underline"
+              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
             >
               {noteHeading}
             </Link>
@@ -753,6 +777,7 @@ function TaskRow({
     </div>
   );
 }
+
 
 function StatusIcon({ status }: { status: Note["status"] }) {
   if (status === "ready") return <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />;
