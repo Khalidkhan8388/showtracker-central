@@ -443,46 +443,86 @@ function NoteDetail() {
 
         {editing ? (
           <section className="mt-4">
-            <div className="mb-2 flex items-center justify-between">
+            <input
+              ref={editFileRef && undefined}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={onPickImages}
+              // real ref below
+            />
+            <input
+              ref={editFileRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={onPickImages}
+            />
+
+            <div className="mb-3 flex flex-wrap items-center gap-2">
               <button
-                onClick={insertWikiLink}
-                className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1 text-[13px] text-primary active:opacity-60"
+                onClick={() => editFileRef.current?.click()}
+                disabled={uploadingImg}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60 disabled:opacity-60"
+              >
+                {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                Image
+              </button>
+              <button
+                onClick={() => setAddingLink((v) => !v)}
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
               >
                 <Link2 className="h-3.5 w-3.5" />
-                Link a note
+                Link
               </button>
-              <span className="text-[11px] text-muted-foreground">
-                Use <code className="rounded bg-muted px-1">[[Title]]</code> to link
+              <span className="ml-auto text-[11px] text-muted-foreground">
+                <code className="rounded bg-muted px-1">[[Title]]</code> links notes
               </span>
             </div>
-            <textarea
-              ref={bodyRef}
+
+            {addingLink && (
+              <div className="mb-3 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
+                <Link2 className="h-4 w-4 text-muted-foreground" />
+                <input
+                  autoFocus
+                  value={linkDraft}
+                  onChange={(e) => setLinkDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitLink();
+                    if (e.key === "Escape") { setAddingLink(false); setLinkDraft(""); }
+                  }}
+                  placeholder="https://…"
+                  className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/60"
+                />
+                <button
+                  onClick={commitLink}
+                  className="rounded-full bg-primary px-2.5 py-1 text-[12px] font-semibold text-primary-foreground active:opacity-70"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
+            <BlockEditor
               value={draftBody}
-              onChange={(e) => setDraftBody(e.target.value)}
-              placeholder="Start writing…"
-              className="min-h-[60vh] w-full resize-none bg-transparent text-[17px] leading-relaxed outline-none placeholder:text-muted-foreground/50"
+              onChange={setDraftBody}
+              onRemoveImage={removeImageFromBody}
+              onRemoveLink={removeLinkFromBody}
+              placeholder="Start writing… # for heading, - for list, > for quote"
             />
+
             {allNotes.length > 0 && (
-              <div className="mt-3">
+              <div className="mt-4">
                 <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                  Link to
+                  Link to a note
                 </p>
                 <div className="flex flex-wrap gap-1.5">
                   {allNotes.slice(0, 20).map((n) => (
                     <button
                       key={n.id}
-                      onClick={() => {
-                        const ta = bodyRef.current;
-                        const start = ta?.selectionStart ?? draftBody.length;
-                        const end = ta?.selectionEnd ?? draftBody.length;
-                        const snippet = `[[${n.heading}]]`;
-                        setDraftBody(draftBody.slice(0, start) + snippet + draftBody.slice(end));
-                        setTimeout(() => {
-                          ta?.focus();
-                          const pos = start + snippet.length;
-                          ta?.setSelectionRange(pos, pos);
-                        }, 0);
-                      }}
+                      onClick={() => insertWikiLinkForTitle(n.heading)}
                       className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
                     >
                       {n.heading}
