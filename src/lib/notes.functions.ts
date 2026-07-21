@@ -91,7 +91,7 @@ async function extractStructured(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userBlocks },
@@ -499,7 +499,7 @@ async function summarizeWebPage(
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: WEB_SYSTEM_PROMPT },
         { role: "user", content: userMsg },
