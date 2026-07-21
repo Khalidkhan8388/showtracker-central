@@ -91,12 +91,17 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       setBusy(false);
       setProcessing(true);
       processFn({ data: { noteId: inserted.id } })
+        .then(() => {
+          onNoteReady?.();
+        })
         .catch((e) => {
           toast.error(e?.message ?? "Processing failed");
+          onNoteReady?.();
         })
         .finally(() => {
           setProcessing(false);
         });
+
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
       setBusy(false);
