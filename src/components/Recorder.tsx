@@ -612,7 +612,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
                 <button
                   onClick={submitText}
-                  disabled={!textHeading.trim()}
+                  disabled={!textHeading.trim() && !textBody.trim()}
                   className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
                 >
                   Save note
