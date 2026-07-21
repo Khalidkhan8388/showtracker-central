@@ -534,7 +534,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             <input
               autoFocus
               type="text"
-              placeholder="Title (optional — AI will generate one)"
+              placeholder="Title"
               value={textHeading}
               onChange={(e) => setTextHeading(e.target.value)}
               maxLength={200}
