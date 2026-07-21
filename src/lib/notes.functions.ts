@@ -731,6 +731,31 @@ export const saveTextNote = createServerFn({ method: "POST" })
     return { ok: true as const, noteId: inserted.id };
   });
 
+const UpdateTextNoteInput = z.object({
+  noteId: z.string().uuid(),
+  heading: z.string().max(500).optional(),
+  body: z.string().max(200000).optional(),
+});
+
+export const updateTextNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => UpdateTextNoteInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const patch: Record<string, unknown> = {};
+    if (data.heading !== undefined) patch.heading = data.heading.trim() || "Untitled note";
+    if (data.body !== undefined) patch.transcript = data.body;
+    if (Object.keys(patch).length === 0) return { ok: true as const };
+    const { error } = await supabase
+      .from("voice_notes")
+      .update(patch)
+      .eq("id", data.noteId)
+      .eq("user_id", userId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+
 const GenerateLinkLabelInput = z.object({ url: z.string().trim().url().max(2000) });
 
 export const generateLinkLabel = createServerFn({ method: "POST" })
