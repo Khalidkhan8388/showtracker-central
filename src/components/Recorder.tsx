@@ -37,6 +37,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textBody, setTextBody] = useState("");
   const [textMode, setTextMode] = useState<"write" | "preview">("write");
   const [uploadingMd, setUploadingMd] = useState(false);
+  const [textFullscreen, setTextFullscreen] = useState(false);
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
