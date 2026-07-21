@@ -25,6 +25,7 @@ type Note = {
   tasks: Array<{ id: string; text: string; done: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
+  pinned: boolean;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
@@ -36,6 +37,7 @@ function Home() {
   const toggleFn = useServerFn(toggleTask);
   const delNotesFn = useServerFn(deleteNotes);
   const delTasksFn = useServerFn(deleteTasks);
+  const pinNoteFn = useServerFn(pinNote);
   const navigate = useNavigate();
 
   const noteSelectMode = selectedNotes.size > 0;
@@ -61,7 +63,7 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned")
       .order("created_at", { ascending: false });
     setNotes((data ?? []) as Note[]);
   }
