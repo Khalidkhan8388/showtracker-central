@@ -3,7 +3,6 @@ import { Mic, Square, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote } from "@/lib/notes.functions";
-import { useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 
 function pickMime(): string {
@@ -18,13 +17,13 @@ export function Recorder() {
   const [recording, setRecording] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
+  const [processing, setProcessing] = useState(false);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const startRef = useRef<number>(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const processFn = useServerFn(processVoiceNote);
-  const navigate = useNavigate();
 
   useEffect(() => () => {
     if (timerRef.current) clearInterval(timerRef.current);
@@ -89,39 +88,47 @@ export function Recorder() {
         .single();
       if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
 
-      // fire-and-forget processing, but wait so we can navigate on completion
-      toast.loading("Transcribing & summarizing…", { id: inserted.id });
+      setBusy(false);
+      setProcessing(true);
       processFn({ data: { noteId: inserted.id } })
-        .then(() => {
-          toast.success("Note ready", { id: inserted.id });
-        })
         .catch((e) => {
-          toast.error(e?.message ?? "Processing failed", { id: inserted.id });
+          toast.error(e?.message ?? "Processing failed");
+        })
+        .finally(() => {
+          setProcessing(false);
         });
-
-      navigate({ to: "/notes/$id", params: { id: inserted.id } });
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
-    } finally {
       setBusy(false);
     }
   }
 
   const mm = String(Math.floor(elapsed / 60)).padStart(2, "0");
   const ss = String(elapsed % 60).padStart(2, "0");
-
   const mmss = `${mm}:${ss}`;
-  const label = busy ? "Uploading…" : recording ? `Recording ${mmss}` : "Tap to record";
+
+  const label = busy
+    ? "Uploading…"
+    : processing
+    ? "Transcribing…"
+    : recording
+    ? `Recording ${mmss}`
+    : "Tap to record";
+
+  const showSpinner = busy || processing;
+  const disabled = busy || processing;
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
       <button
         onClick={recording ? stop : start}
-        disabled={busy}
+        disabled={disabled}
         aria-label={recording ? "Stop recording" : "Start recording"}
-        className={`pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all disabled:opacity-60 ${
+        className={`pointer-events-auto inline-flex items-center gap-2 rounded-full px-4 py-2 text-xs font-semibold shadow-lg ring-1 backdrop-blur-xl backdrop-saturate-150 transition-all disabled:cursor-default ${
           recording
             ? "bg-destructive/80 text-destructive-foreground ring-destructive/20 animate-pulse"
+            : processing
+            ? "bg-foreground/70 text-background ring-black/10"
             : "bg-foreground/80 text-background ring-black/10 hover:scale-[1.03] active:scale-100"
         }`}
       >
@@ -130,7 +137,7 @@ export function Recorder() {
             recording ? "bg-destructive-foreground/20" : "bg-background/15"
           }`}
         >
-          {busy ? (
+          {showSpinner ? (
             <Loader2 className="h-3.5 w-3.5 animate-spin" />
           ) : recording ? (
             <Square className="h-3 w-3" fill="currentColor" />
@@ -143,4 +150,5 @@ export function Recorder() {
     </div>
   );
 }
+
 
