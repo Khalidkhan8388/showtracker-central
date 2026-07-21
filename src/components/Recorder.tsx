@@ -151,8 +151,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
   async function submitText() {
     const heading = textHeading.trim();
-    if (!heading) {
-      toast.error("Please add a title");
+    const body = textBody.trim();
+    if (!heading && !body) {
+      toast.error("Add a title or some content");
       return;
     }
     setTextOpen(false);
@@ -161,7 +162,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       await saveTextFn({
         data: {
           heading,
-          body: textBody.trim(),
+          body,
           imagePaths: [],
           sourceUrl: null,
         },
