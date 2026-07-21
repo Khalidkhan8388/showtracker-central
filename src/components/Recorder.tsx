@@ -6,6 +6,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import { BlockEditor } from "@/components/BlockEditor";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
