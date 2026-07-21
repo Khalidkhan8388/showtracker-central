@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil, Search } from "lucide-react";
+import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
@@ -693,6 +694,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           className="hidden"
           onChange={onPickImages}
         />
+        <Link
+          to="/search"
+          aria-label="Search"
+          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 ${
+            shrunk ? "h-9 w-9" : "h-11 w-11"
+          }`}
+        >
+          <Search className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
+        </Link>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
