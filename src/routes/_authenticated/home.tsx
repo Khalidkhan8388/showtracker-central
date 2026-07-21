@@ -22,7 +22,7 @@ type Note = {
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean }> | null;
+  tasks: Array<{ id: string; text: string; done: boolean; pinned?: boolean; pending?: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
