@@ -95,74 +95,95 @@ function ReviewPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-dvh max-w-[720px] flex-col px-5 pb-24 pt-6">
-      <header className="mb-6 flex items-center justify-between">
-        <Link to="/home" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-          <ChevronLeft className="h-4 w-4" />
-          Home
-        </Link>
-        <h1 className="text-base font-semibold">Suggested tasks</h1>
-        <span className="w-14" />
+    <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background pb-24">
+      {/* iOS large-title header */}
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+        <div className="flex items-center justify-between px-2 pt-3 pb-1">
+          <Link
+            to="/home"
+            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+          >
+            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
+            <span>Home</span>
+          </Link>
+          {items && items.length > 0 && (
+            <button
+              onClick={approveAll}
+              className="rounded-full px-3 py-1 text-[17px] font-semibold text-primary active:opacity-60"
+            >
+              Approve All
+            </button>
+          )}
+        </div>
+        <div className="px-4 pt-1 pb-3">
+          <h1 className="text-[34px] font-bold tracking-tight">Suggested</h1>
+          {items && items.length > 0 && (
+            <p className="mt-0.5 text-[13px] text-muted-foreground">
+              {items.length} pending suggestion{items.length === 1 ? "" : "s"}
+            </p>
+          )}
+        </div>
       </header>
 
-      {items === null ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
-      ) : items.length === 0 ? (
-        <div className="mt-16 text-center">
-          <p className="text-sm text-muted-foreground">Nothing to review right now.</p>
-          <Link to="/home" className="mt-4 inline-block text-sm font-medium underline">
-            Back to home
-          </Link>
-        </div>
-      ) : (
-        <>
-          <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-            <span>
-              {items.length} pending suggestion{items.length === 1 ? "" : "s"}
-            </span>
-            <div className="flex items-center gap-3">
-              <button onClick={dismissAll} className="hover:text-foreground">
-                Dismiss all
-              </button>
-              <button onClick={approveAll} className="font-semibold text-foreground">
-                Approve all
-              </button>
-            </div>
+      <div className="flex-1 px-4 pt-2">
+        {items === null ? (
+          <p className="text-[15px] text-muted-foreground">Loading…</p>
+        ) : items.length === 0 ? (
+          <div className="mt-8 rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
+            <p className="text-[17px] font-semibold">All caught up</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">Nothing to review right now.</p>
+            <Link
+              to="/home"
+              className="mt-4 inline-block text-[15px] font-medium text-primary active:opacity-60"
+            >
+              Back to home
+            </Link>
           </div>
+        ) : (
+          <>
+            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+              {items.map((s, i) => (
+                <li key={`${s.noteId}::${s.taskId}`}>
+                  <div className="flex items-start gap-3 px-4 py-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[17px] leading-tight text-foreground">{s.text}</p>
+                      {s.noteHeading && (
+                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
+                          from {s.noteHeading}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      <button
+                        onClick={() => dismissOne(s)}
+                        aria-label="Dismiss"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-muted text-muted-foreground active:opacity-60"
+                      >
+                        <X className="h-4 w-4" strokeWidth={2.5} />
+                      </button>
+                      <button
+                        onClick={() => approveOne(s)}
+                        aria-label="Approve"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-70"
+                      >
+                        <Check className="h-4 w-4" strokeWidth={3} />
+                      </button>
+                    </div>
+                  </div>
+                  {i < items.length - 1 && <div className="ml-4 h-px bg-border" />}
+                </li>
+              ))}
+            </ul>
 
-          <ul className="space-y-2">
-            {items.map((s) => (
-              <li
-                key={`${s.noteId}::${s.taskId}`}
-                className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3"
-              >
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm leading-snug">{s.text}</p>
-                  {s.noteHeading && (
-                    <p className="mt-1 truncate text-[11px] text-muted-foreground">from {s.noteHeading}</p>
-                  )}
-                </div>
-                <div className="flex shrink-0 items-center gap-1.5">
-                  <button
-                    onClick={() => dismissOne(s)}
-                    aria-label="Dismiss"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                  <button
-                    onClick={() => approveOne(s)}
-                    aria-label="Approve"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground hover:opacity-90"
-                  >
-                    <Check className="h-4 w-4" strokeWidth={3} />
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </>
-      )}
+            <button
+              onClick={dismissAll}
+              className="mt-6 w-full rounded-2xl bg-card py-3.5 text-[17px] text-destructive shadow-sm active:opacity-60"
+            >
+              Dismiss All
+            </button>
+          </>
+        )}
+      </div>
     </div>
   );
 }
