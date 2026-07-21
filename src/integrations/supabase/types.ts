@@ -16,12 +16,13 @@ export type Database = {
     Tables: {
       voice_notes: {
         Row: {
-          audio_path: string
+          audio_path: string | null
           created_at: string
           duration_seconds: number | null
           error: string | null
           heading: string | null
           id: string
+          image_paths: Json
           pinned: boolean
           status: Database["public"]["Enums"]["note_status"]
           summary: string | null
@@ -31,12 +32,13 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          audio_path: string
+          audio_path?: string | null
           created_at?: string
           duration_seconds?: number | null
           error?: string | null
           heading?: string | null
           id?: string
+          image_paths?: Json
           pinned?: boolean
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null
@@ -46,12 +48,13 @@ export type Database = {
           user_id: string
         }
         Update: {
-          audio_path?: string
+          audio_path?: string | null
           created_at?: string
           duration_seconds?: number | null
           error?: string | null
           heading?: string | null
           id?: string
+          image_paths?: Json
           pinned?: boolean
           status?: Database["public"]["Enums"]["note_status"]
           summary?: string | null

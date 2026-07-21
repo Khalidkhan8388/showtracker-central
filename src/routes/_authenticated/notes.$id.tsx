@@ -22,12 +22,14 @@ type Note = {
   error: string | null;
   created_at: string;
   pinned: boolean;
+  image_paths: string[] | null;
 };
 
 function NoteDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
   const [note, setNote] = useState<Note | null>(null);
+  const [imageUrls, setImageUrls] = useState<string[]>([]);
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
   const processFn = useServerFn(processVoiceNote);
@@ -36,6 +38,15 @@ function NoteDetail() {
   async function load() {
     const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
     setNote(data as Note | null);
+    const paths = Array.isArray((data as any)?.image_paths) ? ((data as any).image_paths as string[]) : [];
+    if (paths.length > 0) {
+      const signed = await Promise.all(
+        paths.map((p) => supabase.storage.from("voice-notes").createSignedUrl(p, 3600)),
+      );
+      setImageUrls(signed.map((r) => r.data?.signedUrl ?? "").filter(Boolean));
+    } else {
+      setImageUrls([]);
+    }
   }
 
   useEffect(() => {
@@ -153,6 +164,22 @@ function NoteDetail() {
         <p className="mt-1 text-xs text-muted-foreground">
           {new Date(note.created_at).toLocaleString()}
         </p>
+
+        {imageUrls.length > 0 && (
+          <section className="mt-6">
+            <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+              {imageUrls.map((url, i) => (
+                <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+                  <img
+                    src={url}
+                    alt=""
+                    className="w-full rounded-2xl border border-border object-cover"
+                  />
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
 
         {note.summary && (
           <section className="mt-6">
