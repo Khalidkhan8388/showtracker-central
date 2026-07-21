@@ -159,6 +159,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       if (timerRef.current) clearInterval(timerRef.current);
       streamRef.current?.getTracks().forEach((t) => t.stop());
       pendingRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
+      textImagesRef.current.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     },
     [],
   );
