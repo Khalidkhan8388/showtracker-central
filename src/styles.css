@@ -176,3 +176,14 @@
     border-radius: 4px;
   }
 }
+
+/* Hide scrollbars app-wide while keeping scroll functional */
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
