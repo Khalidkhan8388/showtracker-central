@@ -668,11 +668,12 @@ function NoteCard({
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
           </div>
-          {note.summary && (
-            <p className="relative z-10 line-clamp-[10] text-[12px] leading-snug text-foreground/60">
-              {note.summary}
+          {(note.transcript || note.summary) && (
+            <p className="relative z-10 line-clamp-[12] whitespace-pre-wrap text-[12px] leading-snug text-foreground/70">
+              {note.transcript ?? note.summary}
             </p>
           )}
+
         </>
       ) : (
         <>
