@@ -489,26 +489,41 @@ function NoteCard({
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
 
-  const base =
-    "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
-    (selected
-      ? "border-foreground bg-muted shadow-sm"
-      : isText
-        ? "border-foreground bg-card hover:bg-muted/40 shadow-[3px_3px_0_0_hsl(var(--foreground))]"
+  // MyMind-style soft tinted palette for text notes — deterministic per note
+  const mymindTints = [
+    "#FFF4E0", // cream
+    "#E8F1E4", // sage
+    "#E4EEF7", // sky
+    "#F3E8F0", // blush
+    "#F6EFE1", // sand
+    "#EAEBF6", // lilac
+    "#FBE9E2", // peach
+  ];
+  const tintIdx = (() => {
+    let h = 0;
+    for (let i = 0; i < note.id.length; i++) h = (h * 31 + note.id.charCodeAt(i)) >>> 0;
+    return h % mymindTints.length;
+  })();
+  const textTint = mymindTints[tintIdx];
+
+  const base = isText
+    ? "relative block overflow-hidden rounded-3xl p-4 transition-all " +
+      (selected
+        ? "ring-2 ring-foreground shadow-sm"
+        : "ring-1 ring-black/[0.04] hover:-translate-y-0.5 hover:shadow-md")
+    : "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
+      (selected
+        ? "border-foreground bg-muted shadow-sm"
         : "border-border bg-card hover:bg-muted/50");
   const sizing =
     variant === "wide"
-      ? "p-4"
+      ? isText ? "p-5" : "p-4"
       : fullWidth
         ? "flex aspect-square w-full flex-col gap-3"
         : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
   const textNoteStyle: React.CSSProperties | undefined = isText
-    ? {
-        backgroundImage:
-          "repeating-linear-gradient(to bottom, transparent 0, transparent 21px, hsl(var(--border)) 21px, hsl(var(--border)) 22px)",
-        backgroundPosition: variant === "wide" ? "0 40px" : "0 34px",
-      }
+    ? { backgroundColor: textTint }
     : undefined;
 
   return (
@@ -593,6 +608,19 @@ function NoteCard({
             </div>
           </div>
         </div>
+      ) : isText ? (
+        <>
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+            </h3>
+          </div>
+          {note.summary && (
+            <p className="relative z-10 line-clamp-4 text-[11px] leading-snug text-foreground/60">
+              {note.summary}
+            </p>
+          )}
+        </>
       ) : (
         <>
           {isLink && linkHost && (
