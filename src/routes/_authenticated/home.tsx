@@ -5,7 +5,7 @@ import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -25,6 +25,7 @@ type Note = {
   tasks: Array<{ id: string; text: string; done: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
+  pinned: boolean;
 };
 
 type TaskKey = string; // `${noteId}::${taskId}`
@@ -36,6 +37,7 @@ function Home() {
   const toggleFn = useServerFn(toggleTask);
   const delNotesFn = useServerFn(deleteNotes);
   const delTasksFn = useServerFn(deleteTasks);
+  const pinNoteFn = useServerFn(pinNote);
   const navigate = useNavigate();
 
   const noteSelectMode = selectedNotes.size > 0;
@@ -61,7 +63,7 @@ function Home() {
   async function load() {
     const { data } = await supabase
       .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at")
+      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned")
       .order("created_at", { ascending: false });
     setNotes((data ?? []) as Note[]);
   }
@@ -133,6 +135,23 @@ function Home() {
     }
   }
 
+  async function togglePinSelected() {
+    const ids = Array.from(selectedNotes);
+    if (ids.length === 0 || !notes) return;
+    // If any selected is unpinned, pin all; otherwise unpin all.
+    const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
+    const nextPinned = anyUnpinned;
+    setNotes((prev) =>
+      prev ? prev.map((n) => (selectedNotes.has(n.id) ? { ...n, pinned: nextPinned } : n)) : prev,
+    );
+    setSelectedNotes(new Set());
+    try {
+      await Promise.all(ids.map((noteId) => pinNoteFn({ data: { noteId, pinned: nextPinned } })));
+    } catch {
+      load();
+    }
+  }
+
   const selectMode = noteSelectMode || taskSelectMode;
 
   return (
@@ -171,6 +190,17 @@ function Home() {
           <>
             {(() => {
               const [latest, ...rest] = notes;
+              const pinnedRest = rest.filter((n) => n.pinned);
+              const unpinnedRest = rest.filter((n) => !n.pinned);
+              const stripIds = new Set<string>();
+              const strip: Note[] = [];
+              for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+                if (!stripIds.has(n.id)) {
+                  stripIds.add(n.id);
+                  strip.push(n);
+                }
+              }
+              const grid = unpinnedRest.slice(5);
               return (
                 <div className="space-y-4">
                   <NoteCard
@@ -183,10 +213,10 @@ function Home() {
                     onToggleSel={() => toggleNoteSel(latest.id)}
                   />
 
-                  {rest.length > 0 && (
+                  {strip.length > 0 && (
                     <div className="-mx-5 overflow-x-auto pb-2">
                       <div className="flex gap-3 px-5">
-                        {rest.map((n) => (
+                        {strip.map((n) => (
                           <NoteCard
                             key={n.id}
                             note={n}
@@ -201,56 +231,79 @@ function Home() {
                       </div>
                     </div>
                   )}
-                </div>
-              );
-            })()}
 
-            {(() => {
-              const allTasks = notes.flatMap((n) =>
-                (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
-              );
-              if (allTasks.length === 0) return null;
-              const pinned = allTasks.filter((t) => (t as any).pinned && !t.done);
-              const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
-              const done = allTasks.filter((t) => t.done);
-              const ordered = [...pinned, ...open, ...done];
-              const visible = ordered.slice(0, 3);
-              return (
-                <div className="mt-8">
-                  <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    <span>Tasks</span>
-                    <Link
-                      to="/tasks"
-                      className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
-                    >
-                      <span>
-                        {done.length}/{allTasks.length}
-                      </span>
-                      <ChevronRight className="h-4 w-4" />
-                    </Link>
-                  </h2>
-                  <ul className="space-y-1.5">
-                    {visible.map((t) => {
-                      const key: TaskKey = `${t.noteId}::${t.id}`;
-                      const isSel = selectedTasks.has(key);
-                      return (
-                        <li key={key}>
-                          <TaskRow
-                            selectMode={taskSelectMode}
-                            selected={isSel}
-                            done={t.done}
-                            pinned={Boolean((t as any).pinned)}
-                            text={t.text}
-                            noteHeading={t.noteHeading}
-                            noteId={t.noteId}
-                            onToggleDone={() => onToggle(t.noteId, t.id)}
-                            onLongPress={() => toggleTaskSel(key)}
-                            onSelectTap={() => toggleTaskSel(key)}
+                  {(() => {
+                    const allTasks = notes.flatMap((n) =>
+                      (n.tasks ?? []).map((t) => ({ ...t, noteId: n.id, noteHeading: n.heading })),
+                    );
+                    if (allTasks.length === 0) return null;
+                    const pinnedT = allTasks.filter((t) => (t as any).pinned && !t.done);
+                    const open = allTasks.filter((t) => !(t as any).pinned && !t.done);
+                    const done = allTasks.filter((t) => t.done);
+                    const ordered = [...pinnedT, ...open, ...done];
+                    const visible = ordered.slice(0, 3);
+                    return (
+                      <div className="pt-4">
+                        <h2 className="mb-3 flex items-center justify-between text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                          <span>Tasks</span>
+                          <Link
+                            to="/tasks"
+                            className="inline-flex items-center gap-1 normal-case tracking-normal hover:text-foreground"
+                          >
+                            <span>
+                              {done.length}/{allTasks.length}
+                            </span>
+                            <ChevronRight className="h-4 w-4" />
+                          </Link>
+                        </h2>
+                        <ul className="space-y-1.5">
+                          {visible.map((t) => {
+                            const key: TaskKey = `${t.noteId}::${t.id}`;
+                            const isSel = selectedTasks.has(key);
+                            return (
+                              <li key={key}>
+                                <TaskRow
+                                  selectMode={taskSelectMode}
+                                  selected={isSel}
+                                  done={t.done}
+                                  pinned={Boolean((t as any).pinned)}
+                                  text={t.text}
+                                  noteHeading={t.noteHeading}
+                                  noteId={t.noteId}
+                                  onToggleDone={() => onToggle(t.noteId, t.id)}
+                                  onLongPress={() => toggleTaskSel(key)}
+                                  onSelectTap={() => toggleTaskSel(key)}
+                                />
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    );
+                  })()}
+
+                  {grid.length > 0 && (
+                    <div className="pt-4">
+                      <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        More notes
+                      </h2>
+                      <div className="grid grid-cols-2 gap-3">
+                        {grid.map((n) => (
+                          <NoteCard
+                            key={n.id}
+                            note={n}
+                            variant="square"
+                            fullWidth
+                            selected={selectedNotes.has(n.id)}
+                            selectMode={noteSelectMode}
+                            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                            onLongPress={() => toggleNoteSel(n.id)}
+                            onToggleSel={() => toggleNoteSel(n.id)}
                           />
-                        </li>
-                      );
-                    })}
-                  </ul>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -270,6 +323,15 @@ function Home() {
           >
             <X className="h-4 w-4" />
           </button>
+          {noteSelectMode && (
+            <button
+              onClick={togglePinSelected}
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-foreground/85 px-4 py-2 text-xs font-semibold text-background shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150"
+            >
+              <Pin className="h-3.5 w-3.5" />
+              Pin
+            </button>
+          )}
           <button
             onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
             className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-destructive/85 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg ring-1 ring-destructive/20 backdrop-blur-xl backdrop-saturate-150"
@@ -314,6 +376,7 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 function NoteCard({
   note,
   variant,
+  fullWidth,
   selected,
   selectMode,
   onOpen,
@@ -322,6 +385,7 @@ function NoteCard({
 }: {
   note: Note;
   variant: "wide" | "square";
+  fullWidth?: boolean;
   selected: boolean;
   selectMode: boolean;
   onOpen: () => void;
@@ -345,7 +409,12 @@ function NoteCard({
   const base =
     "relative block rounded-2xl border-2 p-3 transition-colors " +
     (selected ? "border-foreground bg-muted shadow-sm" : "border-border bg-card hover:bg-muted/50");
-  const sizing = variant === "wide" ? "p-4" : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  const sizing =
+    variant === "wide"
+      ? "p-4"
+      : fullWidth
+        ? "flex aspect-square w-full flex-col gap-3"
+        : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
   return (
     <div
@@ -366,9 +435,14 @@ function NoteCard({
           )}
         </div>
       )}
+      {note.pinned && !selectMode && (
+        <div className="absolute right-2 top-2 z-10 text-muted-foreground">
+          <Pin className="h-3.5 w-3.5 fill-foreground text-foreground" />
+        </div>
+      )}
       {variant === "wide" ? (
         <>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 pr-6">
             <h3 className="truncate text-sm font-semibold">
               {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
             </h3>
@@ -390,7 +464,7 @@ function NoteCard({
         </>
       ) : (
         <>
-          <div className="flex items-start gap-1.5">
+          <div className="flex items-start gap-1.5 pr-5">
             <h3 className="text-xs font-semibold leading-tight break-words">
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>

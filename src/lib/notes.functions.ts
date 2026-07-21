@@ -264,3 +264,18 @@ export const pinTask = createServerFn({ method: "POST" })
     if (upErr) throw new Error(upErr.message);
     return { ok: true as const };
   });
+
+const PinNoteInput = z.object({ noteId: z.string().uuid(), pinned: z.boolean() });
+
+export const pinNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => PinNoteInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { error } = await supabase
+      .from("voice_notes")
+      .update({ pinned: data.pinned })
+      .eq("id", data.noteId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
