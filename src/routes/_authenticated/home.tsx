@@ -135,6 +135,23 @@ function Home() {
     }
   }
 
+  async function togglePinSelected() {
+    const ids = Array.from(selectedNotes);
+    if (ids.length === 0 || !notes) return;
+    // If any selected is unpinned, pin all; otherwise unpin all.
+    const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
+    const nextPinned = anyUnpinned;
+    setNotes((prev) =>
+      prev ? prev.map((n) => (selectedNotes.has(n.id) ? { ...n, pinned: nextPinned } : n)) : prev,
+    );
+    setSelectedNotes(new Set());
+    try {
+      await Promise.all(ids.map((noteId) => pinNoteFn({ data: { noteId, pinned: nextPinned } })));
+    } catch {
+      load();
+    }
+  }
+
   const selectMode = noteSelectMode || taskSelectMode;
 
   return (
