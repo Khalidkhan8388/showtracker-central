@@ -569,7 +569,8 @@ function NoteCard({
       ? isText ? "p-5" : "p-4"
       : fullWidth
         ? "flex aspect-square w-full flex-col gap-3"
-        : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+        : "flex aspect-[2/4] w-44 shrink-0 flex-col gap-3";
+
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: textTint }
