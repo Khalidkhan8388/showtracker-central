@@ -375,6 +375,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           <ImagePlus className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
         </button>
         <button
+          onClick={() => setTextOpen(true)}
+          disabled={disabled || recording}
+          aria-label="Write text note"
+          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+            shrunk ? "h-9 w-9" : "h-11 w-11"
+          }`}
+        >
+          <FileText className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
+        </button>
+        <button
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
