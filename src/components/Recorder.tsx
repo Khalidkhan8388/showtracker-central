@@ -285,6 +285,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           <ImagePlus className="h-4 w-4" />
         </button>
         <button
+          onClick={() => setLinkOpen(true)}
+          disabled={disabled || recording}
+          aria-label="Save web link"
+          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-background/90 hover:bg-background/15 disabled:opacity-50"
+        >
+          <Link2 className="h-4 w-4" />
+        </button>
+
+        <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
