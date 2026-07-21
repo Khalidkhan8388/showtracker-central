@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks } from "@/lib/notes.functions";
@@ -349,9 +349,11 @@ function NoteCard({
       {selectMode && (
         <div className="absolute right-2 top-2 z-10">
           {selected ? (
-            <CheckCircle2 className="h-5 w-5 text-foreground" />
+            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+              <Check className="h-3 w-3 text-background" strokeWidth={3} />
+            </div>
           ) : (
-            <Circle className="h-5 w-5 text-muted-foreground" />
+            <div className="h-5 w-5 rounded-full bg-background ring-2 ring-background shadow-sm border border-muted-foreground/40" />
           )}
         </div>
       )}
@@ -444,9 +446,11 @@ function TaskRow({
       {selectMode ? (
         <div className="mt-0.5 shrink-0">
           {selected ? (
-            <CheckCircle2 className="h-4 w-4 text-foreground" />
+            <div className="flex h-4 w-4 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+              <Check className="h-2.5 w-2.5 text-background" strokeWidth={3.5} />
+            </div>
           ) : (
-            <Circle className="h-4 w-4 text-muted-foreground" />
+            <div className="h-4 w-4 rounded-full bg-background ring-2 ring-background border border-muted-foreground/40" />
           )}
         </div>
       ) : (
