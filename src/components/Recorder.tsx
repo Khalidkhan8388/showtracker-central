@@ -40,8 +40,11 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textMode, setTextMode] = useState<"write" | "preview">("write");
   const [uploadingMd, setUploadingMd] = useState(false);
   const [textFullscreen, setTextFullscreen] = useState(false);
+  const [inlineLinkOpen, setInlineLinkOpen] = useState(false);
+  const [inlineLinkUrl, setInlineLinkUrl] = useState("");
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
@@ -96,32 +99,30 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     }
   }
 
-  async function promptInsertLink() {
-    const url = window.prompt("Paste link URL");
+  async function insertLinkFromUrl(rawUrl: string) {
+    const url = rawUrl.trim();
     if (!url) return;
-    const normalized = /^https?:\/\//i.test(url.trim()) ? url.trim() : `https://${url.trim()}`;
+    const normalized = /^https?:\/\//i.test(url) ? url : `https://${url}`;
     try {
       new URL(normalized);
     } catch {
       toast.error("Link doesn't look valid");
       return;
     }
-    // Insert with a placeholder label immediately so the user sees the pill,
-    // then swap in the AI-generated title once it arrives.
     const placeholderId = `__linking_${Date.now()}_${Math.random().toString(36).slice(2, 8)}__`;
-    const initialLabel = placeholderId;
-    insertAtCursor(`\n[${initialLabel}](${normalized})\n`);
+    insertAtCursor(`\n[${placeholderId}](${normalized})\n`);
     try {
       const { label } = await linkLabelFn({ data: { url: normalized } });
       const clean = (label || normalized).replace(/[\[\]]/g, "").trim() || normalized;
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${clean}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${clean}](${normalized})`));
     } catch {
       const hostname = (() => {
         try { return new URL(normalized).hostname.replace(/^www\./, ""); } catch { return normalized; }
       })();
-      setTextBody((prev) => prev.replace(`[${initialLabel}](${normalized})`, `[${hostname}](${normalized})`));
+      setTextBody((prev) => prev.replace(`[${placeholderId}](${normalized})`, `[${hostname}](${normalized})`));
     }
   }
+
 
   function removeImageFromBody(src: string) {
     setTextBody((prev) => {
@@ -509,7 +510,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             <input
               autoFocus
               type="text"
-              placeholder="Title (optional — AI will generate one)"
+              placeholder="Title"
               value={textHeading}
               onChange={(e) => setTextHeading(e.target.value)}
               maxLength={200}
@@ -582,6 +583,55 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               onChange={onPickMarkdownImages}
             />
 
+            {inlineLinkOpen && (
+              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-1 pl-3">
+                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                <input
+                  autoFocus
+                  type="url"
+                  inputMode="url"
+                  placeholder="Paste a link…"
+                  value={inlineLinkUrl}
+                  onChange={(e) => setInlineLinkUrl(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      e.preventDefault();
+                      const v = inlineLinkUrl;
+                      setInlineLinkUrl("");
+                      setInlineLinkOpen(false);
+                      insertLinkFromUrl(v);
+                    } else if (e.key === "Escape") {
+                      setInlineLinkOpen(false);
+                      setInlineLinkUrl("");
+                    }
+                  }}
+                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                />
+                <button
+                  onClick={() => {
+                    setInlineLinkOpen(false);
+                    setInlineLinkUrl("");
+                  }}
+                  aria-label="Cancel"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+                <button
+                  onClick={() => {
+                    const v = inlineLinkUrl;
+                    setInlineLinkUrl("");
+                    setInlineLinkOpen(false);
+                    insertLinkFromUrl(v);
+                  }}
+                  disabled={!inlineLinkUrl.trim()}
+                  className="inline-flex items-center rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
+                >
+                  Add
+                </button>
+              </div>
+            )}
+
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-center gap-2">
                 <button
@@ -593,7 +643,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   Image
                 </button>
                 <button
-                  onClick={promptInsertLink}
+                  onClick={() => setInlineLinkOpen((v) => !v)}
                   className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
                 >
                   <Link2 className="h-4 w-4" />
@@ -619,6 +669,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 </button>
               </div>
             </div>
+
           </div>
         </div>
       )}
