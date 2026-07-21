@@ -30,6 +30,26 @@ type Note = {
 
 function Home() {
   const [notes, setNotes] = useState<Note[] | null>(null);
+  const toggleFn = useServerFn(toggleTask);
+
+  async function onToggle(noteId: string, taskId: string) {
+    setNotes((prev) =>
+      prev
+        ? prev.map((n) =>
+            n.id === noteId
+              ? { ...n, tasks: (n.tasks ?? []).map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
+              : n,
+          )
+        : prev,
+    );
+    try {
+      await toggleFn({ data: { noteId, taskId } });
+    } catch {
+      load();
+    }
+  }
+
+
 
   async function load() {
     const { data } = await supabase
