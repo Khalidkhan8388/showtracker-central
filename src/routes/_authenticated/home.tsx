@@ -47,6 +47,15 @@ function Home() {
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
 
+  const [collapsed, setCollapsed] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setCollapsed(window.scrollY > 24);
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
+
   async function onToggle(noteId: string, taskId: string) {
     setNotes((prev) =>
       prev
