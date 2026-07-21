@@ -72,6 +72,28 @@ function NoteDetail() {
     };
   }, [id]);
 
+  // Sync editor state from server (only when not actively editing / no pending save)
+  const initedRef = useRef(false);
+  useEffect(() => {
+    if (!note) return;
+    if (!initedRef.current) {
+      setEditHeading(note.heading ?? "");
+      setEditBody(note.transcript ?? "");
+      initedRef.current = true;
+    }
+  }, [note]);
+
+  function scheduleSave(next: { heading?: string; body?: string }) {
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      try {
+        await updateFn({ data: { noteId: id, ...next } });
+      } catch (e: any) {
+        toast.error(e?.message ?? "Failed to save");
+      }
+    }, 600);
+  }
+
   async function onToggle(taskId: string) {
     if (!note) return;
     setNote({ ...note, tasks: (note.tasks ?? []).map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) });
