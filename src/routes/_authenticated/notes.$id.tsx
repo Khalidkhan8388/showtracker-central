@@ -2,8 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNote, processVoiceNote } from "@/lib/notes.functions";
-import { ArrowLeft, Loader2, AlertCircle, Trash2, RefreshCw } from "lucide-react";
+import { toggleTask, deleteNote, processVoiceNote, pinNote } from "@/lib/notes.functions";
+import { ArrowLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin } from "lucide-react";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
@@ -21,6 +21,7 @@ type Note = {
   duration_seconds: number | null;
   error: string | null;
   created_at: string;
+  pinned: boolean;
 };
 
 function NoteDetail() {
@@ -30,6 +31,7 @@ function NoteDetail() {
   const toggleFn = useServerFn(toggleTask);
   const deleteFn = useServerFn(deleteNote);
   const processFn = useServerFn(processVoiceNote);
+  const pinFn = useServerFn(pinNote);
 
   async function load() {
     const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
@@ -99,9 +101,27 @@ function NoteDetail() {
         <Link to="/home" className="rounded-full p-2 hover:bg-muted" aria-label="Back">
           <ArrowLeft className="h-5 w-5" />
         </Link>
-        <button onClick={onDelete} className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Delete">
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={async () => {
+              const next = !note.pinned;
+              setNote({ ...note, pinned: next });
+              try {
+                await pinFn({ data: { noteId: id, pinned: next } });
+              } catch (e: any) {
+                toast.error(e?.message ?? "Failed");
+                load();
+              }
+            }}
+            className={`rounded-full p-2 hover:bg-muted ${note.pinned ? "text-foreground" : "text-muted-foreground"}`}
+            aria-label={note.pinned ? "Unpin" : "Pin"}
+          >
+            <Pin className={`h-4 w-4 ${note.pinned ? "fill-foreground" : ""}`} />
+          </button>
+          <button onClick={onDelete} className="rounded-full p-2 text-muted-foreground hover:bg-muted hover:text-destructive" aria-label="Delete">
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       </header>
 
       <div className="px-5">
