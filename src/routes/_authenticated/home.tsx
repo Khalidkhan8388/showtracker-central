@@ -116,42 +116,43 @@ function Home() {
                   </Link>
 
                   {rest.length > 0 && (
-                    <div className="grid grid-cols-2 gap-2">
-                      {rest.map((n) => (
-                        <Link
-                          key={n.id}
-                          to="/notes/$id"
-                          params={{ id: n.id }}
-                          className="flex aspect-square flex-col justify-between rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
-                        >
-                          <div>
-                            <div className="flex items-center gap-1.5">
+                    <div className="-mx-5 overflow-x-auto pb-2">
+                      <div className="flex gap-3 px-5">
+                        {rest.map((n) => (
+                          <Link
+                            key={n.id}
+                            to="/notes/$id"
+                            params={{ id: n.id }}
+                            className="flex w-56 shrink-0 flex-col gap-3 rounded-2xl border border-border bg-card p-3 transition-colors hover:bg-muted/50"
+                          >
+                            <div className="flex items-start gap-1.5">
                               <StatusIcon status={n.status} />
-                              <h3 className="line-clamp-2 text-xs font-semibold leading-tight">
+                              <h3 className="text-xs font-semibold leading-tight break-words">
                                 {n.heading ?? (n.status === "failed" ? "Failed" : "Processing…")}
                               </h3>
                             </div>
-                          </div>
-                          <div className="flex flex-col gap-1 text-[10px] text-muted-foreground">
-                            {n.tasks && n.tasks.length > 0 && (
-                              <span className="flex items-center gap-1">
-                                <CheckCircle2 className="h-3 w-3" />
-                                {n.tasks.filter((t) => t.done).length}/{n.tasks.length} tasks
-                              </span>
-                            )}
-                            <div className="flex items-center gap-2">
-                              <span className="truncate">
-                                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                              </span>
-                              {n.duration_seconds != null && (
-                                <span className="tabular-nums">{formatDur(n.duration_seconds)}</span>
+                            <div className="mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
+                              {n.tasks && n.tasks.length > 0 && (
+                                <span className="flex items-center gap-1">
+                                  <CheckCircle2 className="h-3 w-3" />
+                                  {n.tasks.filter((t) => t.done).length}/{n.tasks.length} tasks
+                                </span>
                               )}
+                              <div className="flex items-center gap-2">
+                                <span>
+                                  {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                                </span>
+                                {n.duration_seconds != null && (
+                                  <span className="tabular-nums">{formatDur(n.duration_seconds)}</span>
+                                )}
+                              </div>
                             </div>
-                          </div>
-                        </Link>
-                      ))}
+                          </Link>
+                        ))}
+                      </div>
                     </div>
                   )}
+
                 </div>
               );
             })()}
