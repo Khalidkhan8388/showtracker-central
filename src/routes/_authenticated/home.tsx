@@ -376,6 +376,7 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 function NoteCard({
   note,
   variant,
+  fullWidth,
   selected,
   selectMode,
   onOpen,
@@ -384,6 +385,7 @@ function NoteCard({
 }: {
   note: Note;
   variant: "wide" | "square";
+  fullWidth?: boolean;
   selected: boolean;
   selectMode: boolean;
   onOpen: () => void;
@@ -407,7 +409,12 @@ function NoteCard({
   const base =
     "relative block rounded-2xl border-2 p-3 transition-colors " +
     (selected ? "border-foreground bg-muted shadow-sm" : "border-border bg-card hover:bg-muted/50");
-  const sizing = variant === "wide" ? "p-4" : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  const sizing =
+    variant === "wide"
+      ? "p-4"
+      : fullWidth
+        ? "flex aspect-square w-full flex-col gap-3"
+        : "flex aspect-square w-40 shrink-0 flex-col gap-3";
 
   return (
     <div
