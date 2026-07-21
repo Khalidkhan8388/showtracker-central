@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
 import { toast } from "sonner";
+import { Markdown } from "@/components/Markdown";
 
 
 function pickMime(): string {
