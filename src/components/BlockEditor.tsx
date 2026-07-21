@@ -223,7 +223,9 @@ export function BlockEditor({
         value={b.value}
         onChange={(v) => updateTextBlock(textIdx, v)}
         placeholder={!hasMedia && textIdx === 0 ? placeholder ?? "" : ""}
+        wikiIndex={wikiIndex}
       />
+
     );
     i += 1;
   }
