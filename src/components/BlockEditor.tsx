@@ -321,7 +321,7 @@ export function LineEditor({
           onKeyDown={(e) => onKey(i, e)}
           placeholder={i === 0 ? placeholder : ""}
           rows={1}
-          className={`w-full resize-none bg-transparent leading-relaxed placeholder:text-muted-foreground/50 outline-none ${lineStyleFor(line)}`}
+          className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
         />
       ))}
     </div>
