@@ -463,11 +463,12 @@ export const addCustomTask = createServerFn({ method: "POST" })
   });
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
 - summary: 2-5 sentences on what the page is about and the key takeaways the reader would want to remember.
 - tasks: array of concrete, actionable to-dos the user would plausibly want to do because they saved this page.
+- tags: 3-6 short lowercase tags (kebab-case, no #). Cover topic, domain type (e.g. "article", "recipe", "product", "video"), and subject (e.g. "cooking", "startup", "python").
 
 HOW TO EXTRACT TASKS — be smart:
 - A product page → "Buy <product>", "Compare <product> vs <alt>" if alternatives are mentioned.
