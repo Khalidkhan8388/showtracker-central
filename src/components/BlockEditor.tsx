@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Loader2, X, Minus, Square, Maximize2 } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Loader2 } from "lucide-react";
 
 // Match either an image (!...) or a plain markdown link ([label](url)).
 // Group 1 = "!" if image, empty for links; Group 2 = label; Group 3 = url.
