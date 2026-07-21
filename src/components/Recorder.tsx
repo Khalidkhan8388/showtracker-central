@@ -137,12 +137,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextBody("");
     setTextMode("write");
     setTextFullscreen(false);
+    setLinkComposerOpen(false);
+    setLinkComposerUrl("");
   }
 
   async function submitText() {
     const heading = textHeading.trim();
-    if (!heading) {
-      toast.error("Please add a title");
+    const body = textBody.trim();
+    if (!heading && !body) {
+      toast.error("Write something first");
       return;
     }
     setTextOpen(false);
