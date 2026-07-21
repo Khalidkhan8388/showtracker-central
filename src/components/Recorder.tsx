@@ -21,6 +21,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [elapsed, setElapsed] = useState(0);
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingImage[]>([]);
+  const [shrunk, setShrunk] = useState(false);
   const pendingRef = useRef<PendingImage[]>([]);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -32,6 +33,26 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [linkUrl, setLinkUrl] = useState("");
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
+
+  useEffect(() => {
+    let lastY = typeof window !== "undefined" ? window.scrollY : 0;
+    let ticking = false;
+    const onScroll = () => {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(() => {
+        const y = window.scrollY;
+        const dy = y - lastY;
+        if (y < 24) setShrunk(false);
+        else if (dy > 4) setShrunk(true);
+        else if (dy < -4) setShrunk(false);
+        lastY = y;
+        ticking = false;
+      });
+    };
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
 
   async function submitLink() {
     const url = linkUrl.trim();
