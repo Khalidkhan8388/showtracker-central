@@ -89,6 +89,7 @@ export function BlockEditor({
   onRemoveImage,
   onRemoveLink,
   placeholder,
+  wikiIndex,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -96,7 +97,9 @@ export function BlockEditor({
   onRemoveImage: (src: string) => void;
   onRemoveLink: (href: string) => void;
   placeholder?: string;
+  wikiIndex?: Map<string, string>;
 }) {
+
   const blocks = parseBlocks(value);
   const hasMedia = blocks.some((b) => b.kind !== "text");
 
