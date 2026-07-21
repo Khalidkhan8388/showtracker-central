@@ -185,7 +185,7 @@ function Home() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* iOS large-title header */}
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
         <div className="flex items-center justify-end px-2 pt-3 pb-1">
           <button
             onClick={signOut}
