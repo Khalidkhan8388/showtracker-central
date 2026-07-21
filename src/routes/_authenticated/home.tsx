@@ -855,7 +855,7 @@ const TaskRow = memo(function TaskRow({
       </div>
     </div>
   );
-}
+});
 
 
 function StatusIcon({ status }: { status: Note["status"] }) {
