@@ -10,16 +10,21 @@ export type Block =
   | { kind: "image"; src: string; raw: string; size: ImageSize; alt: string }
   | { kind: "link"; href: string; label: string; raw: string };
 
-export type ImageSize = "small" | "medium" | "full";
+export type ImageSize = "small" | "medium" | "full" | number;
 
 function parseImageLabel(label: string): { alt: string; size: ImageSize } {
   const parts = label.split("|");
   const alt = parts[0] ?? "";
   const rawSize = (parts[1] ?? "").trim().toLowerCase();
-  const size: ImageSize =
-    rawSize === "small" || rawSize === "medium" || rawSize === "full"
-      ? (rawSize as ImageSize)
-      : "full";
+  let size: ImageSize = "full";
+  if (rawSize === "small" || rawSize === "medium" || rawSize === "full") {
+    size = rawSize as ImageSize;
+  } else {
+    const m = rawSize.match(/^(\d{1,3})%?$/);
+    if (m) {
+      size = Math.max(15, Math.min(100, parseInt(m[1]!, 10)));
+    }
+  }
   return { alt, size };
 }
 
@@ -65,15 +70,17 @@ export function hostnameOf(href: string): string {
 }
 
 function buildImageRaw(alt: string, size: ImageSize, src: string): string {
-  const label = size === "full" ? alt : `${alt}|${size}`;
+  const sizeStr = typeof size === "number" ? `${size}%` : size;
+  const label = sizeStr === "full" ? alt : `${alt}|${sizeStr}`;
   return `![${label}](${src})`;
 }
 
-const IMAGE_WIDTH: Record<ImageSize, string> = {
-  small: "40%",
-  medium: "70%",
-  full: "100%",
-};
+function widthFor(size: ImageSize): string {
+  if (typeof size === "number") return `${size}%`;
+  if (size === "small") return "40%";
+  if (size === "medium") return "70%";
+  return "100%";
+}
 
 export function BlockEditor({
   value,
@@ -116,49 +123,12 @@ export function BlockEditor({
       {blocks.map((b, i) => {
         if (b.kind === "image") {
           return (
-            <div key={`img-${i}`} className="group relative">
-              <img
-                src={b.src}
-                alt={b.alt}
-                className="h-auto rounded-xl"
-                style={{ width: IMAGE_WIDTH[b.size], maxWidth: "100%" }}
-              />
-              <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 p-0.5 text-white shadow-lg">
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "small")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "small" ? "bg-white/25" : ""}`}
-                  aria-label="Small"
-                >
-                  <Minus className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "medium")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "medium" ? "bg-white/25" : ""}`}
-                  aria-label="Medium"
-                >
-                  <Square className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => updateImageSize(i, "full")}
-                  className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${b.size === "full" ? "bg-white/25" : ""}`}
-                  aria-label="Full width"
-                >
-                  <Maximize2 className="h-3 w-3" strokeWidth={3} />
-                </button>
-                <div className="mx-0.5 h-4 w-px bg-white/30" />
-                <button
-                  type="button"
-                  onClick={() => onRemoveImage(b.src)}
-                  aria-label="Remove image"
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/25"
-                >
-                  <X className="h-3 w-3" strokeWidth={3} />
-                </button>
-              </div>
-            </div>
+            <ResizableImage
+              key={`img-${i}`}
+              block={b}
+              onResize={(size) => updateImageSize(i, size)}
+              onRemove={() => onRemoveImage(b.src)}
+            />
           );
         }
         if (b.kind === "link") {
@@ -215,6 +185,103 @@ export function BlockEditor({
           />
         );
       })}
+    </div>
+  );
+}
+
+function ResizableImage({
+  block,
+  onResize,
+  onRemove,
+}: {
+  block: Extract<Block, { kind: "image" }>;
+  onResize: (size: ImageSize) => void;
+  onRemove: () => void;
+}) {
+  const containerRef = useRef<HTMLDivElement | null>(null);
+  const dragRef = useRef<{ containerW: number } | null>(null);
+
+  function setPreset(s: ImageSize) {
+    onResize(s);
+  }
+
+  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
+    const container = containerRef.current;
+    if (!container) return;
+    (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    dragRef.current = { containerW: container.getBoundingClientRect().width };
+    e.preventDefault();
+  }
+  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
+    const d = dragRef.current;
+    const container = containerRef.current;
+    if (!d || !container) return;
+    const rect = container.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const pct = Math.round(Math.max(15, Math.min(100, (x / d.containerW) * 100)));
+    onResize(pct);
+  }
+  function onPointerUp(e: React.PointerEvent<HTMLDivElement>) {
+    try {
+      (e.target as HTMLElement).releasePointerCapture(e.pointerId);
+    } catch {}
+    dragRef.current = null;
+  }
+
+  const currentWidth = widthFor(block.size);
+
+  return (
+    <div ref={containerRef} className="group relative w-full">
+      <div className="relative" style={{ width: currentWidth, maxWidth: "100%" }}>
+        <img src={block.src} alt={block.alt} className="h-auto w-full rounded-xl" />
+        <div
+          role="slider"
+          aria-label="Resize image"
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          className="absolute right-0 top-0 flex h-full w-4 -mr-2 cursor-ew-resize touch-none items-center justify-center"
+          style={{ touchAction: "none" }}
+        >
+          <div className="h-12 w-1.5 rounded-full bg-black/70 shadow-lg ring-1 ring-white/30" />
+        </div>
+        <div className="absolute right-2 top-2 flex items-center gap-1 rounded-full bg-black/70 p-0.5 text-white shadow-lg">
+          <button
+            type="button"
+            onClick={() => setPreset("small")}
+            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "small" ? "bg-white/25" : ""}`}
+            aria-label="Small"
+          >
+            <Minus className="h-3 w-3" strokeWidth={3} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreset("medium")}
+            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "medium" ? "bg-white/25" : ""}`}
+            aria-label="Medium"
+          >
+            <Square className="h-3 w-3" strokeWidth={3} />
+          </button>
+          <button
+            type="button"
+            onClick={() => setPreset("full")}
+            className={`inline-flex h-6 w-6 items-center justify-center rounded-full ${block.size === "full" ? "bg-white/25" : ""}`}
+            aria-label="Full width"
+          >
+            <Maximize2 className="h-3 w-3" strokeWidth={3} />
+          </button>
+          <div className="mx-0.5 h-4 w-px bg-white/30" />
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="Remove image"
+            className="inline-flex h-6 w-6 items-center justify-center rounded-full hover:bg-white/25"
+          >
+            <X className="h-3 w-3" strokeWidth={3} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
