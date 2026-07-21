@@ -592,6 +592,7 @@ export const saveWebLink = createServerFn({ method: "POST" })
           heading: structured.heading,
           summary: structured.summary,
           tasks: tasksPayload,
+          tags: structured.tags,
         })
         .eq("id", inserted.id);
       return { ok: true as const, noteId: inserted.id };
