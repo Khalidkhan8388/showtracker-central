@@ -7,6 +7,8 @@ const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
 const SaveTextNoteInput = z.object({
   heading: z.string().trim().min(1).max(200),
   body: z.string().trim().max(20000).optional().default(""),
+  imagePaths: z.array(z.string().min(1)).max(20).optional().default([]),
+  sourceUrl: z.string().trim().url().max(2000).optional().nullable(),
 });
 
 
@@ -690,6 +692,8 @@ export const saveTextNote = createServerFn({ method: "POST" })
         transcript: data.body || null,
         summary: summary || (data.body ? data.body.slice(0, 500) : ""),
         tasks: tasksPayload,
+        image_paths: data.imagePaths ?? [],
+        source_url: data.sourceUrl ?? null,
         status: "ready",
       })
       .select("id")
