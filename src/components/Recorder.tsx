@@ -5,6 +5,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 
 function pickMime(): string {
