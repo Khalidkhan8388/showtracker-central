@@ -6,17 +6,27 @@ const ProcessInput = z.object({ noteId: z.string().uuid() });
 const SaveWebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
 
 
-const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into structured notes.
-Return a single JSON object with keys: heading, summary, tasks.
-- heading: one short line (max ~8 words), title case, no trailing punctuation.
-- summary: 2-4 concise sentences capturing the key ideas. If images are provided, describe their content and any text visible.
-- tasks: array of HIGH-QUALITY actionable to-dos in imperative voice ("Call John about invoice").
-  STRICT RULES:
-    * Only include a task if the user clearly needs to DO something specific — an explicit action item, a deadline/obligation, a promised follow-up, or a checkbox/handwritten TODO in an image.
-    * DO NOT invent tasks from casual mentions. Do NOT add generic tasks like "Look up X", "Read more about Y", "Consider Z", "Save contact", "File expense" unless the user's own words or the image explicitly state that intent.
-    * If nothing is clearly actionable, return an empty array []. An empty list is better than a filler task.
-    * Maximum 5 tasks. Prefer 0-2 unless the content is genuinely a task list.
-Respond ONLY with valid JSON, no code fences.`;
+const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+
+- heading: short (max ~8 words), title case, no trailing punctuation. Reflect the actual topic — do not use "Untitled" or "Voice Note".
+- summary: 2-4 sentences capturing the key ideas. If images are attached, describe what's visible (objects, people, on-screen text, handwriting) and weave that into the summary.
+- tasks: array of clear, actionable to-dos, each in imperative voice ("Call John about the invoice", "Buy milk on Tuesday", "Reply to Priya's email").
+
+HOW TO EXTRACT TASKS — be smart, not stingy:
+1. Pull EVERY concrete action the user mentions or implies they should do. Examples that ARE tasks:
+   - "I need to / I have to / I should / remind me to / don't forget to …"
+   - "Tomorrow I'll call X", "Book the flight", "Pay the bill by Friday"
+   - Handwritten TODO lists, checklists, or bullet points in an image → each item is a task
+   - A receipt/bill in an image → "Pay <amount> to <merchant> by <date>" if a due date is visible
+   - A meeting/event with a date or time → "Attend <event> on <date>"
+   - A promise to someone ("I told Sara I'd send the doc") → "Send the doc to Sara"
+2. Rewrite tasks so each one is standalone and specific. Include names, amounts, dates, and objects from the source when they're mentioned.
+3. Split compound tasks. "Email Sam and book the venue" → two tasks.
+4. Skip only pure musings, opinions, or facts with no action ("The weather was nice", "Interesting article"). If genuinely nothing is actionable, return [].
+5. Cap at 8 tasks. Order them by importance / time-sensitivity.
+
+Respond with ONLY the JSON object.`;
 
 async function transcribeAudio(bytes: Uint8Array, mime: string, apiKey: string): Promise<string> {
   const ext = ({
@@ -81,7 +91,7 @@ async function extractStructured(
       Authorization: `Bearer ${apiKey}`,
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         { role: "user", content: userBlocks },
@@ -424,16 +434,24 @@ export const addCustomTask = createServerFn({ method: "POST" })
   });
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return a single JSON object with keys: heading, summary, tasks.
-- heading: one short line (max ~8 words), title case, no trailing punctuation. Prefer the page's own title if it's concise.
-- summary: 2-5 sentences capturing what the page is about and the key takeaways.
-- tasks: array of HIGH-QUALITY actionable to-dos derived from the page.
-  STRICT RULES:
-    * Only include a task if the page contains a clear call-to-action, a step-by-step guide, an event with a date/RSVP, a specific purchase decision, or an explicit checklist the user should follow.
-    * DO NOT invent generic tasks like "Read the article", "Look into this", "Consider it", "Bookmark this". The note itself is the bookmark.
-    * If nothing is clearly actionable, return []. An empty list is strongly preferred over filler.
-    * Maximum 5 tasks.
-Respond ONLY with valid JSON, no code fences.`;
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+
+- heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
+- summary: 2-5 sentences on what the page is about and the key takeaways the reader would want to remember.
+- tasks: array of concrete, actionable to-dos the user would plausibly want to do because they saved this page.
+
+HOW TO EXTRACT TASKS — be smart:
+- A product page → "Buy <product>", "Compare <product> vs <alt>" if alternatives are mentioned.
+- A recipe → "Cook <dish>", plus grocery items as separate tasks if it's a shopping-worthy list.
+- A how-to / tutorial → each major step becomes a task, in order.
+- An event / concert / movie release → "Attend <event> on <date>", "Book tickets for <event>".
+- A job posting → "Apply to <role> at <company> by <deadline>".
+- An article that recommends specific actions → capture each recommendation as its own task.
+- Rewrite tasks so they include the specific item, name, date, or amount from the page. No vague verbs.
+
+Skip "Read this later" / "Bookmark this" — saving the note IS the bookmark. If the page is purely informational with no plausible action, return []. Cap at 8 tasks.
+
+Respond with ONLY the JSON object.`;
 
 async function fetchWebPageText(url: string): Promise<{ title: string | null; text: string }> {
   const lovableKey = process.env.LOVABLE_API_KEY;
@@ -481,7 +499,7 @@ async function summarizeWebPage(
     method: "POST",
     headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3.5-flash",
       messages: [
         { role: "system", content: WEB_SYSTEM_PROMPT },
         { role: "user", content: userMsg },
