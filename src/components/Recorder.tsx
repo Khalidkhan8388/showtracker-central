@@ -34,6 +34,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [textOpen, setTextOpen] = useState(false);
   const [textHeading, setTextHeading] = useState("");
   const [textBody, setTextBody] = useState("");
+  const [textImages, setTextImages] = useState<PendingImage[]>([]);
+  const [textLink, setTextLink] = useState("");
+  const textImagesRef = useRef<PendingImage[]>([]);
+  const textFileRef = useRef<HTMLInputElement | null>(null);
   const processFn = useServerFn(processVoiceNote);
   const saveLinkFn = useServerFn(saveWebLink);
   const saveTextFn = useServerFn(saveTextNote);
