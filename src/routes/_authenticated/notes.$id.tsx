@@ -47,9 +47,17 @@ function resolveWikiLinks(md: string, index: Map<string, string>): string {
 function NoteDetail() {
   const { id } = Route.useParams();
   const navigate = useNavigate();
-  const [note, setNote] = useState<Note | null>(null);
+  const noteLocal = useLocalNote(id);
+  const note = (noteLocal ?? null) as Note | null;
+  const allLocal = useLocalNotes();
+  const allNotes: LinkTarget[] = useMemo(
+    () =>
+      ((allLocal ?? []) as Note[])
+        .filter((r) => r.id !== id && r.heading && r.heading !== "__custom__")
+        .map((r) => ({ id: r.id, heading: r.heading as string })),
+    [allLocal, id],
+  );
   const [imageUrls, setImageUrls] = useState<string[]>([]);
-  const [allNotes, setAllNotes] = useState<LinkTarget[]>([]);
   const [editing, setEditing] = useState(false);
   const [draftHeading, setDraftHeading] = useState("");
   const [draftBody, setDraftBody] = useState("");
@@ -67,10 +75,8 @@ function NoteDetail() {
   // trigger re-signing every image on every realtime hit.
   const signedCacheRef = useRef<Map<string, string>>(new Map());
 
-  async function load() {
-    const { data } = await supabase.from("voice_notes").select("*").eq("id", id).single();
-    setNote(data as Note | null);
-    const paths = Array.isArray((data as any)?.image_paths) ? ((data as any).image_paths as string[]) : [];
+  // Refresh signed URLs whenever the note's image_paths change.
+  const refreshImages = useCallback(async (paths: string[]) => {
     if (paths.length === 0) {
       setImageUrls([]);
       return;
@@ -86,40 +92,16 @@ function NoteDetail() {
       });
     }
     setImageUrls(paths.map((p) => signedCacheRef.current.get(p) ?? "").filter(Boolean));
-  }
+  }, []);
 
-  async function loadIndex() {
-    const { data } = await supabase
-      .from("voice_notes")
-      .select("id,heading")
-      .neq("id", id)
-      .neq("heading", "__custom__")
-      .not("heading", "is", null)
-      .order("created_at", { ascending: false })
-      .limit(500);
-    const rows = (data ?? []) as Array<{ id: string; heading: string | null }>;
-    setAllNotes(
-      rows
-        .filter((r) => r.heading)
-        .map((r) => ({ id: r.id, heading: r.heading as string })),
-    );
-  }
+  // Kept as a thin alias — call sites use `load()` to force a re-sign after uploads.
+  const load = useCallback(async () => {
+    await refreshImages(Array.isArray(note?.image_paths) ? (note!.image_paths as string[]) : []);
+  }, [refreshImages, note]);
 
   useEffect(() => {
-    load();
-    loadIndex();
-    const channel = supabase
-      .channel(`voice_note_${id}_${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "voice_notes", filter: `id=eq.${id}` },
-        () => load(),
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [id]);
+    void refreshImages(Array.isArray(note?.image_paths) ? (note!.image_paths as string[]) : []);
+  }, [note?.image_paths, refreshImages]);
 
   const wikiIndex = useMemo(() => {
     const m = new Map<string, string>();
@@ -129,14 +111,16 @@ function NoteDetail() {
 
   async function onToggle(taskId: string) {
     if (!note) return;
-    setNote({ ...note, tasks: (note.tasks ?? []).map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) });
+    const cur = note.tasks?.find((t) => t.id === taskId);
+    await patchLocalTask(id, taskId, { done: !(cur?.done ?? false) });
     try {
       await toggleFn({ data: { noteId: id, taskId } });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
-      load();
+      void resync();
     }
   }
+
 
   async function onDelete() {
     if (!confirm("Delete this note?")) return;
