@@ -236,10 +236,12 @@ function TrashPage() {
                 Restore all
               </button>
               <button
-                onClick={() => navigate({ to: "/profile" })}
-                className="inline-flex h-9 items-center justify-center rounded-full px-3 text-[13px] font-medium active:opacity-60"
+                disabled={busy}
+                onClick={purgeAll}
+                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
               >
-                Done
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete all
               </button>
             </div>
           )
