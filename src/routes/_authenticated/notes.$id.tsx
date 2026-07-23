@@ -437,18 +437,9 @@ function NoteDetail() {
           </div>
         )}
 
-        {editing ? (
-          <input
-            value={draftHeading}
-            onChange={(e) => setDraftHeading(e.target.value)}
-            placeholder="Title"
-            className="w-full bg-transparent text-[28px] font-bold leading-tight tracking-tight outline-none placeholder:text-muted-foreground/50"
-          />
-        ) : (
-          <h1 className="text-[28px] font-bold leading-tight tracking-tight">
-            {note.heading ?? (processing ? "Processing…" : "Untitled")}
-          </h1>
-        )}
+        <h1 className="text-[28px] font-bold leading-tight tracking-tight">
+          {note.heading ?? (processing ? "Processing…" : "Untitled")}
+        </h1>
         <p className="mt-1 text-[13px] text-muted-foreground">
           {new Date(note.created_at).toLocaleString()}
         </p>
