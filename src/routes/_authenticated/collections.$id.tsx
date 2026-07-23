@@ -388,7 +388,8 @@ function CollectionDetail() {
                       <Link
                         to="/notes/$id"
                         params={{ id: n.id }}
-                        className={`relative flex ${isMedia ? "aspect-[2/3]" : "aspect-square"} flex-col justify-between overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60 active:opacity-80`}
+                        style={isMedia ? { borderRadius: 15 } : undefined}
+                        className={`relative flex ${isMedia ? "aspect-[2/3]" : "aspect-square rounded-2xl"} flex-col justify-between overflow-hidden bg-card shadow-sm ring-1 ring-border/60 active:opacity-80`}
                       >
                         {isMedia ? (
                           <>
@@ -398,14 +399,12 @@ function CollectionDetail() {
                               loading="lazy"
                               className="absolute inset-0 h-full w-full object-cover"
                             />
-                            {media?.watch_status && (
-                              <div className="absolute left-1.5 top-1.5 z-10">
-                                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
+                              {media?.watch_status && (
+                                <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
                                   {WATCH_LABEL[media.watch_status]}
                                 </span>
-                              </div>
-                            )}
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-2.5 pt-8">
+                              )}
                               <p className="line-clamp-2 text-[12px] font-semibold text-white">
                                 {media?.title ?? n.heading ?? "Untitled"}
                               </p>
@@ -465,6 +464,7 @@ function CollectionDetail() {
                         aria-label="Remove from collection"
                         className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm ring-1 ring-border/60 backdrop-blur active:opacity-70"
                       >
+
                         <X className="h-3.5 w-3.5" />
                       </button>
                     </li>
