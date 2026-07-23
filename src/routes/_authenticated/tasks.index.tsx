@@ -109,6 +109,36 @@ function TasksPage() {
     }
   }
 
+  async function togglePinSelected() {
+    const items = Array.from(selected).map((k) => {
+      const [noteId, taskId] = k.split("::");
+      return { noteId, taskId };
+    });
+    if (items.length === 0) return;
+    const selectedTasks = items
+      .map(({ noteId, taskId }) => {
+        const n = (notes ?? []).find((x) => x.id === noteId);
+        const t = n?.tasks?.find((x: any) => x.id === taskId);
+        return t ? { noteId, taskId, pinned: !!t.pinned } : null;
+      })
+      .filter(Boolean) as { noteId: string; taskId: string; pinned: boolean }[];
+    const anyUnpinned = selectedTasks.some((t) => !t.pinned);
+    const nextPinned = anyUnpinned;
+    await Promise.all(
+      selectedTasks.map((t) => patchLocalTask(t.noteId, t.taskId, { pinned: nextPinned })),
+    );
+    setSelected(new Set());
+    try {
+      await Promise.all(
+        selectedTasks.map((t) =>
+          pinFn({ data: { noteId: t.noteId, taskId: t.taskId, pinned: nextPinned } }),
+        ),
+      );
+    } catch {
+      void resync();
+    }
+  }
+
   async function onEdit(noteId: string, taskId: string, text: string) {
     await patchLocalTask(noteId, taskId, { text });
     try {
