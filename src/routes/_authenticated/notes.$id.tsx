@@ -938,13 +938,14 @@ function NoteDetail() {
             <button
               onClick={async () => {
                 const next = !note.pinned;
-                setNote({ ...note, pinned: next });
+                await patchLocalNote(id, { pinned: next });
                 try {
                   await pinFn({ data: { noteId: id, pinned: next } });
                 } catch (e: any) {
                   toast.error(e?.message ?? "Failed");
-                  load();
+                  void resync();
                 }
+
               }}
               aria-label={note.pinned ? "Unpin" : "Pin"}
               aria-pressed={note.pinned}
