@@ -503,14 +503,21 @@ function NoteDetail() {
       {/* iOS nav bar */}
       <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
         <div className="flex items-center justify-between px-2 pt-3 pb-2">
-          <Link
-            to="/home"
+          <button
+            type="button"
             aria-label="Back"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                window.history.back();
+              } else {
+                void navigate({ to: "/home" });
+              }
+            }}
             className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
           >
             <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-            <span>Home</span>
-          </Link>
+            <span>Back</span>
+          </button>
           <div />
 
         </div>
