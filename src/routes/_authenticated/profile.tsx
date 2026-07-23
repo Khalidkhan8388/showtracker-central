@@ -25,6 +25,16 @@ function ProfilePage() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
+  const [hideMedia, setHideMedia] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("hide-media-on-home") === "1";
+  });
+  function toggleHideMedia(next: boolean) {
+    setHideMedia(next);
+    localStorage.setItem("hide-media-on-home", next ? "1" : "0");
+    window.dispatchEvent(new Event("braintape:pref-changed"));
+  }
+
 
   async function confirmDelete() {
     setDeleting(true);
