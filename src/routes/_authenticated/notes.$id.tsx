@@ -458,15 +458,13 @@ function NoteDetail() {
             <span>Home</span>
           </Link>
           <div className="flex items-center gap-0.5">
-            {!isVoice && (
-              <button
-                onClick={startEdit}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-                aria-label="Edit"
-              >
-                <Pencil className="h-5 w-5" />
-              </button>
-            )}
+            <button
+              onClick={startEdit}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
+              aria-label="Edit"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
             <button
               onClick={onShare}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
