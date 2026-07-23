@@ -244,7 +244,6 @@ function Home() {
 
     return {
       displayNotes,
-      latest,
       wall,
       suggested,
       allTasks,
@@ -253,6 +252,7 @@ function Home() {
       pct,
       hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
     };
+
   }, [notes]);
 
   const noteCount = notes ? notes.filter((n) => n.heading !== "__custom__").length : 0;
