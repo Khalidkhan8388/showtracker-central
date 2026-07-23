@@ -230,6 +230,8 @@ function SearchPage() {
   const [aiReasoning, setAiReasoning] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
+  const [collapsed, setCollapsed] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const searchFn = useServerFn(searchEverything);
 
   useEffect(() => {
@@ -360,7 +362,7 @@ function SearchPage() {
     <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* Minimal top bar */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
-        <div className="flex items-center gap-3 px-4 pb-3 pt-4">
+        <div className={`flex items-center gap-3 px-4 transition-all duration-200 ${collapsed ? "pb-2 pt-2" : "pb-3 pt-4"}`}>
           <button
             onClick={() => navigate({ to: "/home" })}
             aria-label="Back"
@@ -368,12 +370,16 @@ function SearchPage() {
           >
             <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           </button>
-          <h1 className="text-[20px] font-medium tracking-tight text-foreground">Search</h1>
+          <h1 className={`font-medium tracking-tight text-foreground leading-none transition-all duration-200 ${collapsed ? "text-[17px]" : "text-[24px]"}`}>Search</h1>
         </div>
       </header>
 
       {/* Scroll body — reserves space for bottom search bar */}
-      <div className="flex-1 overflow-y-auto px-4 pb-[132px] pt-1">
+      <div
+        ref={scrollRef}
+        onScroll={(e) => setCollapsed((e.target as HTMLDivElement).scrollTop > 24)}
+        className="flex-1 overflow-y-auto px-4 pb-[132px] pt-1"
+      >
         {/* AI reasoning bubble */}
         {aiMode && aiReasoning && !aiLoading && (
           <div className="mb-4 flex gap-2.5 rounded-2xl bg-primary/10 px-3.5 py-3">
