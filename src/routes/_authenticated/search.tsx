@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useLocalNotes } from "@/hooks/use-local-notes";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
 import { useTheme } from "@/lib/theme";
