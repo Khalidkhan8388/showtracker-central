@@ -232,6 +232,19 @@ function SearchPage() {
   const [recents, setRecents] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const sentinelRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = sentinelRef.current;
+    const root = scrollRef.current;
+    if (!el || !root) return;
+    // IntersectionObserver fires reliably during iOS momentum scrolling.
+    const io = new IntersectionObserver(
+      ([entry]) => setCollapsed(!entry.isIntersecting),
+      { root, threshold: 0 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
   const searchFn = useServerFn(searchEverything);
 
   useEffect(() => {
@@ -377,9 +390,10 @@ function SearchPage() {
       {/* Scroll body — reserves space for bottom search bar */}
       <div
         ref={scrollRef}
-        onScroll={(e) => setCollapsed((e.target as HTMLDivElement).scrollTop > 24)}
         className="flex-1 overflow-y-auto px-4 pb-[132px] pt-1"
       >
+        <div ref={sentinelRef} aria-hidden="true" className="h-2" />
+
         {/* AI reasoning bubble */}
         {aiMode && aiReasoning && !aiLoading && (
           <div className="mb-4 flex gap-2.5 rounded-2xl bg-primary/10 px-3.5 py-3">
