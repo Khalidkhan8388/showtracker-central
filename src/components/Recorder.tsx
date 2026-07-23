@@ -698,8 +698,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         role="toolbar"
         aria-label="Capture actions"
 
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full shadow-2xl ring-1 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
-          shrunk ? "scale-90 p-1 opacity-95" : "scale-100 p-1.5 opacity-100"
+        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full shadow-2xl ring-1 backdrop-blur-2xl backdrop-saturate-150 transition-opacity duration-150 ease-out ${
+          shrunk ? "p-1 opacity-95" : "p-1.5 opacity-100"
         } ${
           recording
             ? "bg-destructive/70 ring-destructive/30 animate-pulse"
@@ -718,7 +718,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         <Link
           to="/search"
           aria-label="Search"
-          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-all duration-300 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
+          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -728,7 +728,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-all duration-300 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
+          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -738,7 +738,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setTextOpen(true)}
           disabled={disabled || recording}
           aria-label="Write text note"
-          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-all duration-300 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
+          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -748,7 +748,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-all duration-300 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
+          className={`inline-flex items-center justify-center rounded-full text-neutral-600 transition-colors duration-150 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -761,7 +761,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className={`group inline-flex items-center gap-2.5 rounded-full bg-black/5 text-neutral-900 transition-all duration-300 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15 ${
+          className={`group inline-flex items-center gap-2.5 rounded-full bg-black/5 text-neutral-900 transition-colors duration-150 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15 ${
             shrunk ? "py-1.5 pl-2.5 pr-4" : "py-2 pl-3 pr-5"
           }`}
         >
