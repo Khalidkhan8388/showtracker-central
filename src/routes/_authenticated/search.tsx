@@ -577,7 +577,11 @@ function SearchPage() {
       </div>
 
       {/* Bottom-anchored search bar (above keyboard) — dark pill to match app UI */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+      <div
+        ref={pillRef}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md will-change-transform"
+        style={{ transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined }}
+      >
         <div className="pointer-events-auto px-5 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
           {(query.trim() || aiMode) && (
             <div className="mb-2 flex items-center justify-between px-2 text-[11px] text-muted-foreground">
