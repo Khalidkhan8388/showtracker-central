@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useCollections, createCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 
-export const Route = createFileRoute("/_authenticated/collections")({
+export const Route = createFileRoute("/_authenticated/collections/")({
   head: () => ({
     meta: [
       { title: "Collections — Braintape" },
