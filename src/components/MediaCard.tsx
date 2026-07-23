@@ -60,7 +60,7 @@ export function MediaCard({
           {isTv ? <Tv className="h-10 w-10 text-white/40" /> : <Film className="h-10 w-10 text-white/40" />}
         </div>
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 scrim-t" />
 
       <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
