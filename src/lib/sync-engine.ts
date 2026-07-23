@@ -157,12 +157,17 @@ function attachRealtime(uid: string) {
           if (oldRow?.id) {
             tombstones.set(oldRow.id, Date.now());
             await db.notes.delete(oldRow.id);
+            await clearPendingDelete([oldRow.id]);
           }
           return;
         }
         const row = normalizeRow(payload.new as Record<string, unknown>);
         if (isTombstoned(row.id)) return;
-        await db.notes.put(row);
+        const pending = await readPendingDeletes(uid);
+        const finalRow = pending.has(row.id)
+          ? { ...row, deleted_at: row.deleted_at ?? new Date().toISOString() }
+          : row;
+        await db.notes.put(finalRow);
         const cur = await db.meta.get(LAST_SYNC(uid));
         if (!cur || row.updated_at > cur.value) {
           await db.meta.put({ key: LAST_SYNC(uid), value: row.updated_at });
