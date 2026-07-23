@@ -48,6 +48,8 @@ function CollectionDetail() {
     [allMembers],
   );
   const hasMedia = mediaMembers.length > 0;
+  const hasTv = useMemo(() => mediaMembers.some((n) => (n as any).media?.type === "tv"), [mediaMembers]);
+
   const statusCounts = useMemo(() => {
     const c: Record<WatchStatus | "all", number> = {
       all: mediaMembers.length,
