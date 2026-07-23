@@ -89,14 +89,14 @@ export function MediaCard({
         )
       )}
 
-      <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
+      <div className={`absolute inset-x-0 bottom-0 z-10 scrim-t p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
         {media.watch_status && (
           <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
             {WATCH_LABEL[media.watch_status]}
           </span>
         )}
-        <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-white">{media.title}</p>
-        <div className="mt-1 flex items-center gap-2 text-[10px] text-white/80">
+        <p className="line-clamp-2 text-[13px] font-semibold leading-tight scrim-fg">{media.title}</p>
+        <div className="mt-1 flex items-center gap-2 text-[10px] scrim-fg-80">
           {year && <span>{year}</span>}
           {media.vote_average != null && media.vote_average > 0 && (
             <span className="inline-flex items-center gap-0.5">
@@ -107,16 +107,17 @@ export function MediaCard({
         </div>
         {isTv && total > 0 && (
           <div className="mt-1.5">
-            <div className="flex items-center justify-between text-[10px] font-medium text-white/85">
+            <div className="flex items-center justify-between text-[10px] font-medium scrim-fg-80">
               <span>{done}/{total} ep</span>
               <span>{Math.round((done / total) * 100)}%</span>
             </div>
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full scrim-track">
+              <div className="h-full rounded-full scrim-fill" style={{ width: `${Math.round((done / total) * 100)}%` }} />
             </div>
           </div>
         )}
       </div>
+
     </div>
   );
 }
