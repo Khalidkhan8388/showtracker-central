@@ -451,14 +451,24 @@ function Home() {
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
             {noteSelectMode && (
-              <button
-                onClick={togglePinSelected}
-                aria-label="Pin selected notes"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
-              >
-                <Pin aria-hidden="true" className="h-3.5 w-3.5" />
-                Pin
-              </button>
+              <>
+                <button
+                  onClick={() => setAddToCollectionOpen(true)}
+                  aria-label="Add to collection"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+                >
+                  <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
+                  Collection
+                </button>
+                <button
+                  onClick={togglePinSelected}
+                  aria-label="Pin selected notes"
+                  className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+                >
+                  <Pin aria-hidden="true" className="h-3.5 w-3.5" />
+                  Pin
+                </button>
+              </>
             )}
             <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
             <button
@@ -473,6 +483,14 @@ function Home() {
       ) : (
         <Recorder onNoteReady={() => { void resync(); }} />
       )}
+
+      <AddToCollectionSheet
+        open={addToCollectionOpen}
+        onClose={() => setAddToCollectionOpen(false)}
+        noteIds={Array.from(selectedNotes)}
+        onAdded={() => setSelectedNotes(new Set())}
+      />
+
     </div>
   );
 }
