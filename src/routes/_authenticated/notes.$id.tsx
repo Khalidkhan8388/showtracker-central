@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
+import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
+import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -64,12 +64,12 @@ function NoteDetail() {
   const [saving, setSaving] = useState(false);
   
 
-  const toggleFn = useServerFn(toggleTask);
-  const deleteFn = useServerFn(deleteNote);
-  const processFn = useServerFn(processVoiceNote);
-  const pinFn = useServerFn(pinNote);
-  const updateFn = useServerFn(updateTextNote);
-  const appendImagesFn = useServerFn(appendImagesToNote);
+  const toggleFn = toggleTask;
+  const deleteFn = deleteNote;
+  const processFn = processVoiceNote;
+  const pinFn = pinNote;
+  const updateFn = updateTextNote;
+  const appendImagesFn = appendImagesToNote;
 
   // Local-first photo cache: pulls from IndexedDB when we've seen the
   // image before, otherwise downloads once and stores it.
@@ -272,8 +272,8 @@ function NoteDetail() {
   const editFileRef = useRef<HTMLInputElement | null>(null);
   const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
   const [addingImages, setAddingImages] = useState(false);
-  const linkLabelFn = useServerFn(generateLinkLabel);
-  const transcribeClipFn = useServerFn(transcribeAudioClip);
+  const linkLabelFn = generateLinkLabel;
+  const transcribeClipFn = transcribeAudioClip;
 
   // Voice-append recorder state
   const [voiceRecording, setVoiceRecording] = useState(false);
@@ -333,15 +333,7 @@ function NoteDetail() {
 
   async function finishVoiceAppend(blob: Blob, mime: string) {
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
-      const path = `${uid}/clips/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-      const { error: upErr } = await supabase.storage
-        .from("voice-notes")
-        .upload(path, blob, { contentType: mime, upsert: false });
-      if (upErr) throw upErr;
+      const path = await storeLocalAudio(blob, mime);
       const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
       const clean = (transcript ?? "").trim();
       if (!clean) throw new Error("Nothing transcribed");
@@ -366,26 +358,15 @@ function NoteDetail() {
     if (files.length === 0) return;
     setUploadingImg(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
       const urls: string[] = [];
       for (const f of files) {
-        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
-        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("voice-notes")
-          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        const { data: signed, error: signErr } = await supabase.storage
-          .from("voice-notes")
-          .createSignedUrl(path, 60 * 60 * 24 * 365 * 10);
-        if (signErr || !signed) throw signErr ?? new Error("Sign failed");
-        urls.push(signed.signedUrl);
+        const path = await storeLocalPhoto(f, f.type);
+        const url = await getPhotoUrl(path);
+        if (url) urls.push(url);
       }
       appendToBody(urls.map((u) => `![](${u})`).join("\n"));
     } catch (err: any) {
-      toast.error(err?.message ?? "Upload failed");
+      toast.error(err?.message ?? "Could not attach image");
     } finally {
       setUploadingImg(false);
     }
@@ -491,18 +472,9 @@ function NoteDetail() {
     if (files.length === 0 || !note) return;
     setAddingImages(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
       const paths: string[] = [];
       for (const f of files) {
-        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
-        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("voice-notes")
-          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        paths.push(path);
+        paths.push(await storeLocalPhoto(f, f.type));
       }
       await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
       await load();

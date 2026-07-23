@@ -1,6 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { useServerFn } from "@tanstack/react-start";
 import { saveWebLink } from "@/lib/notes.functions";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
@@ -21,7 +20,7 @@ export const Route = createFileRoute("/_authenticated/share")({
 function SharePage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
-  const saveFn = useServerFn(saveWebLink);
+  const saveFn = saveWebLink;
   const ranRef = useRef(false);
   const [error, setError] = useState<string | null>(null);
 

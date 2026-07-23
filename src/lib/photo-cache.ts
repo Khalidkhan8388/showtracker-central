@@ -1,82 +1,35 @@
 import { db } from "./local-db";
-import { signPath } from "./signed-url-cache";
 
-// Local-first photo cache.
-//
-// Photos live in IndexedDB as Blobs, keyed by their Supabase storage path.
-// The renderer gets an object URL back synchronously when we've already
-// downloaded a photo — so thumbnails paint instantly on repeat visits and
-// work offline, while first-time loads fall back to a signed URL and get
-// cached in the background.
-//
-// Memory-side object URL cache: URL.createObjectURL is cheap but we keep
-// one per path so <img src> stays stable across renders (no flicker).
+// Local-only photo cache. All photos live as Blobs in IndexedDB, keyed by
+// a synthetic `local://images/<uuid>` path. Object URLs are memoized so
+// <img src> stays stable across renders (no flicker).
+
 const urlCache = new Map<string, string>(); // path -> objectURL
 const inflight = new Map<string, Promise<string>>();
 
-// Cap the cache at ~200 MB — evicts oldest photos when exceeded.
-const MAX_BYTES = 200 * 1024 * 1024;
+// Cap at ~500 MB; evict oldest first.
+const MAX_BYTES = 500 * 1024 * 1024;
 
 export function getCachedPhotoUrl(path: string): string | undefined {
   return urlCache.get(path);
 }
 
-async function hydrateFromDexie(path: string): Promise<string | undefined> {
-  try {
-    const row = await db.photos.get(path);
-    if (!row) return undefined;
-    const url = URL.createObjectURL(row.blob);
-    urlCache.set(path, url);
-    // touch for LRU
-    db.photos.update(path, { cachedAt: Date.now() }).catch(() => {});
-    return url;
-  } catch {
-    return undefined;
-  }
+async function hydrate(path: string): Promise<string> {
+  const row = await db.photos.get(path);
+  if (!row) return "";
+  const url = URL.createObjectURL(row.blob);
+  urlCache.set(path, url);
+  db.photos.update(path, { cachedAt: Date.now() }).catch(() => {});
+  return url;
 }
 
-async function downloadAndCache(path: string): Promise<string> {
-  const signed = await signPath(path);
-  if (!signed) return "";
-  try {
-    const res = await fetch(signed);
-    if (!res.ok) return signed; // fall back to signed URL
-    const blob = await res.blob();
-    const objectUrl = URL.createObjectURL(blob);
-    urlCache.set(path, objectUrl);
-    // Persist in the background — don't block the caller.
-    db.photos
-      .put({
-        path,
-        blob,
-        size: blob.size,
-        contentType: blob.type || "image/jpeg",
-        cachedAt: Date.now(),
-      })
-      .then(() => evictIfNeeded())
-      .catch(() => {});
-    return objectUrl;
-  } catch {
-    return signed;
-  }
-}
-
-/**
- * Returns a URL for the image at `path`. Resolves instantly from the
- * in-memory cache when possible, otherwise from IndexedDB, otherwise
- * downloads once and caches for next time.
- */
 export async function getPhotoUrl(path: string): Promise<string> {
   if (!path) return "";
   const mem = urlCache.get(path);
   if (mem) return mem;
   const existing = inflight.get(path);
   if (existing) return existing;
-  const p = (async () => {
-    const fromDb = await hydrateFromDexie(path);
-    if (fromDb) return fromDb;
-    return downloadAndCache(path);
-  })();
+  const p = hydrate(path);
   inflight.set(path, p);
   try {
     return await p;
@@ -85,11 +38,6 @@ export async function getPhotoUrl(path: string): Promise<string> {
   }
 }
 
-/**
- * Prewarm the memory cache from IndexedDB for a batch of paths. Call this
- * once on app boot so home/search thumbnails are ready synchronously on
- * the first render after a reload.
- */
 export async function warmPhotoCache(paths: string[]): Promise<void> {
   const missing = paths.filter((p) => p && !urlCache.has(p));
   if (missing.length === 0) return;
@@ -106,6 +54,31 @@ export async function warmPhotoCache(paths: string[]): Promise<void> {
   }
 }
 
+/** Persist a new photo Blob and return its local path. */
+export async function storeLocalPhoto(blob: Blob, contentType?: string): Promise<string> {
+  const ct = contentType || blob.type || "image/jpeg";
+  const ext = ct.includes("png") ? "png" : ct.includes("webp") ? "webp" : "jpg";
+  const path = `local://images/${crypto.randomUUID()}.${ext}`;
+  await db.photos.put({
+    path,
+    blob,
+    size: blob.size,
+    contentType: ct,
+    cachedAt: Date.now(),
+  });
+  // Pre-cache the object URL so the immediate re-render is instant.
+  urlCache.set(path, URL.createObjectURL(blob));
+  evictIfNeeded().catch(() => {});
+  return path;
+}
+
+/** Read raw bytes for AI upload. */
+export async function readPhotoBytes(path: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+  const row = await db.photos.get(path);
+  if (!row) return null;
+  return { bytes: new Uint8Array(await row.blob.arrayBuffer()), mime: row.contentType };
+}
+
 let evicting = false;
 async function evictIfNeeded(): Promise<void> {
   if (evicting) return;
@@ -115,26 +88,21 @@ async function evictIfNeeded(): Promise<void> {
     let total = 0;
     for (const r of all) total += r.size;
     if (total <= MAX_BYTES) return;
-    // Delete oldest until under budget.
     for (const r of all) {
       if (total <= MAX_BYTES) break;
       await db.photos.delete(r.path);
       total -= r.size;
-      // Revoke in-memory URL so we don't hand out a stale one.
       const url = urlCache.get(r.path);
       if (url) {
         URL.revokeObjectURL(url);
         urlCache.delete(r.path);
       }
     }
-  } catch {
-    /* ignore */
   } finally {
     evicting = false;
   }
 }
 
-/** Remove a single photo from the cache (e.g. after delete). */
 export async function evictPhoto(path: string): Promise<void> {
   const url = urlCache.get(path);
   if (url) {

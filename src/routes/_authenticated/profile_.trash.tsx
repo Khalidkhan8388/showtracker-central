@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ChevronLeft, RotateCcw, Trash2, Loader2, X } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { useLocalDeletedNotes } from "@/hooks/use-local-notes";
 import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
@@ -29,17 +28,16 @@ function daysLeft(deletedAt: string | null): number {
 
 function TrashPage() {
   const deleted = useLocalDeletedNotes();
-  const purgeExpiredFn = useServerFn(purgeExpiredNotes);
-  const restoreFn = useServerFn(restoreNotes);
-  const purgeFn = useServerFn(purgeNotes);
+  const restoreFn = restoreNotes;
+  const purgeFn = purgeNotes;
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   useEffect(() => {
-    void purgeExpiredFn({}).catch(() => {});
-  }, [purgeExpiredFn]);
+    void purgeExpiredNotes().catch(() => {});
+  }, []);
 
   const items = useMemo(() => (deleted ?? []) as Note[], [deleted]);
   const selectMode = selected.size > 0;

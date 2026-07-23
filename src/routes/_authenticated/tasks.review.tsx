@@ -1,14 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
+import { useMemo } from "react";
+import { useLocalNotes } from "@/hooks/use-local-notes";
 import { approveTasks, dismissTasks } from "@/lib/notes.functions";
 import { ChevronLeft, Check, X } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/tasks/review")({
-  head: () => ({
-    meta: [{ title: "Review suggested tasks — Braintape" }],
-  }),
+  head: () => ({ meta: [{ title: "Review suggested tasks — Braintape" }] }),
   component: ReviewPage,
 });
 
@@ -20,23 +17,13 @@ type Suggested = {
 };
 
 function ReviewPage() {
-  const [items, setItems] = useState<Suggested[] | null>(null);
-  const approveFn = useServerFn(approveTasks);
-  const dismissFn = useServerFn(dismissTasks);
+  const notes = useLocalNotes();
   const navigate = useNavigate();
 
-  async function load() {
-    const { data } = await supabase
-      .from("voice_notes")
-      .select("id,heading,tasks")
-      .order("created_at", { ascending: false });
-    const rows = (data ?? []) as Array<{
-      id: string;
-      heading: string | null;
-      tasks: Array<{ id: string; text: string; done: boolean; pending?: boolean }> | null;
-    }>;
+  const items = useMemo<Suggested[]>(() => {
+    if (!notes) return [];
     const flat: Suggested[] = [];
-    for (const n of rows) {
+    for (const n of notes) {
       for (const t of n.tasks ?? []) {
         if (t.pending) {
           flat.push({
@@ -48,55 +35,28 @@ function ReviewPage() {
         }
       }
     }
-    setItems(flat);
-  }
-
-  useEffect(() => {
-    load();
-  }, []);
+    return flat;
+  }, [notes]);
 
   async function approveOne(s: Suggested) {
-    setItems((prev) => (prev ? prev.filter((i) => !(i.noteId === s.noteId && i.taskId === s.taskId)) : prev));
-    try {
-      await approveFn({ data: { tasks: [{ noteId: s.noteId, taskId: s.taskId }] } });
-    } catch {
-      load();
-    }
+    await approveTasks({ data: { tasks: [{ noteId: s.noteId, taskId: s.taskId }] } });
   }
   async function dismissOne(s: Suggested) {
-    setItems((prev) => (prev ? prev.filter((i) => !(i.noteId === s.noteId && i.taskId === s.taskId)) : prev));
-    try {
-      await dismissFn({ data: { tasks: [{ noteId: s.noteId, taskId: s.taskId }] } });
-    } catch {
-      load();
-    }
+    await dismissTasks({ data: { tasks: [{ noteId: s.noteId, taskId: s.taskId }] } });
   }
   async function approveAll() {
-    if (!items || items.length === 0) return;
-    const payload = items.map((i) => ({ noteId: i.noteId, taskId: i.taskId }));
-    setItems([]);
-    try {
-      await approveFn({ data: { tasks: payload } });
-      navigate({ to: "/tasks" });
-    } catch {
-      load();
-    }
+    if (items.length === 0) return;
+    await approveTasks({ data: { tasks: items.map((i) => ({ noteId: i.noteId, taskId: i.taskId })) } });
+    navigate({ to: "/tasks" });
   }
   async function dismissAll() {
-    if (!items || items.length === 0) return;
-    const payload = items.map((i) => ({ noteId: i.noteId, taskId: i.taskId }));
-    setItems([]);
-    try {
-      await dismissFn({ data: { tasks: payload } });
-      navigate({ to: "/home" });
-    } catch {
-      load();
-    }
+    if (items.length === 0) return;
+    await dismissTasks({ data: { tasks: items.map((i) => ({ noteId: i.noteId, taskId: i.taskId })) } });
+    navigate({ to: "/home" });
   }
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background pb-24">
-      {/* iOS large-title header */}
       <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
         <div className="flex items-center justify-between px-2 pt-3 pb-1">
           <Link
@@ -106,7 +66,7 @@ function ReviewPage() {
             <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
             <span>Home</span>
           </Link>
-          {items && items.length > 0 && (
+          {items.length > 0 && (
             <button
               onClick={approveAll}
               className="rounded-full px-3 py-1 text-[17px] font-semibold text-primary active:opacity-60"
@@ -117,7 +77,7 @@ function ReviewPage() {
         </div>
         <div className="px-4 pt-1 pb-3">
           <h1 className="text-[34px] font-bold tracking-tight">Suggested</h1>
-          {items && items.length > 0 && (
+          {items.length > 0 && (
             <p className="mt-0.5 text-[13px] text-muted-foreground">
               {items.length} pending suggestion{items.length === 1 ? "" : "s"}
             </p>
@@ -126,7 +86,7 @@ function ReviewPage() {
       </header>
 
       <div className="flex-1 px-4 pt-2">
-        {items === null ? (
+        {notes === undefined ? (
           <p className="text-[15px] text-muted-foreground">Loading…</p>
         ) : items.length === 0 ? (
           <div className="mt-8 rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
@@ -148,9 +108,7 @@ function ReviewPage() {
                     <div className="min-w-0 flex-1">
                       <p className="text-[17px] leading-tight text-foreground">{s.text}</p>
                       {s.noteHeading && (
-                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">
-                          from {s.noteHeading}
-                        </p>
+                        <p className="mt-0.5 truncate text-[13px] text-muted-foreground">from {s.noteHeading}</p>
                       )}
                     </div>
                     <div className="flex shrink-0 items-center gap-2">

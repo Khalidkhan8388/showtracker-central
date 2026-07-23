@@ -1,9 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIcon, Loader2, ChevronRight } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
-import { deleteAccount } from "@/lib/account.functions";
+import { useState } from "react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight } from "lucide-react";
+import { deleteAccount } from "@/lib/notes.functions";
 import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
@@ -11,7 +9,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
       { title: "Profile — Braintape" },
-      { name: "description", content: "Your account, appearance, and app preferences." },
+      { name: "description", content: "Appearance and preferences for your local second brain." },
     ],
   }),
   component: ProfilePage,
@@ -19,40 +17,23 @@ export const Route = createFileRoute("/_authenticated/profile")({
 
 function ProfilePage() {
   const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
-  const [email, setEmail] = useState<string>("");
-  const [uid, setUid] = useState<string>("");
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const navigate = useNavigate();
-  const delFn = useServerFn(deleteAccount);
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setEmail(data.user?.email ?? "");
-      setUid(data.user?.id ?? "");
-    });
-  }, []);
-
-  async function signOut() {
-    await supabase.auth.signOut();
-    navigate({ to: "/auth" as any });
-  }
 
   async function confirmDelete() {
     setDeleting(true);
     try {
-      await delFn({});
-      await supabase.auth.signOut();
-      toast.success("Account deleted");
-      navigate({ to: "/auth" as any });
+      await deleteAccount();
+      toast.success("All data wiped");
+      // full reload to clear any in-memory caches (object URLs, memoized queries)
+      if (typeof window !== "undefined") window.location.assign("/home");
+      else navigate({ to: "/home" });
     } catch (e) {
       setDeleting(false);
-      toast.error(e instanceof Error ? e.message : "Failed to delete account");
+      toast.error(e instanceof Error ? e.message : "Failed to wipe data");
     }
   }
-
-  const name = email ? email.split("@")[0] : "You";
-  const initial = (name[0] || "?").toUpperCase();
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
@@ -74,11 +55,13 @@ function ProfilePage() {
             className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-semibold"
             style={{ background: accent.primary, color: accent.foreground }}
           >
-            {initial}
+            B
           </div>
           <div className="min-w-0">
-            <div className="truncate text-[20px] font-semibold leading-tight">{name}</div>
-            <div className="truncate text-[13px] text-muted-foreground">{email || "—"}</div>
+            <div className="truncate text-[20px] font-semibold leading-tight">Local device</div>
+            <div className="truncate text-[13px] text-muted-foreground">
+              Everything you capture is stored on this device only.
+            </div>
           </div>
         </div>
       </section>
@@ -114,10 +97,7 @@ function ProfilePage() {
                   }}
                 >
                   {selected && (
-                    <Check
-                      className="absolute inset-0 m-auto h-5 w-5"
-                      style={{ color: a.foreground }}
-                    />
+                    <Check className="absolute inset-0 m-auto h-5 w-5" style={{ color: a.foreground }} />
                   )}
                 </button>
               );
@@ -154,7 +134,6 @@ function ProfilePage() {
         </p>
       </section>
 
-
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
@@ -173,48 +152,30 @@ function ProfilePage() {
         </p>
       </section>
 
-      {/* Account */}
+      {/* Danger zone */}
       <section className="px-4 pt-8">
-        <SectionTitle>Account</SectionTitle>
+        <SectionTitle>Danger zone</SectionTitle>
         <div className="overflow-hidden rounded-2xl bg-card">
-          <button
-            onClick={signOut}
-            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
-          >
-            <LogOut className="h-5 w-5 text-foreground/70" />
-            <span className="flex-1 text-[15px]">Sign out</span>
-          </button>
-          <div className="h-px bg-border/60" />
           <button
             onClick={() => setConfirmOpen(true)}
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive active:bg-muted/50"
           >
             <Trash2 className="h-5 w-5" />
-            <span className="flex-1 text-[15px]">Delete account</span>
+            <span className="flex-1 text-[15px]">Wipe all data</span>
           </button>
         </div>
         <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-          Deleting your account permanently removes your notes, tasks, and files.
+          This permanently removes every note, task, photo, and voice clip from this device.
         </p>
       </section>
-
-      {/* Meta */}
-      {uid && (
-        <section className="px-4 pt-8 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-2">
-            <UserIcon className="h-3 w-3" />
-            <span className="truncate">{uid}</span>
-          </div>
-        </section>
-      )}
 
       {/* Delete confirmation */}
       {confirmOpen && (
         <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4" onClick={() => !deleting && setConfirmOpen(false)}>
           <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="text-[17px] font-semibold">Delete your account?</h3>
+            <h3 className="text-[17px] font-semibold">Wipe all data?</h3>
             <p className="mt-2 text-[14px] text-muted-foreground">
-              This permanently removes your notes, tasks, and files. This action cannot be undone.
+              This permanently removes every note, task, photo, and voice clip from this device. This cannot be undone.
             </p>
             <div className="mt-5 flex gap-2">
               <button
@@ -230,7 +191,7 @@ function ProfilePage() {
                 className="flex flex-1 items-center justify-center gap-2 rounded-full bg-destructive px-4 py-3 text-[15px] font-medium text-destructive-foreground active:opacity-80"
               >
                 {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-                {deleting ? "Deleting…" : "Delete"}
+                {deleting ? "Wiping…" : "Wipe"}
               </button>
             </div>
           </div>

@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
@@ -265,7 +264,7 @@ function SearchPage() {
       vv.removeEventListener("scroll", update);
     };
   }, []);
-  const searchFn = useServerFn(searchEverything);
+  const searchFn = searchEverything;
 
   useEffect(() => {
     setRecents(loadRecents());
