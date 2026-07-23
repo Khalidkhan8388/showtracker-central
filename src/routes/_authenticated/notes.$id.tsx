@@ -285,6 +285,8 @@ function NoteDetail() {
   const [addingLink, setAddingLink] = useState(false);
   const [linkDraft, setLinkDraft] = useState("");
   const editFileRef = useRef<HTMLInputElement | null>(null);
+  const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
+  const [addingImages, setAddingImages] = useState(false);
   const linkLabelFn = useServerFn(generateLinkLabel);
 
   async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
