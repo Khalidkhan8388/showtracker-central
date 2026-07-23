@@ -102,11 +102,11 @@ function ProfilePage() {
       <section className="px-4 pt-6">
         <div className="flex items-center gap-4">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-semibold"
-            style={{ background: accent.primary, color: accent.foreground }}
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground"
           >
             B
           </div>
+
           <div className="min-w-0">
             <div className="truncate text-[20px] font-semibold leading-tight">Local device</div>
             <div className="truncate text-[13px] text-muted-foreground">
