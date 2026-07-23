@@ -194,6 +194,20 @@ export const processVoiceNote = createServerFn({ method: "POST" })
       .map((p) => (typeof p === "string" ? p : ""))
       .filter(Boolean);
 
+    const { data: priorRow } = await supabase
+      .from("voice_notes")
+      .select("heading, summary, tasks")
+      .eq("id", note.id)
+      .single();
+    const priorTasksArr = Array.isArray((priorRow as any)?.tasks) ? ((priorRow as any).tasks as Array<{ text?: string }>) : [];
+    const prior = priorRow
+      ? {
+          heading: (priorRow as any).heading ?? "",
+          summary: (priorRow as any).summary ?? "",
+          tasks: priorTasksArr.map((t) => String(t?.text ?? "")).filter((s) => s.trim().length > 0),
+        }
+      : null;
+
     if (!note.audio_path && imagePaths.length === 0) {
       throw new Error("Note has no audio and no images");
     }
