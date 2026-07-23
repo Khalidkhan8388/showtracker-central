@@ -58,6 +58,7 @@ function NoteDetail() {
   const processFn = useServerFn(processVoiceNote);
   const pinFn = useServerFn(pinNote);
   const updateFn = useServerFn(updateTextNote);
+  const appendImagesFn = useServerFn(appendImagesToNote);
 
   // Signed-URL cache keyed by storage path, so task/pin updates don't
   // trigger re-signing every image on every realtime hit.
