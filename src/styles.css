@@ -77,9 +77,9 @@
   --popover: #ffffff;
   --popover-foreground: #000000;
 
-  /* Primary — Yellow (keep brand accent) */
-  --primary: #ffc700;
-  --primary-foreground: #000000;
+  /* Primary — black in light mode */
+  --primary: #000000;
+  --primary-foreground: #ffffff;
 
   /* iOS neutrals */
   --secondary: #ffffff;
@@ -94,22 +94,23 @@
 
   --border: rgba(60, 60, 67, 0.18);  /* separator */
   --input: rgba(60, 60, 67, 0.18);
-  --ring: #ffc700;
+  --ring: #000000;
 
-  --chart-1: #ffc700;
-  --chart-2: #000000;
-  --chart-3: #8e8e93;
-  --chart-4: #c7c7cc;
-  --chart-5: #3c3c43;
+  --chart-1: #000000;
+  --chart-2: #8e8e93;
+  --chart-3: #c7c7cc;
+  --chart-4: #3c3c43;
+  --chart-5: #d1d1d6;
 
   --sidebar: #ffffff;
   --sidebar-foreground: #000000;
-  --sidebar-primary: #ffc700;
-  --sidebar-primary-foreground: #000000;
+  --sidebar-primary: #000000;
+  --sidebar-primary-foreground: #ffffff;
   --sidebar-accent: #f2f2f7;
   --sidebar-accent-foreground: #000000;
   --sidebar-border: rgba(60, 60, 67, 0.18);
-  --sidebar-ring: #ffc700;
+  --sidebar-ring: #000000;
+
 }
 
 .dark {
