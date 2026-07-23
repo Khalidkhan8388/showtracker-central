@@ -464,7 +464,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       <div className="pointer-events-none absolute inset-x-0 bottom-[104px] flex flex-col items-center gap-2 px-5">
 
       {pending.length > 0 && (
-        <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10">
+        <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white p-2 shadow-lg ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10">
           {pending.map((p, i) => (
             <div key={i} role="listitem" className="relative shrink-0">
               <img
@@ -485,7 +485,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {linkOpen && (
-        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full bg-white/90 p-1 pl-4 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full bg-white p-1 pl-4 shadow-lg ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10">
           <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-600 dark:text-white/70" />
           <label htmlFor="recorder-link-input" className="sr-only">Web link</label>
           <input
@@ -511,7 +511,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               setLinkUrl("");
             }}
             aria-label="Cancel link entry"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 dark:text-white/80 dark:hover:bg-white/10"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-black dark:text-white/80 dark:hover:bg-white"
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -530,7 +530,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       {textOpen && (
         <div className="sheet-slide-up pointer-events-auto fixed inset-0 z-50 flex flex-col bg-background">
           {/* iOS-style top bar */}
-          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background px-3 pt-[env(safe-area-inset-top)]">
             <div className="flex h-12 w-full items-center justify-between">
               <button
                 onClick={handleCancelText}
@@ -593,7 +593,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   onChange={onPickMarkdownImages}
                 />
                 {inlineLinkOpen && (
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1 pl-3 shadow-xl">
                     <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <input
                       autoFocus
@@ -640,7 +640,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                     </button>
                   </div>
                 )}
-                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1.5 shadow-xl">
                   <button
                     type="button"
                     onClick={() => textFileRef.current?.click()}
@@ -705,7 +705,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 transition-transform duration-200 ease-out motion-reduce:transition-none ${
           recording
             ? "bg-destructive/85 ring-destructive/30 animate-pulse"
-            : "bg-white/95 ring-black/10 dark:bg-neutral-900/95 dark:ring-white/10"
+            : "bg-white ring-black/10 dark:bg-neutral-900 dark:ring-white/10"
         }`}
       >
 
@@ -720,7 +720,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         <Link
           to="/search"
           aria-label="Search"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white dark:hover:text-white"
         >
           <Search className="h-5 w-5" strokeWidth={2} />
         </Link>
@@ -728,7 +728,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white dark:hover:text-white"
         >
           <ImagePlus className="h-5 w-5" strokeWidth={2} />
         </button>
@@ -736,7 +736,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setTextOpen(true)}
           disabled={disabled || recording}
           aria-label="Write text note"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white dark:hover:text-white"
         >
           <FileText className="h-5 w-5" strokeWidth={2} />
         </button>
@@ -744,18 +744,18 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white dark:hover:text-white"
         >
           <Link2 className="h-5 w-5" strokeWidth={2} />
         </button>
 
-        <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
+        <div className="mx-1 h-6 w-px bg-black dark:bg-white" />
 
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="group inline-flex items-center gap-2.5 rounded-full bg-black/5 py-2 pl-3 pr-5 text-neutral-900 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+          className="group inline-flex items-center gap-2.5 rounded-full bg-black py-2 pl-3 pr-5 text-neutral-900 hover:bg-black active:scale-[0.97] disabled:cursor-default dark:bg-white dark:text-white dark:hover:bg-white"
         >
 
 
