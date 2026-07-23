@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
-import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
+import { SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 });
 
 function ProfilePage() {
-  const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
+  const { mode, setMode, sizeScale, setSizeScale } = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
@@ -102,11 +102,11 @@ function ProfilePage() {
       <section className="px-4 pt-6">
         <div className="flex items-center gap-4">
           <div
-            className="flex h-16 w-16 items-center justify-center rounded-full text-2xl font-semibold"
-            style={{ background: accent.primary, color: accent.foreground }}
+            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground"
           >
             B
           </div>
+
           <div className="min-w-0">
             <div className="truncate text-[20px] font-semibold leading-tight">Local device</div>
             <div className="truncate text-[13px] text-muted-foreground">
@@ -128,34 +128,8 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* Accent */}
-      <section className="px-4 pt-6">
-        <SectionTitle>Accent color</SectionTitle>
-        <div className="rounded-2xl bg-card p-4">
-          <div className="flex flex-wrap gap-3">
-            {ACCENTS.map((a) => {
-              const selected = a.id === accent.id;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => setAccentId(a.id)}
-                  aria-label={a.name}
-                  className="relative h-10 w-10 rounded-full transition-transform active:scale-95"
-                  style={{
-                    background: a.primary,
-                    boxShadow: selected ? `0 0 0 2px var(--background), 0 0 0 4px ${a.primary}` : "none",
-                  }}
-                >
-                  {selected && (
-                    <Check className="absolute inset-0 m-auto h-5 w-5" style={{ color: a.foreground }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-[12px] text-muted-foreground">{accent.name}</p>
-        </div>
-      </section>
+
+
 
       {/* Component size */}
       <section className="px-4 pt-6">
