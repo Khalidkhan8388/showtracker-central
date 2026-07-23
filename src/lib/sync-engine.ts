@@ -108,6 +108,7 @@ async function switchUser(uid: string | null) {
     return;
   }
   await pullSince(uid);
+  await flushPendingDeletes();
   attachRealtime(uid);
 }
 
@@ -126,9 +127,13 @@ async function pullSince(uid: string): Promise<void> {
       const { data, error } = await q;
       if (error || !data) return;
       if (data.length > 0) {
+        const pending = await readPendingDeletes(uid);
         const rows = data
           .map((r) => normalizeRow(r as Record<string, unknown>))
-          .filter((r) => !isTombstoned(r.id));
+          .filter((r) => !isTombstoned(r.id))
+          // If the user deleted the note locally but the server hasn't
+          // confirmed yet, keep it soft-deleted so it doesn't resurface.
+          .map((r) => (pending.has(r.id) ? { ...r, deleted_at: r.deleted_at ?? new Date().toISOString() } : r));
         if (rows.length > 0) await db.notes.bulkPut(rows);
         const newest = rows.reduce((a, r) => (r.updated_at > a ? r.updated_at : a), since ?? "");
         if (newest) await db.meta.put({ key: LAST_SYNC(uid), value: newest });
