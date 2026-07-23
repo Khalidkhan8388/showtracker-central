@@ -76,8 +76,10 @@ async function pullSince(uid: string): Promise<void> {
       const { data, error } = await q;
       if (error || !data) return;
       if (data.length > 0) {
-        const rows = data.map((r) => normalizeRow(r as Record<string, unknown>));
-        await db.notes.bulkPut(rows);
+        const rows = data
+          .map((r) => normalizeRow(r as Record<string, unknown>))
+          .filter((r) => !isTombstoned(r.id));
+        if (rows.length > 0) await db.notes.bulkPut(rows);
         const newest = rows.reduce((a, r) => (r.updated_at > a ? r.updated_at : a), since ?? "");
         if (newest) await db.meta.put({ key: LAST_SYNC(uid), value: newest });
       }
