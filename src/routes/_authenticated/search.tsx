@@ -25,7 +25,9 @@ import {
   Film,
   Tv,
   Star,
+  Bookmark,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
@@ -246,16 +248,17 @@ function SearchPage() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
 
-  // Track already-saved TMDB items so results show "Added" instead of a plus.
-  const savedMediaKeys = useMemo(() => {
-    const s = new Set<string>();
+  // Map tmdb key -> current watch_status (or "none" if not saved).
+  const savedMediaStatus = useMemo(() => {
+    const m = new Map<string, "watchlist" | "watching" | "watched" | "dropped">();
     for (const n of (localNotes ?? []) as any[]) {
-      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at) {
-        s.add(`${n.media.type}:${n.media.tmdb_id}`);
+      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at && n.media.watch_status) {
+        m.set(`${n.media.type}:${n.media.tmdb_id}`, n.media.watch_status);
       }
     }
-    return s;
+    return m;
   }, [localNotes]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
@@ -390,15 +393,18 @@ function SearchPage() {
     };
   }, [query]);
 
-  const addMedia = useCallback(
-    async (hit: TmdbSearchHit) => {
+  const setMediaStatus = useCallback(
+    async (hit: TmdbSearchHit, status: "watchlist" | "watched") => {
       const key = `${hit.type}:${hit.tmdb_id}`;
-      if (tmdbAdding.has(key) || savedMediaKeys.has(key)) return;
+      if (tmdbAdding.has(key)) return;
+      // Toggle off: clicking the currently-active status removes it back to watchlist.
+      const current = savedMediaStatus.get(key);
+      const next = current === status ? "watchlist" : status;
       setTmdbAdding((s) => new Set(s).add(key));
       try {
-        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
+        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id, status: next } });
       } catch {
-        // ignore; user can retry
+        /* ignore */
       } finally {
         setTmdbAdding((s) => {
           const n = new Set(s);
@@ -407,8 +413,9 @@ function SearchPage() {
         });
       }
     },
-    [tmdbAdding, savedMediaKeys],
+    [tmdbAdding, savedMediaStatus],
   );
+
 
 
 
@@ -543,7 +550,9 @@ function SearchPage() {
                     ))
                   : tmdbHits.map((hit) => {
                       const key = `${hit.type}:${hit.tmdb_id}`;
-                      const saved = savedMediaKeys.has(key);
+                      const status = savedMediaStatus.get(key);
+                      const isWatchlist = status === "watchlist" || status === "watching";
+                      const isWatched = status === "watched";
                       const adding = tmdbAdding.has(key);
                       const poster = posterUrl(hit.poster_path, "w342");
                       return (
@@ -585,26 +594,46 @@ function SearchPage() {
                                 {hit.vote_average.toFixed(1)}
                               </span>
                             )}
-                            <button
-                              type="button"
-                              onClick={() => addMedia(hit)}
-                              disabled={saved || adding}
-                              aria-label={saved ? "Already in library" : `Add ${hit.title}`}
-                              className={`absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
-                                saved
-                                  ? "bg-emerald-500 text-white"
-                                  : "bg-white/95 text-neutral-900 active:scale-95"
-                              }`}
-                            >
-                              {adding ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
-                              ) : saved ? (
-                                <Check className="h-4 w-4" strokeWidth={3} />
-                              ) : (
-                                <Plus className="h-4 w-4" strokeWidth={3} />
-                              )}
-                            </button>
+                            <div className="absolute inset-x-1.5 bottom-1.5 flex items-center justify-end gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setMediaStatus(hit, "watchlist")}
+                                disabled={adding}
+                                aria-label={isWatchlist ? "Remove from watchlist" : `Hold ${hit.title}`}
+                                title="Hold (watchlist)"
+                                className={`grid h-8 w-8 place-items-center rounded-full shadow-lg backdrop-blur-md transition active:scale-95 ${
+                                  isWatchlist
+                                    ? "bg-amber-500 text-white"
+                                    : "bg-white/95 text-neutral-900"
+                                }`}
+                              >
+                                {adding && isWatchlist ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Bookmark className={`h-4 w-4 ${isWatchlist ? "fill-current" : ""}`} strokeWidth={2.5} />
+                                )}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setMediaStatus(hit, "watched")}
+                                disabled={adding}
+                                aria-label={isWatched ? "Unmark watched" : `Mark ${hit.title} watched`}
+                                title="Tick (watched)"
+                                className={`grid h-8 w-8 place-items-center rounded-full shadow-lg backdrop-blur-md transition active:scale-95 ${
+                                  isWatched
+                                    ? "bg-emerald-500 text-white"
+                                    : "bg-white/95 text-neutral-900"
+                                }`}
+                              >
+                                {adding && isWatched ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <Check className="h-4 w-4" strokeWidth={3} />
+                                )}
+                              </button>
+                            </div>
                           </div>
+
                           <div className="mt-1.5 line-clamp-1 text-[12px] font-medium leading-tight text-foreground">
                             {hit.title}
                           </div>
