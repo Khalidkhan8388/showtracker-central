@@ -20,12 +20,10 @@ export const ACCENTS: Accent[] = [
 
 type ThemeMode = "light" | "dark" | "system";
 
-export type SizeScaleId = "small" | "default" | "large" | "xlarge";
+export type SizeScaleId = "small" | "default";
 export const SIZE_SCALES: { id: SizeScaleId; name: string; value: number }[] = [
   { id: "small", name: "Small", value: 0.9 },
   { id: "default", name: "Default", value: 1 },
-  { id: "large", name: "Large", value: 1.12 },
-  { id: "xlarge", name: "Extra Large", value: 1.25 },
 ];
 
 type ThemeCtx = {
