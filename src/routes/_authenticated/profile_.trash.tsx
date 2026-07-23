@@ -123,6 +123,23 @@ function TrashPage() {
     }
   }
 
+  async function purgeAll() {
+    if (items.length === 0) return;
+    if (!confirm(`Permanently delete all ${items.length} notes? This cannot be undone.`)) return;
+    const ids = items.map((n) => n.id);
+    setBusy(true);
+    try {
+      await hardDeleteLocalNotes(ids);
+      await purgeFn({ data: { noteIds: ids } });
+      setSelected(new Set());
+      toast.success("Deleted forever");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Delete failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
@@ -219,10 +236,12 @@ function TrashPage() {
                 Restore all
               </button>
               <button
-                onClick={() => navigate({ to: "/profile" })}
-                className="inline-flex h-9 items-center justify-center rounded-full px-3 text-[13px] font-medium active:opacity-60"
+                disabled={busy}
+                onClick={purgeAll}
+                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
               >
-                Done
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete all
               </button>
             </div>
           )
