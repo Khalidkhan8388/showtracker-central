@@ -713,9 +713,16 @@ function AddToCollectionSheet({
   );
 }
 
-function CollectionsRow() {
+function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[] }) {
   const collections = useCollections();
   const list = collections ?? [];
+
+  // Build a quick lookup: noteId -> note
+  const noteById = useMemo(() => {
+    const m = new Map<string, import("@/lib/local-db").LocalNote>();
+    for (const n of notes) m.set(n.id, n);
+    return m;
+  }, [notes]);
 
   return (
     <div className="-mx-4">
@@ -734,32 +741,58 @@ function CollectionsRow() {
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
         <Link
           to="/collections"
-          className="flex aspect-square w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
+          style={{ borderRadius: 15 }}
+          className="flex aspect-[2/3] w-28 shrink-0 snap-start flex-col items-center justify-center gap-2 border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
         >
           <Plus className="h-5 w-5" />
-          <span className="text-[13px] font-medium">New collection</span>
+          <span className="text-[11px] font-medium">New</span>
         </Link>
-        {list.map((c) => (
-          <Link
-            key={c.id}
-            to="/collections/$id"
-            params={{ id: c.id }}
-            className="relative flex aspect-square w-40 shrink-0 snap-start overflow-hidden rounded-[20px] bg-card ring-1 ring-border/60 active:opacity-80"
-          >
-            <div className="relative z-10 flex h-full w-full flex-col justify-between p-3">
-              <span className="text-[11px] font-semibold text-muted-foreground">
-                {(c.note_ids ?? []).length} {(c.note_ids ?? []).length === 1 ? "memory" : "memories"}
-              </span>
-              <span className="text-[15px] font-semibold leading-tight text-foreground line-clamp-3">
-                {c.title}
-              </span>
-            </div>
-          </Link>
-        ))}
+        {list.map((c) => {
+          const ids = c.note_ids ?? [];
+          // Prefer a media poster from any member note
+          let posterUrl: string | null = null;
+          for (const nid of ids) {
+            const n = noteById.get(nid);
+            const media = (n as any)?.media as import("@/lib/local-db").LocalMedia | undefined;
+            if (media?.poster_path) {
+              posterUrl = tmdbPoster(media.poster_path, "w342");
+              break;
+            }
+          }
+          return (
+            <Link
+              key={c.id}
+              to="/collections/$id"
+              params={{ id: c.id }}
+              style={{ borderRadius: 15 }}
+              className="relative flex aspect-[2/3] w-28 shrink-0 snap-start overflow-hidden bg-card ring-1 ring-border/60 active:opacity-80"
+            >
+              {posterUrl ? (
+                <img
+                  src={posterUrl}
+                  alt={c.title}
+                  loading="lazy"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
+              )}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-6">
+                <span className="mb-0.5 inline-block rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">
+                  {ids.length}
+                </span>
+                <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-white">
+                  {c.title}
+                </p>
+              </div>
+            </Link>
+          );
+        })}
       </div>
     </div>
   );
 }
+
 
 function SectionHeader({ children }: { children: React.ReactNode }) {
 
