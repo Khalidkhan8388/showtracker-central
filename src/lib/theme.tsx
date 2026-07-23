@@ -1,23 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 
-export type Accent = {
-  id: string;
-  name: string;
-  primary: string;
-  foreground: string;
-};
-
-export const ACCENTS: Accent[] = [
-  { id: "yellow", name: "Sunshine", primary: "#ffc700", foreground: "#000000" },
-  { id: "blue",   name: "Ocean",    primary: "#0a84ff", foreground: "#ffffff" },
-  { id: "purple", name: "Iris",     primary: "#af52de", foreground: "#ffffff" },
-  { id: "green",  name: "Matcha",   primary: "#30d158", foreground: "#000000" },
-  { id: "pink",   name: "Blossom",  primary: "#ff2d92", foreground: "#ffffff" },
-  { id: "orange", name: "Ember",    primary: "#ff9500", foreground: "#000000" },
-  { id: "red",    name: "Cherry",   primary: "#ff3b30", foreground: "#ffffff" },
-  { id: "mono",   name: "Graphite", primary: "#111111", foreground: "#ffffff" },
-];
-
 type ThemeMode = "light" | "dark" | "system";
 
 export type SizeScaleId = "small" | "default";
@@ -29,8 +11,6 @@ export const SIZE_SCALES: { id: SizeScaleId; name: string; value: number }[] = [
 type ThemeCtx = {
   mode: ThemeMode;
   setMode: (m: ThemeMode) => void;
-  accent: Accent;
-  setAccentId: (id: string) => void;
   isDark: boolean;
   sizeScale: SizeScaleId;
   setSizeScale: (id: SizeScaleId) => void;
@@ -39,17 +19,7 @@ type ThemeCtx = {
 const Ctx = createContext<ThemeCtx | null>(null);
 
 const MODE_KEY = "braintape.theme.mode";
-const ACCENT_KEY = "braintape.theme.accent";
 const SIZE_KEY = "braintape.theme.size";
-
-function applyAccent(a: Accent) {
-  const r = document.documentElement;
-  r.style.setProperty("--primary", a.primary);
-  r.style.setProperty("--primary-foreground", a.foreground);
-  r.style.setProperty("--ring", a.primary);
-  r.style.setProperty("--sidebar-primary", a.primary);
-  r.style.setProperty("--sidebar-ring", a.primary);
-}
 
 function applyMode(mode: ThemeMode) {
   const r = document.documentElement;
@@ -66,19 +36,14 @@ function applySize(id: SizeScaleId) {
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("system");
-  const [accent, setAccent] = useState<Accent>(ACCENTS[0]);
   const [isDark, setIsDark] = useState(false);
   const [sizeScale, setSizeScaleState] = useState<SizeScaleId>("default");
 
   useEffect(() => {
     const storedMode = (localStorage.getItem(MODE_KEY) as ThemeMode | null) ?? "system";
-    const storedAccentId = localStorage.getItem(ACCENT_KEY) ?? "yellow";
     const storedSize = (localStorage.getItem(SIZE_KEY) as SizeScaleId | null) ?? "default";
-    const found = ACCENTS.find((a) => a.id === storedAccentId) ?? ACCENTS[0];
     setModeState(storedMode);
-    setAccent(found);
     setSizeScaleState(storedSize);
-    applyAccent(found);
     applySize(storedSize);
     setIsDark(applyMode(storedMode));
 
@@ -97,13 +62,6 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     setIsDark(applyMode(m));
   };
 
-  const setAccentId = (id: string) => {
-    const found = ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];
-    localStorage.setItem(ACCENT_KEY, found.id);
-    setAccent(found);
-    applyAccent(found);
-  };
-
   const setSizeScale = (id: SizeScaleId) => {
     localStorage.setItem(SIZE_KEY, id);
     setSizeScaleState(id);
@@ -111,7 +69,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <Ctx.Provider value={{ mode, setMode, accent, setAccentId, isDark, sizeScale, setSizeScale }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ mode, setMode, isDark, sizeScale, setSizeScale }}>{children}</Ctx.Provider>
   );
 }
 
@@ -125,18 +83,10 @@ export function useTheme() {
 export const THEME_BOOT_SCRIPT = `
 (function(){try{
   var m = localStorage.getItem('${MODE_KEY}') || 'system';
-  var a = localStorage.getItem('${ACCENT_KEY}') || 'yellow';
   var s = localStorage.getItem('${SIZE_KEY}') || 'default';
-  var accents = ${JSON.stringify(ACCENTS)};
   var sizes = ${JSON.stringify(SIZE_SCALES)};
-  var acc = accents.find(function(x){return x.id===a;}) || accents[0];
   var sz = sizes.find(function(x){return x.id===s;}) || sizes[1];
   var r = document.documentElement;
-  r.style.setProperty('--primary', acc.primary);
-  r.style.setProperty('--primary-foreground', acc.foreground);
-  r.style.setProperty('--ring', acc.primary);
-  r.style.setProperty('--sidebar-primary', acc.primary);
-  r.style.setProperty('--sidebar-ring', acc.primary);
   r.style.setProperty('--user-scale', String(sz.value));
   var dark = m==='dark' || (m==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   if(dark) r.classList.add('dark');
