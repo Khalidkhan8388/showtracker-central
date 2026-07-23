@@ -156,9 +156,35 @@ function NoteDetail() {
 
   function startEdit() {
     if (!note) return;
-    setDraftHeading(note.heading ?? "");
-    setDraftBody(note.transcript ?? "");
+    // Prefer any unsaved draft for this note
+    let h = note.heading ?? "";
+    let b = note.transcript ?? "";
+    try {
+      const raw = localStorage.getItem(`braintape:noteDraft:${id}`);
+      if (raw) {
+        const d = JSON.parse(raw) as { h?: string; b?: string };
+        if (d.h !== undefined) h = d.h;
+        if (d.b !== undefined) b = d.b;
+      }
+    } catch {}
+    setDraftHeading(h);
+    setDraftBody(b);
     setEditing(true);
+  }
+
+  function isDirty() {
+    return (
+      draftHeading !== (note?.heading ?? "") ||
+      draftBody !== (note?.transcript ?? "")
+    );
+  }
+
+  function cancelEdit() {
+    if (isDirty() && !confirm("Discard your changes?")) return;
+    try { localStorage.removeItem(`braintape:noteDraft:${id}`); } catch {}
+    setEditing(false);
+    setAddingLink(false);
+    setLinkDraft("");
   }
 
   async function saveEdit() {
@@ -166,6 +192,7 @@ function NoteDetail() {
     setSaving(true);
     try {
       await updateFn({ data: { noteId: id, heading: draftHeading, body: draftBody } });
+      try { localStorage.removeItem(`braintape:noteDraft:${id}`); } catch {}
       setEditing(false);
       await load();
     } catch (e: any) {
@@ -173,6 +200,57 @@ function NoteDetail() {
     } finally {
       setSaving(false);
     }
+  }
+
+  // Autosave draft while editing
+  useEffect(() => {
+    if (!editing) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          `braintape:noteDraft:${id}`,
+          JSON.stringify({ h: draftHeading, b: draftBody }),
+        );
+      } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [editing, draftHeading, draftBody, id]);
+
+  // Keyboard shortcuts: ⌘/Ctrl+Enter save · Esc cancel
+  useEffect(() => {
+    if (!editing) return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        saveEdit();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelEdit();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editing, draftHeading, draftBody]);
+
+  function insertAtCursor(snippet: string) {
+    const el = document.querySelector<HTMLTextAreaElement>('[data-block-editor] textarea:focus')
+      ?? document.querySelector<HTMLTextAreaElement>('[data-block-editor] textarea');
+    setDraftBody((prev) => {
+      if (!el || el.value !== prev) {
+        const sep = prev.length === 0 || prev.endsWith("\n") ? "" : "\n";
+        return prev + sep + snippet;
+      }
+      const start = el.selectionStart ?? prev.length;
+      const end = el.selectionEnd ?? prev.length;
+      const next = prev.slice(0, start) + snippet + prev.slice(end);
+      requestAnimationFrame(() => {
+        el.focus();
+        const pos = start + snippet.length;
+        el.setSelectionRange(pos, pos);
+      });
+      return next;
+    });
   }
 
   function appendToBody(snippet: string) {
