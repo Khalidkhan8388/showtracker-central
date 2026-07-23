@@ -411,9 +411,6 @@ function NoteDetail() {
     }
   }
 
-  const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
-  const [addingImages, setAddingImages] = useState(false);
-
   async function onAddImagesToSaved(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
