@@ -373,7 +373,7 @@ function CollectionDetail() {
                 ))}
               </ul>
             ) : (
-              <ul className="grid grid-cols-2 gap-3">
+              <ul className="grid grid-cols-3 gap-2.5">
                 {members.map((n) => {
                   const media = (n as any).media as import("@/lib/local-db").LocalMedia | undefined;
                   const posterUrl = media?.poster_path ? tmdbPoster(media.poster_path, "w342") : null;
@@ -383,6 +383,7 @@ function CollectionDetail() {
                   const tvTotal = isTvMedia ? mediaTotal(media!) : 0;
                   const tvDone = isTvMedia ? mediaDone(media!) : 0;
                   const tvPct = tvTotal > 0 ? Math.round((tvDone / tvTotal) * 100) : 0;
+                  const isDropped = media?.watch_status === "dropped";
                   return (
                     <li key={n.id} className="relative">
                       <Link
@@ -397,7 +398,7 @@ function CollectionDetail() {
                               src={posterUrl!}
                               alt={media?.title ?? n.heading ?? "Poster"}
                               loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover"
+                              className={`absolute inset-0 h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
                             />
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
                               {media?.watch_status && (
