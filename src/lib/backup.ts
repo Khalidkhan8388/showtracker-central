@@ -57,7 +57,7 @@ function deserializeBlob(s: SerializedBlob): LocalBlob {
     size: s.size,
     contentType: s.contentType,
     cachedAt: s.cachedAt,
-    blob: new Blob([bytes], { type: s.contentType }),
+    blob: new Blob([bytes.buffer as ArrayBuffer], { type: s.contentType }),
   };
 }
 
