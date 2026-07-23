@@ -277,39 +277,21 @@ function Home() {
 
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      {/* iOS large-title header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
-          <div className="min-w-0">
-            <h1
-              className={`font-bold tracking-tight leading-none transition-all duration-200 ${
-                collapsed ? "text-[20px]" : "text-[32px]"
-              }`}
-            >
-              Braintape
-            </h1>
-            {notes && notes.length > 0 && (
-              <p
-                className={`overflow-hidden text-muted-foreground transition-all duration-200 ${
-                  collapsed ? "mt-0 max-h-0 opacity-0" : "mt-1 max-h-5 text-[13px] opacity-100"
-                }`}
-              >
-                {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
-              </p>
-            )}
-          </div>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white">
+      {/* Space-style minimal header */}
+      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3">
+          <h1 className="font-serif text-[32px] leading-none tracking-tight text-foreground">
+            Braintape
+          </h1>
           <button
             onClick={signOut}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[13px] text-primary active:opacity-60"
-            aria-label="Sign out"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/70 active:opacity-60"
+            aria-label="Settings"
           >
-            <LogOut className="h-4 w-4" />
-            <span>Sign out</span>
+            <Settings className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
-
-
       </header>
 
       <section className="flex-1 px-4 pb-32 pt-2">
