@@ -13,6 +13,18 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const AudioSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 const ImageSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 
+// ---------- shared fetch helper (with timeout) ---------------------------
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // ---------- transcription -------------------------------------------------
 
 async function transcribeBytes(base64: string, mime: string, apiKey: string): Promise<string> {
@@ -27,11 +39,11 @@ async function transcribeBytes(base64: string, mime: string, apiKey: string): Pr
   const form = new FormData();
   form.append("model", "openai/gpt-4o-mini-transcribe");
   form.append("file", new Blob([bytes], { type: mime }), `recording.${ext}`);
-  const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
+  const res = await fetchWithTimeout(`${GATEWAY}/audio/transcriptions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
-  });
+  }, 90_000);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Transcription failed (${res.status}): ${body.slice(0, 200)}`);
@@ -96,17 +108,12 @@ const AnalyzeInput = z.object({
   skipTasks: z.boolean().optional().default(false),
 });
 
+
 export const analyzeMediaFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AnalyzeInput.parse(data))
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-
-    let transcript: string | null = null;
-    if (data.audio) {
-      transcript = await transcribeBytes(data.audio.base64, data.audio.mime, apiKey);
-      if (!transcript) throw new Error("Empty transcription");
-    }
 
     const images = data.images ?? [];
     const prior = data.prior ?? null;
@@ -115,6 +122,16 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       (((prior.heading ?? "").trim().length > 0) ||
         ((prior.summary ?? "").trim().length > 0) ||
         ((prior.tasks?.length ?? 0) > 0));
+
+    // Kick off transcription in PARALLEL with structuring (both hit the AI
+    // gateway independently). Structuring uses the transcript once ready.
+    const transcribePromise: Promise<string | null> = data.audio
+      ? transcribeBytes(data.audio.base64, data.audio.mime, apiKey)
+      : Promise.resolve(null);
+
+    // Await transcription before building the structuring prompt (it needs the text).
+    const transcript = await transcribePromise;
+    if (data.audio && !transcript) throw new Error("Empty transcription");
 
     const userBlocks: Array<Record<string, unknown>> = [];
     if (priorHasContent) {
@@ -138,7 +155,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
 
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -149,7 +166,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(`AI failed (${res.status}): ${body.slice(0, 200)}`);
@@ -241,7 +258,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
     const effective = text && text.length >= 30
       ? text
       : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable content; summarize from the URL and title.)`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -252,7 +269,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) throw new Error(`AI failed (${res.status})`);
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
@@ -293,7 +310,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
     const content = data.heading
       ? `Title: ${data.heading}\n\nNote:\n${data.body}`
       : `Note:\n${data.body}\n\n(No title — generate one.)`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -304,7 +321,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) return { heading: data.heading, summary: "", tasks: [], tags: [] };
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
@@ -378,7 +395,7 @@ export const semanticRankFn = createServerFn({ method: "POST" })
 Given a query and a JSON catalog of notes (id, heading, summary, tags), return the most relevant note ids ordered by relevance.
 Only include notes that are genuinely relevant. If nothing fits, return [].
 Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is one short sentence.`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -389,7 +406,7 @@ Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is o
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) throw new Error(`Search failed (${res.status})`);
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
