@@ -364,14 +364,14 @@ function Home() {
             )}
 
             {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
-              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
+              <div className="rounded-[28px] bg-card p-5 shadow-sm">
                 <div className="mb-3 flex items-baseline justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Tasks
                   </span>
                   <Link
                     to="/tasks"
-                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
+                    className="inline-flex items-center gap-0.5 text-[13px] text-foreground/70 active:opacity-60"
                   >
                     <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
                     <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
@@ -380,7 +380,7 @@ function Home() {
                 {derived.visible.length === 0 ? (
                   <Link
                     to="/tasks"
-                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                    className="block py-2 text-center text-[13px] text-foreground/70 active:opacity-70"
                   >
                     + Add a task
                   </Link>
@@ -554,45 +554,19 @@ const NoteCard = memo(function NoteCard({
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
 
-  // MyMind-style soft tinted palette for text notes — deterministic per note
-  const mymindTints = [
-    "#FFF4E0", // cream
-    "#E8F1E4", // sage
-    "#E4EEF7", // sky
-    "#F3E8F0", // blush
-    "#F6EFE1", // sand
-    "#EAEBF6", // lilac
-    "#FBE9E2", // peach
-  ];
-  const tintIdx = (() => {
-    let h = 0;
-    for (let i = 0; i < note.id.length; i++) h = (h * 31 + note.id.charCodeAt(i)) >>> 0;
-    return h % mymindTints.length;
-  })();
-  const textTint = mymindTints[tintIdx];
-
   const isHero = variant === "hero";
   const isMasonry = variant === "masonry";
   const isWideLike = variant === "wide" || isHero;
   const isSquareLike = variant === "square" || isMasonry;
 
-  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
-  const useTint = isMasonry && !isText && !hasImage;
-  const tintBg = useTint ? mymindTints[tintIdx] : undefined;
-
   const base = isText
-    ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+    ? "relative block overflow-hidden rounded-[24px] bg-card p-4 shadow-sm transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
     : isHero
-      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+      ? "relative block overflow-hidden rounded-[24px] bg-card p-5 shadow-sm transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
-      : useTint
-        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
-          (selected ? "ring-2 ring-foreground" : "")
-        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
-          (selected
-            ? "border-foreground bg-muted shadow-sm"
-            : "bg-card hover:bg-muted/50");
+      : "relative block overflow-hidden rounded-[24px] bg-card p-4 shadow-sm transition-colors " +
+        (selected ? "ring-2 ring-foreground" : "");
 
   let sizing: string;
   if (isHero) {
@@ -609,11 +583,8 @@ const NoteCard = memo(function NoteCard({
     sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
   }
 
-  const textNoteStyle: React.CSSProperties | undefined = isText
-    ? { backgroundColor: "#ffffff" }
-    : tintBg
-      ? { backgroundColor: tintBg }
-      : undefined;
+  const textNoteStyle: React.CSSProperties | undefined = undefined;
+
 
 
   return (
@@ -700,7 +671,7 @@ const NoteCard = memo(function NoteCard({
               <h3
                 className={
                   isHero
-                    ? "font-serif text-[24px] font-normal leading-[1.15] tracking-tight text-foreground line-clamp-3"
+                    ? "text-[22px] font-semibold leading-[1.15] tracking-tight text-foreground line-clamp-3"
                     : "truncate text-sm font-semibold"
                 }
               >
@@ -728,7 +699,7 @@ const NoteCard = memo(function NoteCard({
       ) : isText ? (
         <>
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
-            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
+            <h3 className="text-[15px] leading-snug font-semibold tracking-tight break-words line-clamp-2 text-foreground">
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
             </h3>
           </div>
