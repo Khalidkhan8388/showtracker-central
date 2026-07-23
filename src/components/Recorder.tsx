@@ -690,8 +690,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         </div>
       )}
 
+      </div>
 
-
+      {/* Main pill — fixed position, only resizes */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center px-5">
       <div
         role="toolbar"
         aria-label="Capture actions"
@@ -704,6 +706,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             : "bg-white/85 ring-black/10 dark:bg-neutral-900/85 dark:ring-white/10"
         }`}
       >
+
         <input
           ref={fileRef}
           type="file"
