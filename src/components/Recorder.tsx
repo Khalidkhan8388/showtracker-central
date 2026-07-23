@@ -525,7 +525,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {textOpen && (
-        <div className="pointer-events-auto fixed inset-0 z-50 flex flex-col bg-background">
+        <div className="sheet-slide-up pointer-events-auto fixed inset-0 z-50 flex flex-col bg-background">
           {/* iOS-style top bar */}
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
             <div className="flex h-12 w-full items-center justify-between">

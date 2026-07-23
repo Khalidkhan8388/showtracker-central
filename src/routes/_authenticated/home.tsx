@@ -452,7 +452,21 @@ function Home() {
   );
 }
 
+function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: string; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      <span>{label}</span>
+      <span className="inline-flex gap-0.5">
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+      </span>
+    </span>
+  );
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
+
   return (
     <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
       {children}
@@ -603,6 +617,8 @@ const NoteCard = memo(function NoteCard({
 
 
 
+  const isProcessing = note.status !== "ready" && note.status !== "failed";
+
   return (
     <div
       role="button"
@@ -610,8 +626,9 @@ const NoteCard = memo(function NoteCard({
       onClick={handleClick}
       {...lp.handlers}
       style={textNoteStyle}
-      className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100`}
+      className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${isProcessing ? "analyzing-shimmer" : ""}`}
     >
+
       {/* Image-forward tile: image fills the card as background (only when not a link) */}
       {isSquareLike && hasImage && !isLink && (
         <>
@@ -691,7 +708,7 @@ const NoteCard = memo(function NoteCard({
                     : "truncate text-sm font-semibold"
                 }
               >
-                {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed to process" : <AnalyzingBadge />)}
               </h3>
             </div>
             {note.summary && (
@@ -716,7 +733,7 @@ const NoteCard = memo(function NoteCard({
         <>
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
             <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
-              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
             </h3>
           </div>
           {hasImage && (
@@ -750,7 +767,7 @@ const NoteCard = memo(function NoteCard({
           {!(hasImage && !isLink) && (
             <div className="relative z-10 flex items-start gap-1.5 pr-5">
               <h3 className="text-xs font-semibold leading-tight break-words">
-                {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             </div>
           )}
@@ -762,7 +779,7 @@ const NoteCard = memo(function NoteCard({
           >
             {hasImage && !isLink && (
               <h3 className="text-[13px] font-semibold leading-tight break-words text-white drop-shadow line-clamp-3 pr-5">
-                {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             )}
             {note.tasks && note.tasks.length > 0 && (
