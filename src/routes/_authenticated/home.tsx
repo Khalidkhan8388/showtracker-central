@@ -519,7 +519,7 @@ const NoteCard = memo(function NoteCard({
   onToggleSel,
 }: {
   note: Note;
-  variant: "wide" | "square";
+  variant: "wide" | "square" | "hero" | "masonry";
   fullWidth?: boolean;
   thumbUrl?: string;
   selected: boolean;
