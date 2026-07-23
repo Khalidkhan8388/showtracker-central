@@ -369,3 +369,29 @@ input[type="search"]::-webkit-search-decoration {
   scrollbar-width: none;
   &::-webkit-scrollbar { display: none; }
 }
+
+/* Scrim overlays — white fade in light mode, black fade in dark mode. */
+@utility scrim-t {
+  background: linear-gradient(to top, var(--scrim-strong), var(--scrim-mid) 50%, transparent);
+  color: var(--scrim-fg);
+}
+@utility scrim-t-strong {
+  background: linear-gradient(to top, var(--scrim-strong), var(--scrim-strong) 15%, var(--scrim-mid) 55%, transparent);
+  color: var(--scrim-fg);
+}
+@utility scrim-fg {
+  color: var(--scrim-fg);
+}
+@utility scrim-fg-80 {
+  color: color-mix(in oklab, var(--scrim-fg) 80%, transparent);
+}
+@utility scrim-fg-70 {
+  color: color-mix(in oklab, var(--scrim-fg) 70%, transparent);
+}
+@utility scrim-track {
+  background: color-mix(in oklab, var(--scrim-fg) 22%, transparent);
+}
+@utility scrim-fill {
+  background: var(--scrim-fg);
+}
+
