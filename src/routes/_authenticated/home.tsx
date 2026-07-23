@@ -156,9 +156,17 @@ function Home() {
     };
   }, [load, signThumbsFor]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  const [userInitial, setUserInitial] = useState<string>("?");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const em = data.user?.email ?? "";
+      setUserInitial((em[0] || "?").toUpperCase());
+    });
+  }, []);
+  function ProfileInitial() {
+    return <span>{userInitial}</span>;
   }
+
 
   function toggleNoteSel(id: string) {
     setSelectedNotes((prev) => {
