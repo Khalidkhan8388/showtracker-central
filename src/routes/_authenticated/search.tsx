@@ -521,12 +521,12 @@ function SearchPage() {
         )}
       </div>
 
-      {/* Bottom-anchored search bar (above keyboard) */}
+      {/* Bottom-anchored search bar (above keyboard) — dark pill to match app UI */}
       <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
-        <div className="pointer-events-none absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-background to-transparent" />
-        <div className="bg-background/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-xl">
+        <div className="pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-background to-transparent" />
+        <div className="px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-3">
           {(query.trim() || aiMode) && (
-            <div className="mb-2 flex items-center justify-between px-1.5 text-[11px] text-muted-foreground">
+            <div className="mb-2 flex items-center justify-between px-2 text-[11px] text-muted-foreground">
               <span>
                 {aiMode
                   ? aiLoading
@@ -539,55 +539,57 @@ function SearchPage() {
               {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
             </div>
           )}
-          <div className="flex items-center gap-2">
-            <div className="flex flex-1 items-center gap-2.5 rounded-full bg-muted px-4 py-2.5 ring-1 ring-black/[0.04]">
-              <Search className="h-[17px] w-[17px] shrink-0 text-muted-foreground" strokeWidth={2.5} />
-              <input
-                ref={inputRef}
-                autoFocus
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value);
+          <div className="flex items-center gap-2 rounded-full bg-[#1a1a1a] pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)] ring-1 ring-white/5">
+            <Search className="h-[18px] w-[18px] shrink-0 text-white/70" strokeWidth={2.25} />
+            <input
+              ref={inputRef}
+              autoFocus
+              value={query}
+              onChange={(e) => {
+                setQuery(e.target.value);
+                setAiMode(false);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runAiSearch();
+                if (e.key === "Escape") {
+                  setQuery("");
                   setAiMode(false);
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") runAiSearch();
-                  if (e.key === "Escape") {
-                    setQuery("");
-                    setAiMode(false);
-                  }
-                }}
-                placeholder="Search captures, tasks, tags…"
-                className="w-full bg-transparent text-[16px] text-foreground placeholder:text-muted-foreground/70 outline-none"
-              />
-              {query && (
-                <button
-                  onClick={() => {
-                    setQuery("");
-                    setAiMode(false);
-                    inputRef.current?.focus();
-                  }}
-                  aria-label="Clear"
-                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/40 text-background active:opacity-60"
-                >
-                  <X className="h-3 w-3" strokeWidth={3} />
-                </button>
-              )}
-            </div>
-            {query.trim() && (
+                }
+              }}
+              placeholder="Search captures, tasks, tags…"
+              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-white placeholder:text-white/40 outline-none"
+            />
+            {query && (
               <button
-                onClick={() => runAiSearch()}
-                disabled={aiLoading}
-                aria-label="Ask AI"
-                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 active:opacity-70"
+                onClick={() => {
+                  setQuery("");
+                  setAiMode(false);
+                  inputRef.current?.focus();
+                }}
+                aria-label="Clear"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white/90 active:opacity-60"
               >
-                {aiLoading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="h-4 w-4" />
-                )}
+                <X className="h-3 w-3" strokeWidth={3} />
               </button>
             )}
+            <div className="mx-1 h-6 w-px shrink-0 bg-white/10" />
+            <button
+              onClick={() => runAiSearch()}
+              disabled={aiLoading || !query.trim()}
+              aria-label="Ask AI"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-white disabled:opacity-40 active:opacity-70"
+            >
+              {aiLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  {query.trim() && (
+                    <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                  )}
+                </>
+              )}
+            </button>
           </div>
         </div>
       </div>
