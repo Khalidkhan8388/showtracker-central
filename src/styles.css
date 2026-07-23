@@ -220,7 +220,6 @@
 
 .route-enter {
   animation: route-enter 380ms cubic-bezier(0.22, 1, 0.36, 1) both;
-  will-change: transform, opacity, filter;
 }
 
 .card-pop {
