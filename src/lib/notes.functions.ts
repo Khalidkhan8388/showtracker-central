@@ -287,6 +287,7 @@ export async function deleteAccount() {
   await db.photos.clear();
   await db.audios.clear();
   await db.meta.clear();
+  await db.collections.clear();
   return { ok: true as const };
 }
 

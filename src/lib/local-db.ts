@@ -40,11 +40,20 @@ export type LocalBlob = {
   cachedAt: number;  // epoch ms — for LRU eviction
 };
 
+export type LocalCollection = {
+  id: string;
+  title: string;
+  note_ids: string[];
+  created_at: string;
+  updated_at: string;
+};
+
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
   photos!: Table<LocalBlob, string>;
   audios!: Table<LocalBlob, string>;
+  collections!: Table<LocalCollection, string>;
 
   constructor() {
     super("braintape");
@@ -68,6 +77,14 @@ class BraintapeDB extends Dexie {
       meta: "key",
       photos: "path, cachedAt, size",
       audios: "path, cachedAt, size",
+    });
+    // v5: collections — group notes together (many-to-many).
+    this.version(5).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
     });
   }
 }
