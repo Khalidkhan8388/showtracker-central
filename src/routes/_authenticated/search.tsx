@@ -25,7 +25,9 @@ import {
   Film,
   Tv,
   Star,
+  Bookmark,
 } from "lucide-react";
+
 
 export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
