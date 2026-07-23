@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIcon, Loader2 } from "lucide-react";
+import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIcon, Loader2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { deleteAccount } from "@/lib/account.functions";
@@ -154,6 +154,24 @@ function ProfilePage() {
         </p>
       </section>
 
+
+      {/* Data */}
+      <section className="px-4 pt-8">
+        <SectionTitle>Data</SectionTitle>
+        <div className="overflow-hidden rounded-2xl bg-card">
+          <Link
+            to={"/profile/trash" as any}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
+          >
+            <Trash2 className="h-5 w-5 text-foreground/70" />
+            <span className="flex-1 text-[15px]">Recently Deleted</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+        </div>
+        <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+          Deleted notes stay recoverable for 30 days.
+        </p>
+      </section>
 
       {/* Account */}
       <section className="px-4 pt-8">

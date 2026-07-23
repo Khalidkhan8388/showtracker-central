@@ -18,6 +18,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
+import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -65,6 +66,12 @@ const AuthenticatedTasksReviewRoute =
     path: '/tasks/review',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProfileTrashRoute =
+  AuthenticatedProfileTrashRouteImport.update({
+    id: '/profile_/trash',
+    path: '/profile/trash',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
   id: '/notes/$id',
   path: '/notes/$id',
@@ -79,6 +86,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -90,6 +98,7 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
 }
@@ -103,6 +112,7 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
   '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/notes/$id'
+    | '/profile/trash'
     | '/tasks/review'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/notes/$id'
+    | '/profile/trash'
     | '/tasks/review'
     | '/tasks'
   id:
@@ -139,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/share'
     | '/_authenticated/notes/$id'
+    | '/_authenticated/profile_/trash'
     | '/_authenticated/tasks/review'
     | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile_/trash': {
+      id: '/_authenticated/profile_/trash'
+      path: '/profile/trash'
+      fullPath: '/profile/trash'
+      preLoaderRoute: typeof AuthenticatedProfileTrashRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/notes/$id': {
       id: '/_authenticated/notes/$id'
       path: '/notes/$id'
@@ -230,6 +250,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
+  AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
   AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
 }
@@ -240,6 +261,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
+  AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
   AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
 }

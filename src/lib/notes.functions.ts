@@ -320,18 +320,18 @@ async function removeNoteFiles(noteRows: Array<{ audio_path: string | null; imag
 
 const DeleteInput = z.object({ noteId: z.string().uuid() });
 
+// Soft-delete: marks the note as trashed so it can be restored within 30 days.
+// Files are kept until purge (restoreNotes brings them back intact).
 export const deleteNote = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => DeleteInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { data: note } = await supabase
+    const now = new Date().toISOString();
+    const { error } = await supabase
       .from("voice_notes")
-      .select("audio_path, image_paths")
-      .eq("id", data.noteId)
-      .single();
-    if (note) await removeNoteFiles([note as any]);
-    const { error } = await supabase.from("voice_notes").delete().eq("id", data.noteId);
+      .update({ deleted_at: now, updated_at: now })
+      .eq("id", data.noteId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
   });
@@ -343,14 +343,72 @@ export const deleteNotes = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => DeleteNotesInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
-    const { data: rows } = await supabase
+    const now = new Date().toISOString();
+    const { error } = await supabase
       .from("voice_notes")
-      .select("audio_path, image_paths")
+      .update({ deleted_at: now, updated_at: now })
       .in("id", data.noteIds);
-    if (rows && rows.length > 0) await removeNoteFiles(rows as any);
-    const { error } = await supabase.from("voice_notes").delete().in("id", data.noteIds);
     if (error) throw new Error(error.message);
     return { ok: true as const };
+  });
+
+const RestoreNotesInput = z.object({ noteIds: z.array(z.string().uuid()).min(1) });
+
+export const restoreNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => RestoreNotesInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const now = new Date().toISOString();
+    const { error } = await supabase
+      .from("voice_notes")
+      .update({ deleted_at: null, updated_at: now })
+      .in("id", data.noteIds);
+    if (error) throw new Error(error.message);
+    return { ok: true as const };
+  });
+
+const PurgeNotesInput = z.object({ noteIds: z.array(z.string().uuid()).min(1) });
+
+// Permanently removes trashed notes and their storage files.
+export const purgeNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => PurgeNotesInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: rows } = await supabase
+      .from("voice_notes")
+      .select("audio_path, image_paths, deleted_at")
+      .in("id", data.noteIds);
+    const trashed = (rows ?? []).filter((r: any) => r.deleted_at);
+    if (trashed.length === 0) return { ok: true as const, purged: 0 };
+    await removeNoteFiles(trashed as any);
+    const { error } = await supabase
+      .from("voice_notes")
+      .delete()
+      .in("id", data.noteIds)
+      .not("deleted_at", "is", null);
+    if (error) throw new Error(error.message);
+    return { ok: true as const, purged: trashed.length };
+  });
+
+// Auto-purge trashed notes older than 30 days for the current user.
+export const purgeExpiredNotes = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: rows } = await supabase
+      .from("voice_notes")
+      .select("id, audio_path, image_paths")
+      .eq("user_id", userId)
+      .lt("deleted_at", cutoff);
+    if (!rows || rows.length === 0) return { ok: true as const, purged: 0 };
+    await removeNoteFiles(rows as any);
+    const ids = rows.map((r: any) => r.id as string);
+    const { error } = await supabase.from("voice_notes").delete().in("id", ids);
+    if (error) throw new Error(error.message);
+    return { ok: true as const, purged: ids.length };
   });
 
 const DeleteTasksInput = z.object({

@@ -25,6 +25,7 @@ export type LocalNote = {
   tags: string[];
   audio_path: string | null;
   error: string | null;
+  deleted_at: string | null;
 };
 
 export type MetaRow = { key: string; value: string };
@@ -54,6 +55,12 @@ class BraintapeDB extends Dexie {
       meta: "key",
       photos: "path, cachedAt, size",
     });
+    // v3: index deleted_at so trash & active queries are cheap.
+    this.version(3).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+    });
   }
 }
 
@@ -78,5 +85,6 @@ export function normalizeRow(r: Record<string, unknown>): LocalNote {
     tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
     audio_path: (r.audio_path as string | null) ?? null,
     error: (r.error as string | null) ?? null,
+    deleted_at: (r.deleted_at as string | null) ?? null,
   };
 }

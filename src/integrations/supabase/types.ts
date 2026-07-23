@@ -18,6 +18,7 @@ export type Database = {
         Row: {
           audio_path: string | null
           created_at: string
+          deleted_at: string | null
           duration_seconds: number | null
           error: string | null
           heading: string | null
@@ -36,6 +37,7 @@ export type Database = {
         Insert: {
           audio_path?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_seconds?: number | null
           error?: string | null
           heading?: string | null
@@ -54,6 +56,7 @@ export type Database = {
         Update: {
           audio_path?: string | null
           created_at?: string
+          deleted_at?: string | null
           duration_seconds?: number | null
           error?: string | null
           heading?: string | null
