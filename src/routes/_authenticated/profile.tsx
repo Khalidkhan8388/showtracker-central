@@ -4,7 +4,7 @@ import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIco
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { deleteAccount } from "@/lib/account.functions";
-import { ACCENTS, useTheme } from "@/lib/theme";
+import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
