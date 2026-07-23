@@ -427,7 +427,7 @@ function Home() {
                     className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
                     aria-label="Go to tasks"
                   >
-                    <Plus className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
                 <ul>
