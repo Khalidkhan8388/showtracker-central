@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
@@ -24,6 +24,14 @@ function CollectionDetail() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
+  const [view, setView] = useState<"list" | "grid">(() => {
+    if (typeof window === "undefined") return "list";
+    return (localStorage.getItem("collection-view") as "list" | "grid") ?? "list";
+  });
+  function setViewMode(v: "list" | "grid") {
+    setView(v);
+    if (typeof window !== "undefined") localStorage.setItem("collection-view", v);
+  }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
   const members = useMemo(
@@ -192,19 +200,43 @@ function CollectionDetail() {
           </>
         ) : (
           <>
-            <button
-              type="button"
-              onClick={() => setPicking(true)}
-              className="mb-3 flex w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground active:opacity-70"
-            >
-              <Plus className="h-4 w-4" />
-              Add memories
-            </button>
+            <div className="mb-3 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => setPicking(true)}
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground active:opacity-70"
+              >
+                <Plus className="h-4 w-4" />
+                Add memories
+              </button>
+              <div className="inline-flex rounded-full bg-card p-1 ring-1 ring-border/60">
+                <button
+                  type="button"
+                  aria-label="List view"
+                  onClick={() => setViewMode("list")}
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <ListIcon className="h-4 w-4" />
+                </button>
+                <button
+                  type="button"
+                  aria-label="Grid view"
+                  onClick={() => setViewMode("grid")}
+                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                    view === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                  }`}
+                >
+                  <LayoutGrid className="h-4 w-4" />
+                </button>
+              </div>
+            </div>
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
                 This collection is empty.
               </p>
-            ) : (
+            ) : view === "list" ? (
               <ul className="space-y-2">
                 {members.map((n) => (
                   <li key={n.id}>
@@ -232,6 +264,40 @@ function CollectionDetail() {
                         <X className="h-4 w-4" />
                       </button>
                     </div>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <ul className="grid grid-cols-2 gap-3">
+                {members.map((n) => (
+                  <li key={n.id} className="relative">
+                    <Link
+                      to="/notes/$id"
+                      params={{ id: n.id }}
+                      className="flex aspect-square flex-col justify-between overflow-hidden rounded-2xl bg-card p-3 shadow-sm ring-1 ring-border/60 active:opacity-80"
+                    >
+                      <p className="text-[11px] text-muted-foreground">
+                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                      </p>
+                      <div>
+                        <p className="line-clamp-2 text-[14px] font-semibold text-foreground">
+                          {n.heading ?? "Untitled"}
+                        </p>
+                        {n.summary && (
+                          <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                            {n.summary}
+                          </p>
+                        )}
+                      </div>
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => void removeNotesFromCollection(id, [n.id])}
+                      aria-label="Remove from collection"
+                      className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm ring-1 ring-border/60 backdrop-blur active:opacity-70"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
                   </li>
                 ))}
               </ul>
