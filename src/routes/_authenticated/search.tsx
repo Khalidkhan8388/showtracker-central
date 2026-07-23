@@ -391,15 +391,18 @@ function SearchPage() {
     };
   }, [query]);
 
-  const addMedia = useCallback(
-    async (hit: TmdbSearchHit) => {
+  const setMediaStatus = useCallback(
+    async (hit: TmdbSearchHit, status: "watchlist" | "watched") => {
       const key = `${hit.type}:${hit.tmdb_id}`;
-      if (tmdbAdding.has(key) || savedMediaKeys.has(key)) return;
+      if (tmdbAdding.has(key)) return;
+      // Toggle off: clicking the currently-active status removes it back to watchlist.
+      const current = savedMediaStatus.get(key);
+      const next = current === status ? "watchlist" : status;
       setTmdbAdding((s) => new Set(s).add(key));
       try {
-        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
+        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id, status: next } });
       } catch {
-        // ignore; user can retry
+        /* ignore */
       } finally {
         setTmdbAdding((s) => {
           const n = new Set(s);
@@ -408,8 +411,9 @@ function SearchPage() {
         });
       }
     },
-    [tmdbAdding, savedMediaKeys],
+    [tmdbAdding, savedMediaStatus],
   );
+
 
 
 
