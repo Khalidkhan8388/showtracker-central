@@ -1,5 +1,7 @@
 import Dexie, { type Table } from "dexie";
 
+export const LOCAL_UID = "local";
+
 export type LocalTask = {
   id: string;
   text: string;
@@ -30,8 +32,8 @@ export type LocalNote = {
 
 export type MetaRow = { key: string; value: string };
 
-export type LocalPhoto = {
-  path: string;      // storage path (primary key)
+export type LocalBlob = {
+  path: string;      // local path (primary key)
   blob: Blob;        // raw bytes
   size: number;      // bytes
   contentType: string;
@@ -41,7 +43,8 @@ export type LocalPhoto = {
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
-  photos!: Table<LocalPhoto, string>;
+  photos!: Table<LocalBlob, string>;
+  audios!: Table<LocalBlob, string>;
 
   constructor() {
     super("braintape");
@@ -49,17 +52,22 @@ class BraintapeDB extends Dexie {
       notes: "id, user_id, created_at, updated_at, pinned, heading",
       meta: "key",
     });
-    // v2: add local photo blob cache so images load instantly and offline.
     this.version(2).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading",
       meta: "key",
       photos: "path, cachedAt, size",
     });
-    // v3: index deleted_at so trash & active queries are cheap.
     this.version(3).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
       meta: "key",
       photos: "path, cachedAt, size",
+    });
+    // v4: local audio blobs (fully local audio storage — no cloud).
+    this.version(4).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
     });
   }
 }
@@ -67,24 +75,26 @@ class BraintapeDB extends Dexie {
 
 export const db = new BraintapeDB();
 
-export function normalizeRow(r: Record<string, unknown>): LocalNote {
+export function newNote(patch: Partial<LocalNote> = {}): LocalNote {
+  const now = new Date().toISOString();
   return {
-    id: String(r.id),
-    user_id: String(r.user_id),
-    status: (r.status as LocalNote["status"]) ?? "ready",
-    heading: (r.heading as string | null) ?? null,
-    summary: (r.summary as string | null) ?? null,
-    transcript: (r.transcript as string | null) ?? null,
-    tasks: Array.isArray(r.tasks) ? (r.tasks as LocalTask[]) : [],
-    duration_seconds: (r.duration_seconds as number | null) ?? null,
-    created_at: String(r.created_at ?? new Date().toISOString()),
-    updated_at: String(r.updated_at ?? r.created_at ?? new Date().toISOString()),
-    pinned: Boolean(r.pinned),
-    image_paths: Array.isArray(r.image_paths) ? (r.image_paths as string[]) : [],
-    source_url: (r.source_url as string | null) ?? null,
-    tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
-    audio_path: (r.audio_path as string | null) ?? null,
-    error: (r.error as string | null) ?? null,
-    deleted_at: (r.deleted_at as string | null) ?? null,
+    id: crypto.randomUUID(),
+    user_id: LOCAL_UID,
+    status: "ready",
+    heading: null,
+    summary: null,
+    transcript: null,
+    tasks: [],
+    duration_seconds: null,
+    created_at: now,
+    updated_at: now,
+    pinned: false,
+    image_paths: [],
+    source_url: null,
+    tags: [],
+    audio_path: null,
+    error: null,
+    deleted_at: null,
+    ...patch,
   };
 }

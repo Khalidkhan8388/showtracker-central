@@ -1,7 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -64,12 +63,12 @@ function NoteDetail() {
   const [saving, setSaving] = useState(false);
   
 
-  const toggleFn = useServerFn(toggleTask);
-  const deleteFn = useServerFn(deleteNote);
-  const processFn = useServerFn(processVoiceNote);
-  const pinFn = useServerFn(pinNote);
-  const updateFn = useServerFn(updateTextNote);
-  const appendImagesFn = useServerFn(appendImagesToNote);
+  const toggleFn = toggleTask;
+  const deleteFn = deleteNote;
+  const processFn = processVoiceNote;
+  const pinFn = pinNote;
+  const updateFn = updateTextNote;
+  const appendImagesFn = appendImagesToNote;
 
   // Local-first photo cache: pulls from IndexedDB when we've seen the
   // image before, otherwise downloads once and stores it.
@@ -272,8 +271,8 @@ function NoteDetail() {
   const editFileRef = useRef<HTMLInputElement | null>(null);
   const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
   const [addingImages, setAddingImages] = useState(false);
-  const linkLabelFn = useServerFn(generateLinkLabel);
-  const transcribeClipFn = useServerFn(transcribeAudioClip);
+  const linkLabelFn = generateLinkLabel;
+  const transcribeClipFn = transcribeAudioClip;
 
   // Voice-append recorder state
   const [voiceRecording, setVoiceRecording] = useState(false);

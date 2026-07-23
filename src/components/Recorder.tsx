@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
-import { useServerFn } from "@tanstack/react-start";
 import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -47,10 +46,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
 
-  const processFn = useServerFn(processVoiceNote);
-  const saveLinkFn = useServerFn(saveWebLink);
-  const saveTextFn = useServerFn(saveTextNote);
-  const linkLabelFn = useServerFn(generateLinkLabel);
+  const processFn = processVoiceNote;
+  const saveLinkFn = saveWebLink;
+  const saveTextFn = saveTextNote;
+  const linkLabelFn = generateLinkLabel;
 
   function insertAtCursor(snippet: string) {
     const el = textAreaRef.current;

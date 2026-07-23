@@ -4,7 +4,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
@@ -46,10 +45,10 @@ function Home() {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
-  const toggleFn = useServerFn(toggleTask);
-  const delNotesFn = useServerFn(deleteNotes);
-  const delTasksFn = useServerFn(deleteTasks);
-  const pinNoteFn = useServerFn(pinNote);
+  const toggleFn = toggleTask;
+  const delNotesFn = deleteNotes;
+  const delTasksFn = deleteTasks;
+  const pinNoteFn = pinNote;
   const navigate = useNavigate();
 
   const noteSelectMode = selectedNotes.size > 0;

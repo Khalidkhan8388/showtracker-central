@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
-import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalTask, deleteLocalTasks, resync } from "@/lib/sync-engine";
@@ -58,11 +57,11 @@ function TasksPage() {
   const notes = (localNotes ?? null) as Note[] | null;
   const [selected, setSelected] = useState<Set<TaskKey>>(new Set());
   const [newTask, setNewTask] = useState("");
-  const toggleFn = useServerFn(toggleTask);
-  const pinFn = useServerFn(pinTask);
-  const delFn = useServerFn(deleteTasks);
-  const editFn = useServerFn(editTaskText);
-  const addFn = useServerFn(addCustomTask);
+  const toggleFn = toggleTask;
+  const pinFn = pinTask;
+  const delFn = deleteTasks;
+  const editFn = editTaskText;
+  const addFn = addCustomTask;
   const selectMode = selected.size > 0;
 
   async function onToggle(noteId: string, taskId: string, done: boolean) {
