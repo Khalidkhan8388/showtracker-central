@@ -334,50 +334,24 @@ function Home() {
             <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {derived.latest && (
-              <div>
-                <SectionHeader>Latest</SectionHeader>
-                <NoteCard
-                  note={derived.latest}
-                  variant="wide"
-                  thumbUrl={thumbs[derived.latest.id]}
-                  selected={selectedNotes.has(derived.latest.id)}
-                  selectMode={noteSelectMode}
-                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                  onLongPress={() => toggleNoteSel(derived.latest.id)}
-                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                />
-              </div>
-            )}
-
-            {derived.strip.length > 0 && (
-              <div>
-                <SectionHeader>Pinned & Recent</SectionHeader>
-                <div className="-mx-4 overflow-x-auto pb-1">
-                  <div className="flex gap-3 px-4">
-                    {derived.strip.map((n) => (
-                      <NoteCard
-                        key={n.id}
-                        note={n}
-                        variant="square"
-                        thumbUrl={thumbs[n.id]}
-                        selected={selectedNotes.has(n.id)}
-                        selectMode={noteSelectMode}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => toggleNoteSel(n.id)}
-                        onToggleSel={() => toggleNoteSel(n.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <NoteCard
+                note={derived.latest}
+                variant="hero"
+                thumbUrl={thumbs[derived.latest.id]}
+                selected={selectedNotes.has(derived.latest.id)}
+                selectMode={noteSelectMode}
+                onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                onLongPress={() => toggleNoteSel(derived.latest.id)}
+                onToggleSel={() => toggleNoteSel(derived.latest.id)}
+              />
             )}
 
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
-                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
+                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary-foreground" />
@@ -389,63 +363,61 @@ function Home() {
               </Link>
             )}
 
-            <div>
-              <div className="mb-2 flex items-baseline justify-between px-1">
-                <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-                  Tasks
-                </h2>
-                <Link
-                  to="/tasks"
-                  className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
-                >
-                  <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                </Link>
+            {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
+              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
+                <div className="mb-3 flex items-baseline justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    Tasks
+                  </span>
+                  <Link
+                    to="/tasks"
+                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
+                  >
+                    <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                    <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                  </Link>
+                </div>
+                {derived.visible.length === 0 ? (
+                  <Link
+                    to="/tasks"
+                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                  >
+                    + Add a task
+                  </Link>
+                ) : (
+                  <ul className="space-y-1">
+                    {derived.visible.map((t) => {
+                      const key: TaskKey = `${t.noteId}::${t.id}`;
+                      const isSel = selectedTasks.has(key);
+                      return (
+                        <li key={key}>
+                          <TaskRow
+                            selectMode={taskSelectMode}
+                            selected={isSel}
+                            done={t.done}
+                            pinned={Boolean(t.pinned)}
+                            text={t.text}
+                            noteHeading={t.noteHeading}
+                            noteId={t.noteId}
+                            onToggleDone={() => onToggle(t.noteId, t.id)}
+                            onLongPress={() => toggleTaskSel(key)}
+                            onSelectTap={() => toggleTaskSel(key)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
-              {derived.visible.length === 0 ? (
-                <Link
-                  to="/tasks"
-                  className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
-                >
-                  + Add a task
-                </Link>
-              ) : (
-                <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-                  {derived.visible.map((t, i) => {
-                    const key: TaskKey = `${t.noteId}::${t.id}`;
-                    const isSel = selectedTasks.has(key);
-                    return (
-                      <li key={key}>
-                        <TaskRow
-                          selectMode={taskSelectMode}
-                          selected={isSel}
-                          done={t.done}
-                          pinned={Boolean(t.pinned)}
-                          text={t.text}
-                          noteHeading={t.noteHeading}
-                          noteId={t.noteId}
-                          onToggleDone={() => onToggle(t.noteId, t.id)}
-                          onLongPress={() => toggleTaskSel(key)}
-                          onSelectTap={() => toggleTaskSel(key)}
-                        />
-                        {i < derived.visible.length - 1 && <div className="ml-12 h-px bg-border" />}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            )}
 
-            {derived.grid.length > 0 && (
-              <div>
-                <SectionHeader>More Notes</SectionHeader>
-                <div className="grid grid-cols-2 gap-3">
-                  {derived.grid.map((n) => (
+            {(derived.strip.length > 0 || derived.grid.length > 0) && (
+              <div className="columns-2 gap-3 [column-fill:_balance]">
+                {[...derived.strip, ...derived.grid].map((n) => (
+                  <div key={n.id} className="mb-3 break-inside-avoid">
                     <NoteCard
-                      key={n.id}
                       note={n}
-                      variant="square"
-                      fullWidth
+                      variant="masonry"
                       thumbUrl={thumbs[n.id]}
                       selected={selectedNotes.has(n.id)}
                       selectMode={noteSelectMode}
@@ -453,13 +425,14 @@ function Home() {
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
                     />
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
       </section>
+
 
 
 
@@ -546,7 +519,7 @@ const NoteCard = memo(function NoteCard({
   onToggleSel,
 }: {
   note: Note;
-  variant: "wide" | "square";
+  variant: "wide" | "square" | "hero" | "masonry";
   fullWidth?: boolean;
   thumbUrl?: string;
   selected: boolean;
@@ -598,26 +571,49 @@ const NoteCard = memo(function NoteCard({
   })();
   const textTint = mymindTints[tintIdx];
 
-  const base = isText
-    ? "relative block overflow-hidden rounded-3xl p-4 transition-all " +
-      (selected ? "ring-2 ring-foreground" : "")
-    : "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
-      (selected
-        ? "border-foreground bg-muted shadow-sm"
-        : "border-border bg-card hover:bg-muted/50");
-  const sizing =
-    variant === "wide"
-      ? isText ? "p-5" : "p-4"
-      : fullWidth
-        ? "flex aspect-square w-full flex-col gap-3"
-        : isText
-          ? "flex aspect-square w-40 shrink-0 flex-col gap-3"
-          : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  const isHero = variant === "hero";
+  const isMasonry = variant === "masonry";
+  const isWideLike = variant === "wide" || isHero;
+  const isSquareLike = variant === "square" || isMasonry;
 
+  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
+  const useTint = isMasonry && !isText && !hasImage;
+  const tintBg = useTint ? mymindTints[tintIdx] : undefined;
+
+  const base = isText
+    ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+      (selected ? "ring-2 ring-foreground" : "")
+    : isHero
+      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+        (selected ? "ring-2 ring-foreground" : "")
+      : useTint
+        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+          (selected ? "ring-2 ring-foreground" : "")
+        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
+          (selected
+            ? "border-foreground bg-muted shadow-sm"
+            : "bg-card hover:bg-muted/50");
+
+  let sizing: string;
+  if (isHero) {
+    sizing = "";
+  } else if (variant === "wide") {
+    sizing = isText ? "p-5" : "p-4";
+  } else if (isMasonry) {
+    sizing = hasImage && !isLink
+      ? "flex aspect-[4/5] w-full flex-col gap-2"
+      : "flex w-full flex-col gap-3 min-h-[7rem]";
+  } else if (fullWidth) {
+    sizing = "flex aspect-square w-full flex-col gap-3";
+  } else {
+    sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  }
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: "#ffffff" }
-    : undefined;
+    : tintBg
+      ? { backgroundColor: tintBg }
+      : undefined;
 
 
   return (
@@ -629,8 +625,8 @@ const NoteCard = memo(function NoteCard({
       style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
-      {/* Square variant: image fills the card as background (only when not a link) */}
-      {variant === "square" && hasImage && !isLink && (
+      {/* Image-forward tile: image fills the card as background (only when not a link) */}
+      {isSquareLike && hasImage && !isLink && (
         <>
           <img
             src={thumbUrl}
@@ -664,34 +660,57 @@ const NoteCard = memo(function NoteCard({
           <Pin className="h-3.5 w-3.5 fill-foreground text-foreground" />
         </div>
       )}
-      {variant === "wide" ? (
-        <div className="flex items-start gap-3">
+      {isWideLike ? (
+        <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
               src={thumbUrl}
               alt=""
               loading="lazy"
               decoding="async"
-              className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+              className={
+                isHero
+                  ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                  : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+              }
             />
           )}
           <div className="min-w-0 flex-1">
-            {isLink && linkHost && (
-              <div className="mb-1.5">
-                <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
-                  {linkHost}
+            {isHero ? (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Latest
                 </span>
+                {isLink && linkHost && (
+                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+                    {linkHost}
+                  </span>
+                )}
               </div>
+            ) : (
+              isLink && linkHost && (
+                <div className="mb-1.5">
+                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+                    {linkHost}
+                  </span>
+                </div>
+              )
             )}
             <div className="flex items-center gap-2 pr-6">
-              <h3 className="truncate text-sm font-semibold">
+              <h3
+                className={
+                  isHero
+                    ? "font-serif text-[24px] font-normal leading-[1.15] tracking-tight text-foreground line-clamp-3"
+                    : "truncate text-sm font-semibold"
+                }
+              >
                 {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
               </h3>
             </div>
             {note.summary && (
-              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
+              <p className={`${isHero ? "mt-2 text-[13px]" : "mt-1 text-xs"} line-clamp-2 text-muted-foreground`}>{note.summary}</p>
             )}
-            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <div className={`${isHero ? "mt-3" : "mt-2"} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
               {note.tasks && note.tasks.length > 0 && (
