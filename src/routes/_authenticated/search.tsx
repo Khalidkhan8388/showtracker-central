@@ -231,6 +231,7 @@ function SearchPage() {
   const [recents, setRecents] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
+  const [pillHeight, setPillHeight] = useState(140);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
@@ -263,6 +264,18 @@ function SearchPage() {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
     };
+  }, []);
+
+  // Measure the floating search pill so results always sit above it,
+  // even when the results-count row appears/disappears.
+  useEffect(() => {
+    const el = pillRef.current;
+    if (!el) return;
+    const update = () => setPillHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
   }, []);
   const searchFn = searchEverything;
 
@@ -426,7 +439,7 @@ function SearchPage() {
       <div
         ref={scrollRef}
         className="flex flex-1 flex-col overflow-y-auto px-4 pt-1"
-        style={{ paddingBottom: 132 + kbOffset }}
+        style={{ paddingBottom: pillHeight + kbOffset + 16 }}
       >
         <div ref={sentinelRef} aria-hidden="true" className="h-2" />
         <div className="mt-auto">
