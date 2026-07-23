@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
@@ -8,6 +8,9 @@ import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
 import { generateLinkLabel } from "@/lib/notes.functions";
+import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
+import { patchLocalNote, patchLocalTask, resync } from "@/lib/sync-engine";
+
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
   head: () => ({ meta: [{ title: "Note — Braintape" }] }),
