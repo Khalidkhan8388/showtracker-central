@@ -537,9 +537,8 @@ function SearchPage() {
       </div>
 
       {/* Bottom-anchored search bar (above keyboard) — dark pill to match app UI */}
-      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
-        <div className="pointer-events-none absolute inset-x-0 bottom-full h-10 bg-gradient-to-t from-background to-transparent" />
-        <div className="px-4 pb-[max(env(safe-area-inset-bottom),14px)] pt-3">
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+        <div className="pointer-events-auto px-5 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
           {(query.trim() || aiMode) && (
             <div className="mb-2 flex items-center justify-between px-2 text-[11px] text-muted-foreground">
               <span>
