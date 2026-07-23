@@ -294,29 +294,20 @@ function Home() {
         </div>
       </header>
 
-      <section className="flex-1 px-4 pb-32 pt-2">
+      <section className="flex-1 px-5 pb-32 pt-1">
         {notes === null ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : notes.length === 0 ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-          </div>
         ) : !derived || !derived.hasAnyContent ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
+          <div className="rounded-[28px] bg-[#EFECE4] px-6 py-14 text-center">
+            <p className="font-serif text-[22px] leading-snug text-foreground">
+              Your second brain is quiet.
+            </p>
+            <p className="mt-2 text-[13px] text-foreground/60">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {derived.latest && (
               <NoteCard
                 note={derived.latest}
@@ -333,41 +324,57 @@ function Home() {
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
-                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
+                className="flex items-center justify-between rounded-full bg-foreground px-5 py-3 active:opacity-80"
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
-                  <span className="text-[15px] font-semibold text-primary-foreground">
+                  <Sparkles className="h-4 w-4 text-background" />
+                  <span className="text-[14px] font-medium text-background">
                     {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
                   </span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+                <ChevronRight className="h-4 w-4 text-background/70" />
               </Link>
             )}
 
+            {derived.strip.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {derived.strip.slice(0, 4).map((n) => (
+                  <NoteCard
+                    key={n.id}
+                    note={n}
+                    variant="masonry"
+                    thumbUrl={thumbs[n.id]}
+                    selected={selectedNotes.has(n.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                    onLongPress={() => toggleNoteSel(n.id)}
+                    onToggleSel={() => toggleNoteSel(n.id)}
+                  />
+                ))}
+              </div>
+            )}
+
             {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
-              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
-                <div className="mb-3 flex items-baseline justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
-                    Tasks
-                  </span>
-                  <Link
-                    to="/tasks"
-                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
-                  >
-                    <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                    <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                  </Link>
-                </div>
+              <div className="space-y-2">
+                <Link
+                  to="/tasks"
+                  className="flex items-center justify-between px-1 py-1 active:opacity-60"
+                >
+                  <span className="text-[17px] font-semibold text-foreground">Upcoming</span>
+                  <div className="flex items-center gap-1 text-foreground/40">
+                    <span className="text-[13px] tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                    <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </Link>
                 {derived.visible.length === 0 ? (
                   <Link
                     to="/tasks"
-                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                    className="block rounded-2xl bg-[#1c1c1e] py-3 text-center text-[14px] text-white/70 active:opacity-70"
                   >
                     + Add a task
                   </Link>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
                       const isSel = selectedTasks.has(key);
@@ -393,11 +400,13 @@ function Home() {
               </div>
             )}
 
-            {(derived.strip.length > 0 || derived.grid.length > 0) && (
-              <div className="columns-2 gap-3 [column-fill:_balance]">
-                {[...derived.strip, ...derived.grid].map((n) => (
-                  <div key={n.id} className="mb-3 break-inside-avoid">
+            {derived.grid.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="px-1 text-[17px] font-semibold text-foreground">Memory</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {derived.grid.map((n) => (
                     <NoteCard
+                      key={n.id}
                       note={n}
                       variant="masonry"
                       thumbUrl={thumbs[n.id]}
@@ -407,8 +416,8 @@ function Home() {
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
                     />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
