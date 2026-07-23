@@ -231,8 +231,10 @@ function SearchPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
@@ -244,6 +246,24 @@ function SearchPage() {
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Track on-screen keyboard via visualViewport so ONLY the search pill
+  // rides up with the keyboard — the page itself stays put.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, []);
   const searchFn = useServerFn(searchEverything);
 
