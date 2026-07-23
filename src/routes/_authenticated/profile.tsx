@@ -127,6 +127,37 @@ function ProfilePage() {
         </div>
       </section>
 
+      {/* Component size */}
+      <section className="px-4 pt-6">
+        <SectionTitle>Component size</SectionTitle>
+        <div className="overflow-hidden rounded-2xl bg-card">
+          {SIZE_SCALES.map((s, i) => {
+            const selected = s.id === sizeScale;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setSizeScale(s.id)}
+                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 ${
+                  i > 0 ? "border-t border-border/60" : ""
+                }`}
+              >
+                <span
+                  className="font-semibold text-foreground"
+                  style={{ fontSize: `${13 * s.value}px` }}
+                >
+                  Aa
+                </span>
+                <span className="flex-1 text-[15px]">{s.name}</span>
+                {selected && <Check className="h-5 w-5 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+          Scales the entire app to your preferred size.
+        </p>
+      </section>
+
       {/* Account */}
       <section className="px-4 pt-8">
         <SectionTitle>Account</SectionTitle>
