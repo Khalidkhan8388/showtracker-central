@@ -278,21 +278,32 @@ function TasksPage() {
       </div>
 
       {selectMode && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center gap-2 px-5">
-          <button
-            onClick={() => setSelected(new Set())}
-            aria-label="Cancel selection"
-            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5 backdrop-blur-xl"
-          >
-            Cancel
-          </button>
-          <button
-            onClick={confirmDelete}
-            className="pointer-events-auto inline-flex h-11 items-center gap-2 rounded-full bg-destructive px-5 text-[15px] font-semibold text-destructive-foreground shadow-lg"
-          >
-            <Trash2 className="h-4 w-4" />
-            Delete
-          </button>
+        <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
+          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+            <button
+              onClick={() => setSelected(new Set())}
+              aria-label="Cancel selection"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+            >
+              <X aria-hidden="true" className="h-4 w-4" />
+            </button>
+            <button
+              onClick={togglePinSelected}
+              aria-label="Pin selected tasks"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+            >
+              <Pin aria-hidden="true" className="h-3.5 w-3.5" />
+              Pin
+            </button>
+            <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
+            <button
+              onClick={confirmDelete}
+              className="inline-flex items-center gap-1.5 rounded-full bg-destructive/90 px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm active:scale-90 active:opacity-90"
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+              Delete
+            </button>
+          </div>
         </div>
       )}
     </main>
