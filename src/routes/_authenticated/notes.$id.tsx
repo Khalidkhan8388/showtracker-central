@@ -498,6 +498,41 @@ function NoteDetail() {
 
   const renderedBody = note.transcript ? resolveWikiLinks(note.transcript, wikiIndex) : "";
 
+  const media = (note as any).media as import("@/lib/local-db").LocalMedia | null | undefined;
+  if (media) {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
+        <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+          <div className="flex items-center justify-between px-2 pt-3 pb-2">
+            <button
+              type="button"
+              aria-label="Back"
+              onClick={() => {
+                if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+                else void navigate({ to: "/home" });
+              }}
+              className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+            >
+              <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
+              <span>Back</span>
+            </button>
+          </div>
+        </header>
+        <div className="px-5">
+          <MediaDetail
+            noteId={id}
+            media={media}
+            onDelete={async () => {
+              await deleteFn({ data: { id } });
+              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+              else void navigate({ to: "/home" });
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
       {/* iOS nav bar */}
