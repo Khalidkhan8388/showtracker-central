@@ -242,12 +242,25 @@ export const processVoiceNote = createServerFn({ method: "POST" })
         images.push({ mime, base64: bytesToBase64(bytes) });
       }
 
-      const structured = await extractStructured(transcript, images, apiKey);
+      const structured = await extractStructured(transcript, images, apiKey, prior);
       // Image-only notes (no audio) should not have AI-generated tasks — they're
       // rarely actionable and mostly noise. Users can still add custom tasks.
       const skipTasks = !note.audio_path && imagePaths.length > 0;
       const effectiveTasks = skipTasks ? [] : structured.tasks;
-      const tasksPayload = effectiveTasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
+      // Preserve done/pending state for tasks whose text matches a prior task.
+      const priorTaskMap = new Map<string, { done: boolean; pending: boolean }>();
+      for (const t of priorTasksArr) {
+        const key = String((t as any)?.text ?? "").trim().toLowerCase();
+        if (!key) continue;
+        priorTaskMap.set(key, {
+          done: Boolean((t as any)?.done),
+          pending: (t as any)?.pending === undefined ? false : Boolean((t as any)?.pending),
+        });
+      }
+      const tasksPayload = effectiveTasks.map((text, i) => {
+        const match = priorTaskMap.get(text.trim().toLowerCase());
+        return { id: `t${i}`, text, done: match?.done ?? false, pending: match?.pending ?? true };
+      });
 
       await supabase
         .from("voice_notes")
