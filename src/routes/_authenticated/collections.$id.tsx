@@ -24,6 +24,14 @@ function CollectionDetail() {
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
+  const [view, setView] = useState<"list" | "grid">(() => {
+    if (typeof window === "undefined") return "list";
+    return (localStorage.getItem("collection-view") as "list" | "grid") ?? "list";
+  });
+  function setViewMode(v: "list" | "grid") {
+    setView(v);
+    if (typeof window !== "undefined") localStorage.setItem("collection-view", v);
+  }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
   const members = useMemo(
