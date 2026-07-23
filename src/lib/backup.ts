@@ -1,16 +1,9 @@
 // Local backup: export/import all Dexie data as a single JSON file.
 // Blobs are base64-encoded so the file is self-contained and portable.
 
-import {
-  db,
-  type LocalNote,
-  type LocalBlob,
-  type MetaRow,
-  type LocalCollection,
-  type LocalCollectionEntry,
-} from "./local-db";
+import { db, type LocalNote, type LocalBlob, type MetaRow } from "./local-db";
 
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 1;
 
 type SerializedBlob = {
   path: string;
@@ -28,10 +21,7 @@ type BackupFile = {
   photos: SerializedBlob[];
   audios: SerializedBlob[];
   meta: MetaRow[];
-  collections?: LocalCollection[];
-  collectionEntries?: LocalCollectionEntry[];
 };
-
 
 function bytesToBase64(bytes: Uint8Array): string {
   let bin = "";
@@ -72,13 +62,11 @@ function deserializeBlob(s: SerializedBlob): LocalBlob {
 }
 
 export async function exportAll(): Promise<Blob> {
-  const [notes, photos, audios, meta, collections, collectionEntries] = await Promise.all([
+  const [notes, photos, audios, meta] = await Promise.all([
     db.notes.toArray(),
     db.photos.toArray(),
     db.audios.toArray(),
     db.meta.toArray(),
-    db.collections.toArray(),
-    db.collectionEntries.toArray(),
   ]);
   const payload: BackupFile = {
     app: "braintape",
@@ -88,12 +76,9 @@ export async function exportAll(): Promise<Blob> {
     photos: await Promise.all(photos.map(serializeBlob)),
     audios: await Promise.all(audios.map(serializeBlob)),
     meta,
-    collections,
-    collectionEntries,
   };
   return new Blob([JSON.stringify(payload)], { type: "application/json" });
 }
-
 
 export async function downloadExport(): Promise<void> {
   const blob = await exportAll();
@@ -139,32 +124,16 @@ export async function importFromFile(
   const photos = (Array.isArray(parsed.photos) ? parsed.photos : []).map(deserializeBlob);
   const audios = (Array.isArray(parsed.audios) ? parsed.audios : []).map(deserializeBlob);
   const meta = Array.isArray(parsed.meta) ? parsed.meta : [];
-  const collections = Array.isArray(parsed.collections) ? parsed.collections : [];
-  const collectionEntries = Array.isArray(parsed.collectionEntries) ? parsed.collectionEntries : [];
 
-  await db.transaction(
-    "rw",
-    [db.notes, db.photos, db.audios, db.meta, db.collections, db.collectionEntries],
-    async () => {
-
-      if (mode === "replace") {
-        await Promise.all([
-          db.notes.clear(),
-          db.photos.clear(),
-          db.audios.clear(),
-          db.meta.clear(),
-          db.collections.clear(),
-          db.collectionEntries.clear(),
-        ]);
-      }
-      if (notes.length) await db.notes.bulkPut(notes);
-      if (photos.length) await db.photos.bulkPut(photos);
-      if (audios.length) await db.audios.bulkPut(audios);
-      if (meta.length) await db.meta.bulkPut(meta);
-      if (collections.length) await db.collections.bulkPut(collections);
-      if (collectionEntries.length) await db.collectionEntries.bulkPut(collectionEntries);
-    },
-  );
+  await db.transaction("rw", db.notes, db.photos, db.audios, db.meta, async () => {
+    if (mode === "replace") {
+      await Promise.all([db.notes.clear(), db.photos.clear(), db.audios.clear(), db.meta.clear()]);
+    }
+    if (notes.length) await db.notes.bulkPut(notes);
+    if (photos.length) await db.photos.bulkPut(photos);
+    if (audios.length) await db.audios.bulkPut(audios);
+    if (meta.length) await db.meta.bulkPut(meta);
+  });
 
   return {
     notes: notes.length,
@@ -173,4 +142,3 @@ export async function importFromFile(
     meta: meta.length,
   };
 }
-

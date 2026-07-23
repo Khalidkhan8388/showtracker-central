@@ -40,34 +40,11 @@ export type LocalBlob = {
   cachedAt: number;  // epoch ms — for LRU eviction
 };
 
-export type LocalCollection = {
-  id: string;
-  name: string;
-  description: string | null;
-  view_mode: "grid" | "list";
-  cover_image_path: string | null;
-  color: string | null;
-  sort_order: number;
-  pinned: boolean;
-  created_at: string;
-  updated_at: string;
-};
-
-export type LocalCollectionEntry = {
-  // Compound key: `${collection_id}::${note_id}` for O(1) upserts.
-  key: string;
-  collection_id: string;
-  note_id: string;
-  added_at: string;
-};
-
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
   photos!: Table<LocalBlob, string>;
   audios!: Table<LocalBlob, string>;
-  collections!: Table<LocalCollection, string>;
-  collectionEntries!: Table<LocalCollectionEntry, string>;
 
   constructor() {
     super("braintape");
@@ -92,21 +69,11 @@ class BraintapeDB extends Dexie {
       photos: "path, cachedAt, size",
       audios: "path, cachedAt, size",
     });
-    // v5: collections + junction table for grouping notes.
-    this.version(5).stores({
-      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
-      meta: "key",
-      photos: "path, cachedAt, size",
-      audios: "path, cachedAt, size",
-      collections: "id, name, sort_order, pinned, updated_at",
-      collectionEntries: "key, collection_id, note_id, added_at",
-    });
   }
 }
 
 
 export const db = new BraintapeDB();
-
 
 export function newNote(patch: Partial<LocalNote> = {}): LocalNote {
   const now = new Date().toISOString();
