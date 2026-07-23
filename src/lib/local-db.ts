@@ -25,6 +25,7 @@ export type LocalNote = {
   tags: string[];
   audio_path: string | null;
   error: string | null;
+  deleted_at: string | null;
 };
 
 export type MetaRow = { key: string; value: string };
