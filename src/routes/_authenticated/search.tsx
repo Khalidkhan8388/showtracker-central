@@ -364,6 +364,52 @@ function SearchPage() {
     setAiReasoning(null);
   }, [query]);
 
+  // Debounced TMDB search — always run when the user has typed something.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setTmdbHits([]);
+      setTmdbLoading(false);
+      return;
+    }
+    setTmdbLoading(true);
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const hits = await searchTmdbFn({ data: { query: q } });
+        if (!cancelled) setTmdbHits(hits);
+      } catch {
+        if (!cancelled) setTmdbHits([]);
+      } finally {
+        if (!cancelled) setTmdbLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query]);
+
+  const addMedia = useCallback(
+    async (hit: TmdbSearchHit) => {
+      const key = `${hit.type}:${hit.tmdb_id}`;
+      if (tmdbAdding.has(key) || savedMediaKeys.has(key)) return;
+      setTmdbAdding((s) => new Set(s).add(key));
+      try {
+        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
+      } catch {
+        // ignore; user can retry
+      } finally {
+        setTmdbAdding((s) => {
+          const n = new Set(s);
+          n.delete(key);
+          return n;
+        });
+      }
+    },
+    [tmdbAdding, savedMediaKeys],
+  );
+
 
 
 
