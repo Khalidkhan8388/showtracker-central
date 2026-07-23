@@ -132,21 +132,26 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
 
 // -- CRUD ----
 
-export async function toggleTask({ data }: { data: { noteId: string; taskId: string } }) {
+export async function toggleTask({ data }: { data: { noteId: string; taskId: string; done?: boolean } }) {
   const note = await getNote(data.noteId);
   if (!note) return { ok: true as const };
-  const next = (note.tasks ?? []).map((t) => (t.id === data.taskId ? { ...t, done: !t.done } : t));
+  const next = (note.tasks ?? []).map((t) =>
+    t.id === data.taskId ? { ...t, done: typeof data.done === "boolean" ? data.done : !t.done } : t,
+  );
   await updateNote(data.noteId, { tasks: next });
   return { ok: true as const };
 }
 
-export async function pinTask({ data }: { data: { noteId: string; taskId: string } }) {
+export async function pinTask({ data }: { data: { noteId: string; taskId: string; pinned?: boolean } }) {
   const note = await getNote(data.noteId);
   if (!note) return { ok: true as const };
-  const next = (note.tasks ?? []).map((t) => (t.id === data.taskId ? { ...t, pinned: !t.pinned } : t));
+  const next = (note.tasks ?? []).map((t) =>
+    t.id === data.taskId ? { ...t, pinned: typeof data.pinned === "boolean" ? data.pinned : !t.pinned } : t,
+  );
   await updateNote(data.noteId, { tasks: next });
   return { ok: true as const };
 }
+
 
 export async function editTaskText({
   data,
