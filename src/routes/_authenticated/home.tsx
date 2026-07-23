@@ -694,7 +694,7 @@ function AddToCollectionSheet({
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-[14px] font-semibold text-foreground">{c.title}</p>
                   <p className="text-[11px] text-muted-foreground">
-                    {c.note_ids.length} {c.note_ids.length === 1 ? "memory" : "memories"}
+                    {(c.note_ids ?? []).length} {(c.note_ids ?? []).length === 1 ? "memory" : "memories"}
                   </p>
                 </div>
               </button>
