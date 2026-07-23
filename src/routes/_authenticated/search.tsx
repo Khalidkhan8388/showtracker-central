@@ -617,19 +617,22 @@ function SearchPage() {
       >
         <div className="pointer-events-auto px-5 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
           {(query.trim() || aiMode) && (
-            <div className="mb-2 flex items-center justify-between px-2 text-[11px] text-muted-foreground">
-              <span>
-                {aiMode
-                  ? aiLoading
-                    ? "Thinking…"
-                    : `${filteredNotes.length} AI match${filteredNotes.length === 1 ? "" : "es"}`
-                  : `${filteredNotes.length + matchingTasks.length} result${
-                      filteredNotes.length + matchingTasks.length === 1 ? "" : "s"
-                    }`}
-              </span>
-              {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
+            <div className="mb-2 flex justify-center">
+              <div className="inline-flex items-center gap-3 rounded-full bg-white/90 px-3 py-1 text-[11px] text-muted-foreground shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/10">
+                <span>
+                  {aiMode
+                    ? aiLoading
+                      ? "Thinking…"
+                      : `${filteredNotes.length} AI match${filteredNotes.length === 1 ? "" : "es"}`
+                    : `${filteredNotes.length + matchingTasks.length} result${
+                        filteredNotes.length + matchingTasks.length === 1 ? "" : "s"
+                      }`}
+                </span>
+                {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
+              </div>
             </div>
           )}
+
           <div role="search" aria-label="Search captures" className="flex items-center gap-2 rounded-full bg-white/90 pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/5 dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)]">
             <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
             <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>
