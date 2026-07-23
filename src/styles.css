@@ -159,11 +159,42 @@
     -webkit-tap-highlight-color: transparent;
   }
 
+  /*
+   * Universal fluid sizing.
+   *
+   * `--app-scale` fluidly scales the whole UI between a 320px iPhone SE and
+   * a 480px large phone, then caps for tablet/desktop. Because arbitrary
+   * `text-[Npx]`, `h-*`, `w-*`, `p-*` values throughout the app are all in
+   * px, we can't rely on rem alone — instead we set the root font-size to
+   * a fluid px value AND scale every fixed unit via `zoom` at the html
+   * level. `zoom` (widely supported in modern Chromium/Safari/Firefox 126+)
+   * scales layout metrics correctly, including `fixed` positioning, so the
+   * bottom pill stays anchored.
+   *
+   * `text-size-adjust` prevents mobile browsers from silently up-scaling
+   * text and lets us honour the user's OS-level font-size preference.
+   */
+  :root {
+    --app-scale: clamp(0.92, 0.72 + 0.0625 * 100vw / 16, 1.15);
+  }
+
   html {
+    zoom: var(--app-scale);
+    font-size: 100%; /* respects the user's browser/OS font-size setting */
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
     font-family: var(--font-sans);
+  }
+
+  /* Larger screens: cap the scale so the mobile-max-w-md layout doesn't balloon. */
+  @media (min-width: 480px) {
+    :root { --app-scale: 1.15; }
+  }
+  @media (min-width: 768px) {
+    :root { --app-scale: 1.1; }
   }
 
   body {
@@ -171,6 +202,9 @@
     color: var(--color-foreground);
     font-family: var(--font-sans);
     letter-spacing: -0.01em;
+    /* Safe-area insets for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   h1, h2, h3, h4 {
