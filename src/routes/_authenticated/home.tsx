@@ -770,18 +770,30 @@ const NoteCard = memo(function NoteCard({
       ) : (
         <>
           {isLink && linkHost && (
-            <div className="relative z-10">
-              <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-background max-w-full truncate">
+            <div className="relative z-10 flex items-center gap-1.5 text-muted-foreground">
+              <Link2 className="h-3 w-3 shrink-0" />
+              <span className="truncate text-[10px] font-medium uppercase tracking-wide">
                 {linkHost}
               </span>
             </div>
           )}
+          {isVoice && !hasImage && (
+            <div className="relative z-10 flex items-center gap-1.5 text-muted-foreground">
+              <Mic className="h-3 w-3 shrink-0" />
+              <span className="text-[10px] font-medium uppercase tracking-wide">Voice</span>
+            </div>
+          )}
           {!(hasImage && !isLink) && (
             <div className="relative z-10 flex items-start gap-1.5 pr-5">
-              <h3 className="text-xs font-semibold leading-tight break-words">
+              <h3 className="text-[13px] font-semibold leading-snug break-words line-clamp-3 text-foreground">
                 {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             </div>
+          )}
+          {!(hasImage && !isLink) && note.summary && (
+            <p className="relative z-10 text-[11px] leading-snug text-muted-foreground line-clamp-2">
+              {note.summary}
+            </p>
           )}
 
           <div
@@ -809,6 +821,7 @@ const NoteCard = memo(function NoteCard({
           </div>
         </>
       )}
+
     </div>
   );
 });
