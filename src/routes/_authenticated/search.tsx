@@ -439,7 +439,7 @@ function SearchPage() {
       <div
         ref={scrollRef}
         className="flex flex-1 flex-col overflow-y-auto px-4 pt-1"
-        style={{ paddingBottom: 132 + kbOffset }}
+        style={{ paddingBottom: pillHeight + kbOffset + 16 }}
       >
         <div ref={sentinelRef} aria-hidden="true" className="h-2" />
         <div className="mt-auto">
