@@ -524,7 +524,7 @@ function NoteDetail() {
             noteId={id}
             media={media}
             onDelete={async () => {
-              await deleteFn({ data: { id } });
+              await deleteFn({ data: { noteId: id } });
               if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
               else void navigate({ to: "/home" });
             }}
