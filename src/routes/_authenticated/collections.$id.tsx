@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow } from "date-fns";
+import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
@@ -42,6 +43,44 @@ function CollectionDetail() {
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
   );
+
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const paths: string[] = [];
+    const pairs: Array<{ id: string; path: string }> = [];
+    for (const n of members) {
+      const p = Array.isArray((n as any).image_paths) ? (n as any).image_paths[0] : null;
+      if (!p) continue;
+      paths.push(p);
+      pairs.push({ id: n.id, path: p });
+    }
+    if (!paths.length) return;
+    // Prime from in-memory cache immediately
+    setThumbs((cur) => {
+      let next = cur;
+      for (const { id: nid, path } of pairs) {
+        const u = getCachedPhotoUrl(path);
+        if (u && next[nid] !== u) {
+          if (next === cur) next = { ...cur };
+          next[nid] = u;
+        }
+      }
+      return next;
+    });
+    void warmPhotoCache(paths).then(() => {
+      setThumbs((cur) => {
+        let next = cur;
+        for (const { id: nid, path } of pairs) {
+          const u = getCachedPhotoUrl(path);
+          if (u && next[nid] !== u) {
+            if (next === cur) next = { ...cur };
+            next[nid] = u;
+          }
+        }
+        return next;
+      });
+    });
+  }, [members]);
 
   if (collection === null) {
     return (
@@ -269,37 +308,62 @@ function CollectionDetail() {
               </ul>
             ) : (
               <ul className="grid grid-cols-2 gap-3">
-                {members.map((n) => (
-                  <li key={n.id} className="relative">
-                    <Link
-                      to="/notes/$id"
-                      params={{ id: n.id }}
-                      className="flex aspect-square flex-col justify-between overflow-hidden rounded-2xl bg-card p-3 shadow-sm ring-1 ring-border/60 active:opacity-80"
-                    >
-                      <p className="text-[11px] text-muted-foreground">
-                        {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                      </p>
-                      <div>
-                        <p className="line-clamp-2 text-[14px] font-semibold text-foreground">
-                          {n.heading ?? "Untitled"}
-                        </p>
-                        {n.summary && (
-                          <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
-                            {n.summary}
-                          </p>
+                {members.map((n) => {
+                  const thumb = thumbs[n.id];
+                  return (
+                    <li key={n.id} className="relative">
+                      <Link
+                        to="/notes/$id"
+                        params={{ id: n.id }}
+                        className="relative flex aspect-square flex-col justify-between overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60 active:opacity-80"
+                      >
+                        {thumb ? (
+                          <>
+                            <img
+                              src={thumb}
+                              alt={n.heading ?? "Memory"}
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <div className="relative z-10 mt-auto p-3">
+                              <p className="line-clamp-2 text-[13px] font-semibold text-white">
+                                {n.heading ?? "Untitled"}
+                              </p>
+                              <p className="mt-0.5 text-[10px] text-white/70">
+                                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                              </p>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex h-full w-full flex-col justify-between p-3">
+                            <p className="text-[11px] text-muted-foreground">
+                              {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
+                            </p>
+                            <div>
+                              <p className="line-clamp-2 text-[14px] font-semibold text-foreground">
+                                {n.heading ?? "Untitled"}
+                              </p>
+                              {n.summary && (
+                                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
+                                  {n.summary}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         )}
-                      </div>
-                    </Link>
-                    <button
-                      type="button"
-                      onClick={() => void removeNotesFromCollection(id, [n.id])}
-                      aria-label="Remove from collection"
-                      className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm ring-1 ring-border/60 backdrop-blur active:opacity-70"
-                    >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  </li>
-                ))}
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={() => void removeNotesFromCollection(id, [n.id])}
+                        aria-label="Remove from collection"
+                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm ring-1 ring-border/60 backdrop-blur active:opacity-70"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </>
