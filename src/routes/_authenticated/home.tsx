@@ -587,9 +587,10 @@ const NoteCard = memo(function NoteCard({
   const isWideLike = variant === "wide" || isHero;
   const isSquareLike = variant === "square" || isMasonry;
 
-  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
-  const useTint = isMasonry && !isText && !hasImage;
+  // Only text notes get soft tints. Voice and link cards stay clean like image tiles.
+  const useTint = false;
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
+
 
   const base = isText
     ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
