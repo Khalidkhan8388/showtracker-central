@@ -16,6 +16,7 @@ export type Note = {
   image_paths: string[] | null;
   source_url: string | null;
   transcript: string | null;
+  deleted_at?: string | null;
 };
 
 export function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: string; className?: string }) {
