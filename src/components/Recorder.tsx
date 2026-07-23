@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Maximize2, Minimize2, Eye, Pencil, Search } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
@@ -150,7 +150,61 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextBody("");
     setTextMode("write");
     setTextFullscreen(false);
+    try { localStorage.removeItem("braintape:textDraft"); } catch {}
   }
+
+  function handleCancelText() {
+    const dirty = textHeading.trim().length > 0 || textBody.trim().length > 0;
+    if (dirty && !confirm("Discard this note?")) return;
+    resetTextComposer();
+    setTextOpen(false);
+    setInlineLinkOpen(false);
+    setInlineLinkUrl("");
+  }
+
+  // Persist draft while composer is open
+  useEffect(() => {
+    if (!textOpen) return;
+    try {
+      const raw = localStorage.getItem("braintape:textDraft");
+      if (raw) {
+        const d = JSON.parse(raw) as { h?: string; b?: string };
+        if (!textHeading && d.h) setTextHeading(d.h);
+        if (!textBody && d.b) setTextBody(d.b);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textOpen]);
+
+  useEffect(() => {
+    if (!textOpen) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          "braintape:textDraft",
+          JSON.stringify({ h: textHeading, b: textBody }),
+        );
+      } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [textOpen, textHeading, textBody]);
+
+  // ⌘/Ctrl+Enter to save, Esc to cancel
+  useEffect(() => {
+    if (!textOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        submitText();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancelText();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textOpen, textHeading, textBody]);
 
   async function submitText() {
     const heading = textHeading.trim();
@@ -467,210 +521,164 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {textOpen && (
-        <div className="pointer-events-auto fixed inset-0 z-50 flex items-end justify-center bg-black/40 backdrop-blur-sm sm:items-center">
-          <div
-            className={`flex w-full flex-col gap-3 border border-border bg-background shadow-2xl ${
-              textFullscreen
-                ? "h-full max-h-none max-w-none rounded-none p-5"
-                : "max-h-[90vh] max-w-lg rounded-t-3xl p-5 sm:rounded-3xl"
-            }`}
-          >
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-bold tracking-tight">New note</h2>
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setTextMode(textMode === "write" ? "preview" : "write")}
-                  aria-label={textMode === "write" ? "Switch to preview" : "Switch to edit"}
-                  className="mr-1 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-xs font-medium text-foreground hover:bg-muted/70"
-                >
-                  {textMode === "write" ? (
-                    <>
-                      <Eye className="h-3.5 w-3.5" /> Preview
-                    </>
-                  ) : (
-                    <>
-                      <Pencil className="h-3.5 w-3.5" /> Edit
-                    </>
-                  )}
-                </button>
-                <button
-                  onClick={() => setTextFullscreen((f) => !f)}
-                  aria-label={textFullscreen ? "Exit fullscreen" : "Fullscreen"}
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-                >
-                  {textFullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
-                </button>
-                <button
-                  onClick={() => setTextOpen(false)}
-                  aria-label="Close"
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-            <input
-              autoFocus
-              type="text"
-              placeholder="Title"
-              value={textHeading}
-              onChange={(e) => setTextHeading(e.target.value)}
-              maxLength={200}
-              className="w-full bg-transparent text-lg font-semibold tracking-tight text-foreground placeholder:text-muted-foreground outline-none"
-            />
-            {textMode === "write" ? (
-              <BlockEditor
-                value={textBody}
-                onChange={setTextBody}
-                fullscreen={textFullscreen}
-                onRemoveImage={removeImageFromBody}
-                onRemoveLink={removeLinkFromBody}
-              />
-            ) : (
-              <div
-                className={`w-full flex-1 overflow-y-auto rounded-2xl border border-border bg-muted/30 p-4 ${
-                  textFullscreen ? "min-h-0" : "min-h-[200px]"
-                }`}
+        <div className="pointer-events-auto fixed inset-0 z-50 flex flex-col bg-background">
+          {/* iOS-style top bar */}
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+            <div className="flex h-12 w-full items-center justify-between">
+              <button
+                onClick={handleCancelText}
+                className="rounded-full px-2 py-1 text-[15px] text-primary active:opacity-60"
               >
-                {textBody.trim() ? (
-                  <div className="markdown text-sm leading-relaxed text-foreground [&_h1]:mt-4 [&_h1]:mb-2 [&_h1]:text-xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h2]:mt-4 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:font-semibold [&_h3]:mt-3 [&_h3]:mb-1.5 [&_h3]:text-base [&_h3]:font-semibold [&_p]:my-2 [&_p]:whitespace-pre-wrap [&_ul]:my-2 [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:my-2 [&_ol]:list-decimal [&_ol]:pl-5 [&_li]:my-0.5 [&_a]:underline [&_a]:decoration-foreground/40 [&_a]:underline-offset-2 [&_strong]:font-semibold [&_em]:italic [&_code]:rounded [&_code]:bg-muted [&_code]:px-1 [&_code]:py-0.5 [&_code]:font-mono [&_code]:text-[0.85em] [&_pre]:my-3 [&_pre]:overflow-x-auto [&_pre]:rounded-xl [&_pre]:bg-muted [&_pre]:p-3 [&_blockquote]:my-3 [&_blockquote]:border-l-2 [&_blockquote]:border-foreground/30 [&_blockquote]:pl-3 [&_blockquote]:text-muted-foreground">
-                    <ReactMarkdown
-                      remarkPlugins={[remarkGfm]}
-                      components={{
-                        a: ({ node, ...props }) => <a {...props} target="_blank" rel="noreferrer" />,
-                        p: ({ node, children, ...props }) => {
-                          // Unwrap paragraphs that contain only images (avoid <p><div>...</div></p>)
-                          const kids = Array.isArray(children) ? children : [children];
-                          const onlyImg = kids.every(
-                            (c: any) =>
-                              (typeof c === "string" && c.trim() === "") ||
-                              (c && c.type === "img") ||
-                              (c && c.props && c.props.node && c.props.node.tagName === "img"),
-                          );
-                          if (onlyImg) return <>{children}</>;
-                          return <p {...props}>{children}</p>;
-                        },
-                        img: ({ src, alt }) => (
-                          <div className="group relative my-3 inline-block max-w-full">
-                            <img src={src as string} alt={(alt as string) ?? ""} className="max-h-96 rounded-xl" />
-                            <button
-                              type="button"
-                              onClick={() => removeImageFromBody(src as string)}
-                              aria-label="Remove image"
-                              className="absolute right-2 top-2 inline-flex h-7 w-7 items-center justify-center rounded-full bg-black/70 text-white shadow-lg"
-                            >
-                              <X className="h-3.5 w-3.5" strokeWidth={3} />
-                            </button>
-                          </div>
-                        ),
-                      }}
-                    >
-                      {textBody}
-                    </ReactMarkdown>
-                  </div>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Nothing to preview yet.</p>
-                )}
-              </div>
-            )}
+                Cancel
+              </button>
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">New note</span>
+              <button
+                onClick={submitText}
+                disabled={!textHeading.trim() && !textBody.trim()}
+                className="rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground active:opacity-70 disabled:opacity-40"
+              >
+                Save
+              </button>
+            </div>
+          </header>
 
-
-            <input
-              ref={textFileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="hidden"
-              onChange={onPickMarkdownImages}
-            />
-
-            {inlineLinkOpen && (
-              <div className="flex items-center gap-1 rounded-full border border-border bg-muted/40 p-1 pl-3">
-                <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <input
-                  autoFocus
-                  type="url"
-                  inputMode="url"
-                  placeholder="Paste a link…"
-                  value={inlineLinkUrl}
-                  onChange={(e) => setInlineLinkUrl(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      e.preventDefault();
-                      const v = inlineLinkUrl;
-                      setInlineLinkUrl("");
-                      setInlineLinkOpen(false);
-                      insertLinkFromUrl(v);
-                    } else if (e.key === "Escape") {
-                      setInlineLinkOpen(false);
-                      setInlineLinkUrl("");
-                    }
-                  }}
-                  className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+          {/* Body: title + editor */}
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-5 pt-5 pb-40">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Title"
+                value={textHeading}
+                onChange={(e) => setTextHeading(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    // jump into body
+                    const first = document.querySelector<HTMLTextAreaElement>('[data-block-editor] textarea');
+                    first?.focus();
+                  }
+                }}
+                maxLength={200}
+                className="w-full bg-transparent text-[28px] font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
+              />
+              <div className="mt-4" data-block-editor>
+                <BlockEditor
+                  value={textBody}
+                  onChange={setTextBody}
+                  fullscreen
+                  onRemoveImage={removeImageFromBody}
+                  onRemoveLink={removeLinkFromBody}
+                  placeholder="Start writing… # heading · - list · > quote · [[Title]] links a note"
                 />
-                <button
-                  onClick={() => {
-                    setInlineLinkOpen(false);
-                    setInlineLinkUrl("");
-                  }}
-                  aria-label="Cancel"
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-                <button
-                  onClick={() => {
-                    const v = inlineLinkUrl;
-                    setInlineLinkUrl("");
-                    setInlineLinkOpen(false);
-                    insertLinkFromUrl(v);
-                  }}
-                  disabled={!inlineLinkUrl.trim()}
-                  className="inline-flex items-center rounded-full bg-foreground px-3 py-1.5 text-xs font-semibold text-background disabled:opacity-50"
-                >
-                  Add
-                </button>
-              </div>
-            )}
-
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => textFileRef.current?.click()}
-                  disabled={uploadingMd}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted disabled:opacity-50"
-                >
-                  {uploadingMd ? <Loader2 className="h-4 w-4 animate-spin" /> : <ImagePlus className="h-4 w-4" />}
-                  Image
-                </button>
-                <button
-                  onClick={() => setInlineLinkOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-foreground hover:bg-muted"
-                >
-                  <Link2 className="h-4 w-4" />
-                  Link
-                </button>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => {
-                    resetTextComposer();
-                    setTextOpen(false);
-                  }}
-                  className="rounded-full px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-muted"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={submitText}
-                  disabled={!textHeading.trim() && !textBody.trim()}
-                  className="rounded-full bg-foreground px-4 py-2 text-sm font-semibold text-background disabled:opacity-50"
-                >
-                  Save note
-                </button>
               </div>
             </div>
 
+            {/* Sticky bottom toolbar */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+              <div className="pointer-events-auto flex w-full max-w-md flex-col gap-2">
+                <input
+                  ref={textFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={onPickMarkdownImages}
+                />
+                {inlineLinkOpen && (
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
+                    <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                      autoFocus
+                      type="url"
+                      inputMode="url"
+                      placeholder="Paste a link…"
+                      value={inlineLinkUrl}
+                      onChange={(e) => setInlineLinkUrl(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          const v = inlineLinkUrl;
+                          setInlineLinkUrl("");
+                          setInlineLinkOpen(false);
+                          insertLinkFromUrl(v);
+                        } else if (e.key === "Escape") {
+                          setInlineLinkOpen(false);
+                          setInlineLinkUrl("");
+                        }
+                      }}
+                      className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+                    />
+                    <button
+                      onClick={() => {
+                        setInlineLinkOpen(false);
+                        setInlineLinkUrl("");
+                      }}
+                      aria-label="Cancel"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={() => {
+                        const v = inlineLinkUrl;
+                        setInlineLinkUrl("");
+                        setInlineLinkOpen(false);
+                        insertLinkFromUrl(v);
+                      }}
+                      disabled={!inlineLinkUrl.trim()}
+                      className="inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
+                  <button
+                    type="button"
+                    onClick={() => textFileRef.current?.click()}
+                    disabled={uploadingMd}
+                    aria-label="Add image"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {uploadingMd ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" strokeWidth={2} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setInlineLinkOpen((v) => !v)}
+                    aria-label="Add link"
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted ${inlineLinkOpen ? "bg-muted" : ""}`}
+                  >
+                    <Link2 className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                  <div className="mx-1 h-5 w-px bg-border" />
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n- ")}
+                    aria-label="Bullet list"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-lg leading-none">•</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n# ")}
+                    aria-label="Heading"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-sm font-bold">H</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("[[]]")}
+                    aria-label="Link a note"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-xs font-semibold tracking-tighter">[[ ]]</span>
+                  </button>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}
