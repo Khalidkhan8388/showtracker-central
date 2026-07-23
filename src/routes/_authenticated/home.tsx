@@ -105,6 +105,15 @@ function Home() {
     }
   }
 
+  async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
+    await patchLocalTask(noteId, taskId, { pinned: !pinned });
+    try {
+      await pinTask({ data: { noteId, taskId } });
+    } catch {
+      void resync();
+    }
+  }
+
   // Sign only images we haven't signed yet — cache is keyed by storage path so
   // Signed URL cache is module-level so it survives route unmounts/remounts;
   // this stops thumbnails from re-signing every time we transition back.
