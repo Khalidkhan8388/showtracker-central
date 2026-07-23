@@ -130,33 +130,30 @@ function ProfilePage() {
       {/* Component size */}
       <section className="px-4 pt-6">
         <SectionTitle>Component size</SectionTitle>
-        <div className="overflow-hidden rounded-2xl bg-card">
-          {SIZE_SCALES.map((s, i) => {
-            const selected = s.id === sizeScale;
-            return (
-              <button
-                key={s.id}
-                onClick={() => setSizeScale(s.id)}
-                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 ${
-                  i > 0 ? "border-t border-border/60" : ""
-                }`}
-              >
-                <span
-                  className="font-semibold text-foreground"
-                  style={{ fontSize: `${13 * s.value}px` }}
+        <div className="rounded-2xl bg-card p-1">
+          <div className="grid grid-cols-2 gap-1">
+            {SIZE_SCALES.map((s) => {
+              const selected = s.id === sizeScale;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setSizeScale(s.id)}
+                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-[13px] font-medium transition-colors ${
+                    selected ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-muted/50"
+                  }`}
                 >
-                  Aa
-                </span>
-                <span className="flex-1 text-[15px]">{s.name}</span>
-                {selected && <Check className="h-5 w-5 text-primary" />}
-              </button>
-            );
-          })}
+                  <span style={{ fontSize: `${13 * s.value}px` }} className="font-semibold">Aa</span>
+                  <span>{s.name}</span>
+                </button>
+              );
+            })}
+          </div>
         </div>
         <p className="mt-2 px-1 text-[12px] text-muted-foreground">
           Scales the entire app to your preferred size.
         </p>
       </section>
+
 
       {/* Account */}
       <section className="px-4 pt-8">
