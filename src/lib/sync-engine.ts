@@ -8,6 +8,22 @@ let currentUserId: string | null = null;
 let channel: ReturnType<typeof supabase.channel> | null = null;
 let pulling: Promise<void> | null = null;
 
+// Tombstones: ids the user just deleted locally. Any realtime or pull
+// write for these ids is ignored for TOMBSTONE_TTL_MS so a late-arriving
+// UPDATE (e.g. a background "processing → ready" event) or a racing
+// pullSince can't resurrect a deleted note.
+const tombstones = new Map<string, number>();
+const TOMBSTONE_TTL_MS = 60_000;
+function isTombstoned(id: string): boolean {
+  const ts = tombstones.get(id);
+  if (!ts) return false;
+  if (Date.now() - ts > TOMBSTONE_TTL_MS) {
+    tombstones.delete(id);
+    return false;
+  }
+  return true;
+}
+
 const LAST_SYNC = (uid: string) => `last_sync:${uid}`;
 
 /**
