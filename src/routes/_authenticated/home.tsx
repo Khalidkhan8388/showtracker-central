@@ -7,6 +7,8 @@ import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
+import { useTheme } from "@/lib/theme";
+
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
@@ -372,10 +374,11 @@ function Home() {
             )}
 
             {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
-              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
+              <div className="rounded-[28px] bg-card p-5 ring-1 ring-border/60">
                 <div className="mb-3 flex items-baseline justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Tasks
+
                   </span>
                   <Link
                     to="/tasks"
@@ -562,16 +565,22 @@ const NoteCard = memo(function NoteCard({
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
 
-  // MyMind-style soft tinted palette for text notes — deterministic per note
-  const mymindTints = [
-    "#FFF4E0", // cream
-    "#E8F1E4", // sage
-    "#E4EEF7", // sky
-    "#F3E8F0", // blush
-    "#F6EFE1", // sand
-    "#EAEBF6", // lilac
-    "#FBE9E2", // peach
+  const { isDark } = useTheme();
+  // MyMind-style soft tinted palette for text notes — deterministic per note.
+  // Dark mode uses deeper, desaturated tints that read well on a black background.
+  const mymindTintsLight = [
+    "#FFF4E0", "#E8F1E4", "#E4EEF7", "#F3E8F0", "#F6EFE1", "#EAEBF6", "#FBE9E2",
   ];
+  const mymindTintsDark = [
+    "#2A241A", // warm brown
+    "#1E2A22", // deep sage
+    "#1B2530", // midnight blue
+    "#2A1F27", // plum
+    "#2A2418", // olive sand
+    "#22222E", // indigo
+    "#2C1F1A", // rust
+  ];
+  const mymindTints = isDark ? mymindTintsDark : mymindTintsLight;
   const tintIdx = (() => {
     let h = 0;
     for (let i = 0; i < note.id.length; i++) h = (h * 31 + note.id.charCodeAt(i)) >>> 0;
@@ -618,10 +627,11 @@ const NoteCard = memo(function NoteCard({
   }
 
   const textNoteStyle: React.CSSProperties | undefined = isText
-    ? { backgroundColor: "#ffffff" }
+    ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
     : tintBg
       ? { backgroundColor: tintBg }
       : undefined;
+
 
 
   return (
