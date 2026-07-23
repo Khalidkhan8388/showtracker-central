@@ -435,11 +435,11 @@ function SearchPage() {
         </div>
       </header>
 
-      {/* Scroll body — content is bottom-anchored so results sit just above the search pill */}
+      {/* Scroll body — content is bottom-anchored so results sit above the search pill */}
       <div
         ref={scrollRef}
         className="flex flex-1 flex-col overflow-y-auto px-4 pt-1"
-        style={{ paddingBottom: pillHeight + kbOffset + 16 }}
+        style={{ paddingBottom: pillHeight + kbOffset + 40 }}
       >
         <div ref={sentinelRef} aria-hidden="true" className="h-2" />
         <div className="mt-auto">
