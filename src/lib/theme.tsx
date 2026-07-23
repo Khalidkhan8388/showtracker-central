@@ -106,8 +106,14 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     applyAccent(found);
   };
 
+  const setSizeScale = (id: SizeScaleId) => {
+    localStorage.setItem(SIZE_KEY, id);
+    setSizeScaleState(id);
+    applySize(id);
+  };
+
   return (
-    <Ctx.Provider value={{ mode, setMode, accent, setAccentId, isDark }}>{children}</Ctx.Provider>
+    <Ctx.Provider value={{ mode, setMode, accent, setAccentId, isDark, sizeScale, setSizeScale }}>{children}</Ctx.Provider>
   );
 }
 
