@@ -542,9 +542,11 @@ function SearchPage() {
               {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
             </div>
           )}
-          <div className="flex items-center gap-2 rounded-full bg-[#1a1a1a] pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)] ring-1 ring-white/5">
-            <Search className="h-[18px] w-[18px] shrink-0 text-white/70" strokeWidth={2.25} />
+          <div role="search" aria-label="Search captures" className="flex items-center gap-2 rounded-full bg-white/90 pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/5 dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)]">
+            <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
+            <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>
             <input
+              id="search-input"
               ref={inputRef}
               autoFocus
               value={query}
@@ -560,7 +562,7 @@ function SearchPage() {
                 }
               }}
               placeholder="Search captures, tasks, tags…"
-              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-white placeholder:text-white/40 outline-none"
+              className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/40"
             />
             {query && (
               <button
@@ -569,31 +571,32 @@ function SearchPage() {
                   setAiMode(false);
                   inputRef.current?.focus();
                 }}
-                aria-label="Clear"
-                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white/15 text-white/90 active:opacity-60"
+                aria-label="Clear search"
+                className="inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-black/10 text-neutral-700 active:opacity-60 dark:bg-white/15 dark:text-white/90"
               >
-                <X className="h-3 w-3" strokeWidth={3} />
+                <X aria-hidden="true" className="h-3 w-3" strokeWidth={3} />
               </button>
             )}
-            <div className="mx-1 h-6 w-px shrink-0 bg-white/10" />
+            <div aria-hidden="true" className="mx-1 h-6 w-px shrink-0 bg-black/10 dark:bg-white/10" />
             <button
               onClick={() => runAiSearch()}
               disabled={aiLoading || !query.trim()}
               aria-label="Ask AI"
-              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-white/10 text-white disabled:opacity-40 active:opacity-70"
+              className="relative grid h-11 w-11 shrink-0 place-items-center rounded-full bg-black/5 text-neutral-900 disabled:opacity-40 active:opacity-70 dark:bg-white/10 dark:text-white"
             >
               {aiLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+                <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />
               ) : (
                 <>
-                  <Sparkles className="h-4 w-4" />
+                  <Sparkles aria-hidden="true" className="h-4 w-4" />
                   {query.trim() && (
-                    <span className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-yellow-400" />
+                    <span aria-hidden="true" className="absolute right-1.5 top-1.5 h-1.5 w-1.5 rounded-full bg-yellow-400" />
                   )}
                 </>
               )}
             </button>
           </div>
+
         </div>
       </div>
     </div>
