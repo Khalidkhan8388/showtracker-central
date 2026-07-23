@@ -222,10 +222,10 @@ function Home() {
   const derived = useMemo(() => {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__");
-    const [latest, ...rest] = displayNotes;
-    const pinnedRest = rest.filter((n) => n.pinned);
-    const unpinnedRest = rest.filter((n) => !n.pinned);
+    const pinnedRest = displayNotes.filter((n) => n.pinned);
+    const unpinnedRest = displayNotes.filter((n) => !n.pinned);
     const wall = [...pinnedRest, ...unpinnedRest];
+
 
     const allTasksRaw = notes.flatMap((n) =>
       (n.tasks ?? []).map((t) => ({
@@ -244,7 +244,6 @@ function Home() {
 
     return {
       displayNotes,
-      latest,
       wall,
       suggested,
       allTasks,
@@ -253,6 +252,7 @@ function Home() {
       pct,
       hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
     };
+
   }, [notes]);
 
   const noteCount = notes ? notes.filter((n) => n.heading !== "__custom__").length : 0;
@@ -297,18 +297,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Latest hero */}
-            {derived.latest && (
-              <LatestHero
-                note={derived.latest}
-                thumbUrl={thumbs[derived.latest.id]}
-                selected={selectedNotes.has(derived.latest.id)}
-                selectMode={noteSelectMode}
-                onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                onLongPress={() => toggleNoteSel(derived.latest.id)}
-                onToggleSel={() => toggleNoteSel(derived.latest.id)}
-              />
-            )}
+
 
             {/* Suggested tasks */}
             {derived.suggested.length > 0 && (
