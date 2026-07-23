@@ -239,8 +239,33 @@ function Home() {
     } catch {
       void resync();
     }
-
   }
+
+  async function togglePinSelectedTasks() {
+    const keys = Array.from(selectedTasks);
+    if (keys.length === 0 || !notes) return;
+    const items = keys
+      .map((k) => {
+        const [noteId, taskId] = k.split("::");
+        const n = notes.find((x) => x.id === noteId);
+        const t = n?.tasks?.find((x: any) => x.id === taskId);
+        return t ? { noteId, taskId, pinned: !!t.pinned } : null;
+      })
+      .filter(Boolean) as { noteId: string; taskId: string; pinned: boolean }[];
+    if (items.length === 0) return;
+    const anyUnpinned = items.some((t) => !t.pinned);
+    const nextPinned = anyUnpinned;
+    await Promise.all(items.map((t) => patchLocalTask(t.noteId, t.taskId, { pinned: nextPinned })));
+    setSelectedTasks(new Set());
+    try {
+      await Promise.all(
+        items.map((t) => pinTask({ data: { noteId: t.noteId, taskId: t.taskId, pinned: nextPinned } })),
+      );
+    } catch {
+      void resync();
+    }
+  }
+
 
   const selectMode = noteSelectMode || taskSelectMode;
 
@@ -509,10 +534,10 @@ function Home() {
             >
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
-            {noteSelectMode && (
+            {(noteSelectMode || taskSelectMode) && (
               <button
-                onClick={togglePinSelected}
-                aria-label="Pin selected notes"
+                onClick={noteSelectMode ? togglePinSelected : togglePinSelectedTasks}
+                aria-label="Pin selected"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
                 <Pin aria-hidden="true" className="h-3.5 w-3.5" />
