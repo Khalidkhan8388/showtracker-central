@@ -74,7 +74,7 @@ function TasksPage() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("voice_notes_tasks")
+      .channel(`voice_notes_tasks_${Math.random().toString(36).slice(2)}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "voice_notes" }, () => load())
       .subscribe();
     return () => {

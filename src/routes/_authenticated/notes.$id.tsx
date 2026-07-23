@@ -106,7 +106,7 @@ function NoteDetail() {
     load();
     loadIndex();
     const channel = supabase
-      .channel(`voice_note_${id}`)
+      .channel(`voice_note_${id}_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "voice_notes", filter: `id=eq.${id}` },
