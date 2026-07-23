@@ -441,7 +441,7 @@ function Home() {
               setSelectedTasks(new Set());
             }}
             aria-label="Cancel selection"
-            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10"
+            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full bg-white/90 text-neutral-900 shadow-lg ring-1 ring-black/10 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10"
           >
             <X aria-hidden="true" className="h-4 w-4" />
           </button>
@@ -449,7 +449,7 @@ function Home() {
             <button
               onClick={togglePinSelected}
               aria-label="Pin selected notes"
-              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-neutral-900 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10"
+              className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-white/90 px-4 py-2 text-xs font-semibold text-neutral-900 shadow-lg ring-1 ring-black/10 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10"
             >
               <Pin aria-hidden="true" className="h-3.5 w-3.5" />
               Pin
@@ -458,7 +458,7 @@ function Home() {
 
           <button
             onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
-            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-destructive/85 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg ring-1 ring-destructive/20 backdrop-blur-xl backdrop-saturate-150"
+            className="pointer-events-auto inline-flex items-center gap-2 rounded-full bg-destructive/85 px-4 py-2 text-xs font-semibold text-destructive-foreground shadow-lg ring-1 ring-destructive/20"
           >
             <Trash2 className="h-3.5 w-3.5" />
             Delete

@@ -917,7 +917,7 @@ function NoteDetail() {
           <div
             role="toolbar"
             aria-label="Note actions"
-            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900/85 dark:ring-white/10"
           >
             <button
               onClick={startEdit}

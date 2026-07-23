@@ -573,7 +573,7 @@ function SearchPage() {
               {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
             </div>
           )}
-          <div role="search" aria-label="Search captures" className="flex items-center gap-2 rounded-full bg-white/90 pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/5 dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)]">
+          <div role="search" aria-label="Search captures" className="flex items-center gap-2 rounded-full bg-white/90 pl-5 pr-1.5 py-1.5 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.25)] ring-1 ring-black/10 dark:bg-[#1a1a1a]/90 dark:ring-white/5 dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)]">
             <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
             <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>
             <input
