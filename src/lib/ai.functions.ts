@@ -108,17 +108,6 @@ const AnalyzeInput = z.object({
   skipTasks: z.boolean().optional().default(false),
 });
 
-export const analyzeMediaFn = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) => AnalyzeInput.parse(data))
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-
-    let transcript: string | null = null;
-    if (data.audio) {
-      transcript = await transcribeBytes(data.audio.base64, data.audio.mime, apiKey);
-      if (!transcript) throw new Error("Empty transcription");
-    }
 
 export const analyzeMediaFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AnalyzeInput.parse(data))
