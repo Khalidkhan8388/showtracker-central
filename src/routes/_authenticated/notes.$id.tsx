@@ -520,7 +520,15 @@ function NoteDetail() {
       }
       await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
       await load();
-      toast.success(files.length === 1 ? "Image added" : `${files.length} images added`);
+      toast.success(files.length === 1 ? "Image added — refreshing…" : `${files.length} images added — refreshing…`);
+      // Re-run AI so summary/tasks reflect the new photos.
+      try {
+        await processFn({ data: { noteId: id } });
+        await load();
+        toast.success("Note updated");
+      } catch (err: any) {
+        toast.error(err?.message ?? "Refresh failed");
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
     } finally {
@@ -689,16 +697,7 @@ function NoteDetail() {
                   </a>
                 ))}
               </div>
-            ) : (
-              <button
-                onClick={() => viewAddImagesRef.current?.click()}
-                disabled={addingImages}
-                className="flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-6 text-[13px] text-muted-foreground active:opacity-60 disabled:opacity-50"
-              >
-                <ImagePlus className="h-5 w-5" />
-                Attach photos
-              </button>
-            )}
+            ) : null}
           </section>
         )}
 
