@@ -198,6 +198,9 @@ export async function deleteLocalNotes(ids: string[]): Promise<void> {
   for (const id of ids) {
     await db.notes.update(id, { deleted_at: now, updated_at: now });
   }
+  // Track as pending so a failed server call / offline delete is retried on
+  // next boot and pullSince won't resurrect the row before it confirms.
+  await markPendingDelete(ids);
 }
 
 export async function restoreLocalNotes(ids: string[]): Promise<void> {
@@ -205,12 +208,14 @@ export async function restoreLocalNotes(ids: string[]): Promise<void> {
   for (const id of ids) {
     await db.notes.update(id, { deleted_at: null, updated_at: now });
   }
+  await clearPendingDelete(ids);
 }
 
 export async function hardDeleteLocalNotes(ids: string[]): Promise<void> {
   const now = Date.now();
   for (const id of ids) tombstones.set(id, now);
   await db.notes.bulkDelete(ids);
+  await clearPendingDelete(ids);
 }
 
 export async function patchLocalTask(
