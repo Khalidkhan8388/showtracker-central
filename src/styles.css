@@ -247,8 +247,17 @@
 }
 
 .route-enter {
-  animation: route-enter 180ms ease-out backwards;
+  animation: route-enter 160ms ease-out backwards;
+  will-change: opacity;
 }
+
+/* Fixed bottom pills sit inside .route-enter; promote them to their own
+ * compositor layer so shadows / ring / blur paint in the same frame as
+ * the route fade instead of appearing a tick later. */
+.route-enter .fixed {
+  transform: translateZ(0);
+}
+
 
 @keyframes card-pop {
   0% { opacity: 0; transform: translateY(10px) scale(0.97); }
