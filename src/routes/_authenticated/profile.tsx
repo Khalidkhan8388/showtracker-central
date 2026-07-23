@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
+import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
@@ -19,6 +20,10 @@ function ProfilePage() {
   const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   async function confirmDelete() {
@@ -34,6 +39,41 @@ function ProfilePage() {
       toast.error(e instanceof Error ? e.message : "Failed to wipe data");
     }
   }
+
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadExport();
+      toast.success("Backup downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function pickImport(mode: ImportMode) {
+    setImportMode(mode);
+    fileInputRef.current?.click();
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !importMode) return;
+    setImporting(true);
+    try {
+      const summary = await importFromFile(file, importMode);
+      toast.success(`Imported ${summary.notes} notes, ${summary.photos + summary.audios} files`);
+      if (typeof window !== "undefined") window.location.assign("/home");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+      setImportMode(null);
+    }
+  }
+
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
@@ -137,7 +177,31 @@ function ProfilePage() {
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+          >
+            {exporting ? <Loader2 className="h-5 w-5 animate-spin text-foreground/70" /> : <Download className="h-5 w-5 text-foreground/70" />}
+            <span className="flex-1 text-[15px]">{exporting ? "Exporting…" : "Export backup"}</span>
+          </button>
+          <button
+            onClick={() => pickImport("merge")}
+            disabled={importing}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+          >
+            {importing ? <Loader2 className="h-5 w-5 animate-spin text-foreground/70" /> : <Upload className="h-5 w-5 text-foreground/70" />}
+            <span className="flex-1 text-[15px]">{importing ? "Importing…" : "Import (merge)"}</span>
+          </button>
+          <button
+            onClick={() => pickImport("replace")}
+            disabled={importing}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive active:bg-muted/50 disabled:opacity-60"
+          >
+            <Upload className="h-5 w-5" />
+            <span className="flex-1 text-[15px]">Import & replace all</span>
+          </button>
           <Link
             to={"/profile/trash" as any}
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
@@ -147,8 +211,15 @@ function ProfilePage() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
         <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-          Deleted notes stay recoverable for 30 days.
+          Backup includes every note, photo, and voice clip on this device. Deleted notes stay recoverable for 30 days.
         </p>
       </section>
 
