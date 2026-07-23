@@ -14,6 +14,8 @@ import {
 } from "./ai.functions";
 import { evictPhoto, readPhotoBytes, storeLocalPhoto } from "./photo-cache";
 import { evictAudio, readAudioBytes, storeLocalAudio } from "./audio-cache";
+import { purgeNoteFromAllCollections } from "./collections.functions";
+
 
 // ---------------------------------------------------------------------------
 // helpers
