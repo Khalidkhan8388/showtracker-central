@@ -130,7 +130,7 @@ function Home() {
   useEffect(() => {
     load();
     const channel = supabase
-      .channel("voice_notes_home")
+      .channel(`voice_notes_home_${Math.random().toString(36).slice(2)}`)
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "voice_notes" },
