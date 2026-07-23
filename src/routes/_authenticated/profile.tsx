@@ -20,6 +20,10 @@ function ProfilePage() {
   const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  const [importMode, setImportMode] = useState<ImportMode | null>(null);
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   async function confirmDelete() {
