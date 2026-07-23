@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
+import { useLocalNotes } from "@/hooks/use-local-notes";
+import { patchLocalTask, deleteLocalTasks, resync } from "@/lib/sync-engine";
 
 const CUSTOM_HEADING = "__custom__";
 
@@ -53,7 +54,8 @@ function useLongPress(onLongPress: () => void, ms = 450) {
 }
 
 function TasksPage() {
-  const [notes, setNotes] = useState<Note[] | null>(null);
+  const localNotes = useLocalNotes();
+  const notes = (localNotes ?? null) as Note[] | null;
   const [selected, setSelected] = useState<Set<TaskKey>>(new Set());
   const [newTask, setNewTask] = useState("");
   const toggleFn = useServerFn(toggleTask);
@@ -63,52 +65,21 @@ function TasksPage() {
   const addFn = useServerFn(addCustomTask);
   const selectMode = selected.size > 0;
 
-  async function load() {
-    const { data } = await supabase
-      .from("voice_notes")
-      .select("id,heading,tasks,created_at")
-      .order("created_at", { ascending: false });
-    setNotes((data ?? []) as Note[]);
-  }
-
-  useEffect(() => {
-    load();
-    const channel = supabase
-      .channel(`voice_notes_tasks_${Math.random().toString(36).slice(2)}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "voice_notes" }, () => load())
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  function patchTask(noteId: string, taskId: string, patch: Partial<Task>) {
-    setNotes((prev) =>
-      prev
-        ? prev.map((n) =>
-            n.id === noteId
-              ? { ...n, tasks: (n.tasks ?? []).map((t) => (t.id === taskId ? { ...t, ...patch } : t)) }
-              : n,
-          )
-        : prev,
-    );
-  }
-
   async function onToggle(noteId: string, taskId: string, done: boolean) {
-    patchTask(noteId, taskId, { done: !done });
+    await patchLocalTask(noteId, taskId, { done: !done });
     try {
       await toggleFn({ data: { noteId, taskId } });
     } catch {
-      load();
+      void resync();
     }
   }
 
   async function onPin(noteId: string, taskId: string, pinned: boolean) {
-    patchTask(noteId, taskId, { pinned: !pinned });
+    await patchLocalTask(noteId, taskId, { pinned: !pinned });
     try {
       await pinFn({ data: { noteId, taskId } });
     } catch {
-      load();
+      void resync();
     }
   }
 
@@ -127,29 +98,21 @@ function TasksPage() {
       return { noteId, taskId };
     });
     if (items.length === 0) return;
-    const keys = new Set(selected);
-    setNotes((prev) =>
-      prev
-        ? prev.map((n) => ({
-            ...n,
-            tasks: (n.tasks ?? []).filter((t) => !keys.has(`${n.id}::${t.id}`)),
-          }))
-        : prev,
-    );
+    await deleteLocalTasks(items);
     setSelected(new Set());
     try {
       await delFn({ data: { tasks: items } });
     } catch {
-      load();
+      void resync();
     }
   }
 
   async function onEdit(noteId: string, taskId: string, text: string) {
-    patchTask(noteId, taskId, { text });
+    await patchLocalTask(noteId, taskId, { text });
     try {
       await editFn({ data: { noteId, taskId, text } });
     } catch {
-      load();
+      void resync();
     }
   }
 
@@ -159,11 +122,12 @@ function TasksPage() {
     setNewTask("");
     try {
       await addFn({ data: { text } });
-      load();
+      void resync();
     } catch {
       setNewTask(text);
     }
   }
+
 
   const allTasks = (notes ?? []).flatMap((n) =>
     (n.tasks ?? [])
