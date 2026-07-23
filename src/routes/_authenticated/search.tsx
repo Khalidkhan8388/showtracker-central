@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
+import { useTheme } from "@/lib/theme";
+
 import {
   Search,
   ArrowLeft,
@@ -177,7 +179,9 @@ function CaptureCard({
   }
 
   // Text / voice tint card
-  const bg = tintFor(note.id);
+  const { isDark } = useTheme();
+  const bg = tintFor(note.id, isDark);
+
   return (
     <button
       onClick={onOpen}
