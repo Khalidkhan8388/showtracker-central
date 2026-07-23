@@ -109,6 +109,7 @@ async function fetchDetails(key: string, type: "movie" | "tv", id: number, origi
         const s = await tmdbGet(`/tv/${id}/season/${sn}`, key);
         const episodes: TmdbEpisode[] = Array.isArray(s.episodes)
           ? s.episodes.map((e: any) => ({
+              season_number: s.season_number,
               episode_number: e.episode_number,
               name: e.name ?? `Episode ${e.episode_number}`,
               overview: e.overview ?? "",
