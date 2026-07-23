@@ -250,7 +250,7 @@ function TasksPage() {
           <button
             onClick={() => setSelected(new Set())}
             aria-label="Cancel selection"
-            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5"
+            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5 backdrop-blur-xl"
           >
             Cancel
           </button>
