@@ -534,10 +534,10 @@ function Home() {
             >
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
-            {noteSelectMode && (
+            {(noteSelectMode || taskSelectMode) && (
               <button
-                onClick={togglePinSelected}
-                aria-label="Pin selected notes"
+                onClick={noteSelectMode ? togglePinSelected : togglePinSelectedTasks}
+                aria-label="Pin selected"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
                 <Pin aria-hidden="true" className="h-3.5 w-3.5" />
