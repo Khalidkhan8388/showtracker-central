@@ -97,22 +97,25 @@ function Home() {
   async function onToggle(noteId: string, taskId: string) {
     const note = notes?.find((n) => n.id === noteId);
     const cur = note?.tasks?.find((t) => t.id === taskId);
-    await patchLocalTask(noteId, taskId, { done: !(cur?.done ?? false) });
+    const nextDone = !(cur?.done ?? false);
+    await patchLocalTask(noteId, taskId, { done: nextDone });
     try {
-      await toggleFn({ data: { noteId, taskId } });
+      await toggleFn({ data: { noteId, taskId, done: nextDone } });
     } catch {
       void resync();
     }
   }
 
   async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
-    await patchLocalTask(noteId, taskId, { pinned: !pinned });
+    const nextPinned = !pinned;
+    await patchLocalTask(noteId, taskId, { pinned: nextPinned });
     try {
-      await pinTask({ data: { noteId, taskId } });
+      await pinTask({ data: { noteId, taskId, pinned: nextPinned } });
     } catch {
       void resync();
     }
   }
+
 
   // Sign only images we haven't signed yet — cache is keyed by storage path so
   // Signed URL cache is module-level so it survives route unmounts/remounts;
