@@ -264,21 +264,28 @@ function Home() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       {/* iOS large-title header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
           <div className="min-w-0">
             <h1
-              className={`font-bold tracking-tight leading-none transition-all duration-200 ${
-                collapsed ? "text-[20px]" : "text-[32px]"
-              }`}
+              style={{
+                transform: collapsed ? "scale(0.625)" : "scale(1)",
+                transformOrigin: "left center",
+                willChange: "transform",
+              }}
+              className="font-bold tracking-tight leading-none text-[32px] transition-transform duration-200 ease-out motion-reduce:transition-none"
             >
               Braintape
             </h1>
             {notes && notes.length > 0 && (
               <p
-                className={`overflow-hidden text-muted-foreground transition-all duration-200 ${
-                  collapsed ? "mt-0 max-h-0 opacity-0" : "mt-1 max-h-5 text-[13px] opacity-100"
-                }`}
+                style={{
+                  opacity: collapsed ? 0 : 1,
+                  height: collapsed ? 0 : "1.25rem",
+                  marginTop: collapsed ? 0 : "0.25rem",
+                  willChange: "opacity",
+                }}
+                className="overflow-hidden text-[13px] text-muted-foreground transition-opacity duration-150 ease-out motion-reduce:transition-none"
               >
                 {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
               </p>
