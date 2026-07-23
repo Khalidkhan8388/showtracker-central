@@ -1016,7 +1016,7 @@ const NoteCard = memo(function NoteCard({
             decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 scrim-t" />
           {imageCount > 1 && (
             <div className="absolute left-2 top-2 z-10 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               +{imageCount - 1}
