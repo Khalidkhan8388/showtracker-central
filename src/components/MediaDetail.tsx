@@ -44,25 +44,34 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
       {/* Backdrop hero */}
       <div className="relative -mx-5 aspect-[16/9] overflow-hidden bg-neutral-900">
         {backdropUrl ? (
-          <img src={backdropUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-70" />
+          <img
+            src={backdropUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-70"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
         ) : posterUrl ? (
-          <img src={posterUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 blur-2xl scale-110" />
+          <img
+            src={posterUrl}
+            alt=""
+            className="absolute inset-0 h-full w-full object-cover opacity-40 blur-2xl scale-110"
+            onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
+          />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       </div>
 
-      <div className="-mt-24 flex items-end gap-4 px-1">
-        {posterUrl ? (
-          <img
-            src={posterUrl}
-            alt={media.title}
-            className="h-40 w-28 shrink-0 rounded-2xl object-cover shadow-2xl ring-1 ring-black/20"
-          />
-        ) : (
-          <div className="flex h-40 w-28 shrink-0 items-center justify-center rounded-2xl bg-neutral-800 text-white/40 shadow-2xl">
-            {isTv ? <Tv className="h-8 w-8" /> : <Film className="h-8 w-8" />}
-          </div>
-        )}
+      <div className="-mt-20 flex items-end gap-4 px-1">
+        <div
+          className="relative h-40 w-28 shrink-0 overflow-hidden rounded-2xl bg-neutral-800 shadow-2xl ring-1 ring-black/20"
+          style={posterUrl ? { backgroundImage: `url(${posterUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
+        >
+          {!posterUrl && (
+            <div className="flex h-full w-full items-center justify-center text-white/40">
+              {isTv ? <Tv className="h-8 w-8" /> : <Film className="h-8 w-8" />}
+            </div>
+          )}
+        </div>
         <div className="min-w-0 flex-1 pb-1">
           <div className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
