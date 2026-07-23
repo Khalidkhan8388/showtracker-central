@@ -55,6 +55,12 @@ class BraintapeDB extends Dexie {
       meta: "key",
       photos: "path, cachedAt, size",
     });
+    // v3: index deleted_at so trash & active queries are cheap.
+    this.version(3).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+    });
   }
 }
 
