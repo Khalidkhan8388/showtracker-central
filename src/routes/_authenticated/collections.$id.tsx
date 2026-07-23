@@ -374,10 +374,14 @@ function CollectionDetail() {
             ) : (
               <ul className="grid grid-cols-2 gap-3">
                 {members.map((n) => {
-                  const media = (n as any).media as { poster_path?: string | null; title?: string } | undefined;
+                  const media = (n as any).media as import("@/lib/local-db").LocalMedia | undefined;
                   const posterUrl = media?.poster_path ? tmdbPoster(media.poster_path, "w342") : null;
                   const thumb = thumbs[n.id];
                   const isMedia = !!posterUrl;
+                  const isTvMedia = media?.type === "tv";
+                  const tvTotal = isTvMedia ? mediaTotal(media!) : 0;
+                  const tvDone = isTvMedia ? mediaDone(media!) : 0;
+                  const tvPct = tvTotal > 0 ? Math.round((tvDone / tvTotal) * 100) : 0;
                   return (
                     <li key={n.id} className="relative">
                       <Link
@@ -393,12 +397,31 @@ function CollectionDetail() {
                               loading="lazy"
                               className="absolute inset-0 h-full w-full object-cover"
                             />
+                            {media?.watch_status && (
+                              <div className="absolute left-1.5 top-1.5 z-10">
+                                <span className={`rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
+                                  {WATCH_LABEL[media.watch_status]}
+                                </span>
+                              </div>
+                            )}
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-2.5 pt-8">
                               <p className="line-clamp-2 text-[12px] font-semibold text-white">
                                 {media?.title ?? n.heading ?? "Untitled"}
                               </p>
+                              {isTvMedia && tvTotal > 0 && (
+                                <div className="mt-1.5">
+                                  <div className="flex items-center justify-between text-[10px] font-medium text-white/85">
+                                    <span>{tvDone}/{tvTotal} ep</span>
+                                    <span>{tvPct}%</span>
+                                  </div>
+                                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
+                                    <div className="h-full rounded-full bg-white" style={{ width: `${tvPct}%` }} />
+                                  </div>
+                                </div>
+                              )}
                             </div>
                           </>
+
                         ) : thumb ? (
                           <>
                             <img
