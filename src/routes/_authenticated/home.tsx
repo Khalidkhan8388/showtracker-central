@@ -825,6 +825,29 @@ const NoteCard = memo(function NoteCard({
     onOpen();
   };
 
+  // Media (movie / TV) short-circuit — dedicated card, no shared chrome.
+  const media = (note as any).media as import("@/lib/local-db").LocalMedia | null | undefined;
+  if (media) {
+    const sizing = variant === "wide" || variant === "hero"
+      ? "aspect-[16/9] w-full"
+      : variant === "masonry"
+        ? "aspect-[2/3] w-full"
+        : fullWidth
+          ? "aspect-square w-full"
+          : "aspect-[2/3] w-40 shrink-0";
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        {...lp.handlers}
+        className={`${sizing} cursor-pointer select-none`}
+      >
+        <MediaCard media={media} selectMode={selectMode} selected={selected} pinned={note.pinned} variant={variant === "masonry" ? "grid" : "row"} />
+      </div>
+    );
+  }
+
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
   const isVoice = note.duration_seconds != null;
