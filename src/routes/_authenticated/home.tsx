@@ -46,6 +46,22 @@ type TaskKey = string; // `${noteId}::${taskId}`
 function Home() {
   const localNotes = useLocalNotes();
   const notes = (localNotes ?? null) as Note[] | null;
+  const [hideMedia, setHideMedia] = useState(false);
+  useEffect(() => {
+    const read = () => setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
+    read();
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === "hide-media-on-home") read();
+    };
+    const onCustom = () => read();
+    window.addEventListener("storage", onStorage);
+    window.addEventListener("braintape:pref-changed", onCustom);
+    return () => {
+      window.removeEventListener("storage", onStorage);
+      window.removeEventListener("braintape:pref-changed", onCustom);
+    };
+  }, []);
+
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
