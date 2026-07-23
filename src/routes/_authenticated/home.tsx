@@ -8,6 +8,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
+import { getCachedSignedUrl, signPath } from "@/lib/signed-url-cache";
 
 
 export const Route = createFileRoute("/_authenticated/home")({
