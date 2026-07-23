@@ -9,6 +9,9 @@ import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.funct
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedSignedUrl, signPath } from "@/lib/signed-url-cache";
+import { useLocalNotes } from "@/hooks/use-local-notes";
+import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync } from "@/lib/sync-engine";
+
 
 
 export const Route = createFileRoute("/_authenticated/home")({
@@ -38,7 +41,8 @@ type Note = {
 type TaskKey = string; // `${noteId}::${taskId}`
 
 function Home() {
-  const [notes, setNotes] = useState<Note[] | null>(null);
+  const localNotes = useLocalNotes();
+  const notes = (localNotes ?? null) as Note[] | null;
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
@@ -61,19 +65,13 @@ function Home() {
 
 
   async function onToggle(noteId: string, taskId: string) {
-    setNotes((prev) =>
-      prev
-        ? prev.map((n) =>
-            n.id === noteId
-              ? { ...n, tasks: (n.tasks ?? []).map((t) => (t.id === taskId ? { ...t, done: !t.done } : t)) }
-              : n,
-          )
-        : prev,
-    );
+    const note = notes?.find((n) => n.id === noteId);
+    const cur = note?.tasks?.find((t) => t.id === taskId);
+    await patchLocalTask(noteId, taskId, { done: !(cur?.done ?? false) });
     try {
       await toggleFn({ data: { noteId, taskId } });
     } catch {
-      load();
+      void resync();
     }
   }
 
@@ -110,46 +108,10 @@ function Home() {
     });
   }, []);
 
-  const load = useCallback(async () => {
-    const { data } = await supabase
-      .from("voice_notes")
-      .select("id,status,heading,summary,tasks,duration_seconds,created_at,pinned,image_paths,source_url,transcript")
-      .order("created_at", { ascending: false });
-    const rows = (data ?? []) as Note[];
-    setNotes(rows);
-    signThumbsFor(rows);
-  }, [signThumbsFor]);
-
+  // Whenever the local note set changes, re-check thumbnails for new rows.
   useEffect(() => {
-    load();
-    const channel = supabase
-      .channel(`voice_notes_home_${Math.random().toString(36).slice(2)}`)
-      .on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "voice_notes" },
-        (payload) => {
-          const event = payload.eventType;
-          if (event === "INSERT") {
-            const row = payload.new as Note;
-            setNotes((prev) => (prev ? [row, ...prev.filter((n) => n.id !== row.id)] : [row]));
-            signThumbsFor([row]);
-          } else if (event === "UPDATE") {
-            const row = payload.new as Note;
-            setNotes((prev) => (prev ? prev.map((n) => (n.id === row.id ? row : n)) : prev));
-            signThumbsFor([row]);
-          } else if (event === "DELETE") {
-            const oldRow = payload.old as { id?: string };
-            if (oldRow?.id) {
-              setNotes((prev) => (prev ? prev.filter((n) => n.id !== oldRow.id) : prev));
-            }
-          }
-        },
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [load, signThumbsFor]);
+    if (notes) signThumbsFor(notes);
+  }, [notes, signThumbsFor]);
 
   const [userInitial, setUserInitial] = useState<string>("?");
   useEffect(() => {
@@ -183,12 +145,12 @@ function Home() {
   async function confirmDeleteNotes() {
     const ids = Array.from(selectedNotes);
     if (ids.length === 0) return;
-    setNotes((prev) => (prev ? prev.filter((n) => !selectedNotes.has(n.id)) : prev));
+    await deleteLocalNotes(ids);
     setSelectedNotes(new Set());
     try {
       await delNotesFn({ data: { noteIds: ids } });
     } catch {
-      load();
+      void resync();
     }
   }
 
@@ -198,20 +160,12 @@ function Home() {
       return { noteId, taskId };
     });
     if (items.length === 0) return;
-    const keys = new Set(selectedTasks);
-    setNotes((prev) =>
-      prev
-        ? prev.map((n) => ({
-            ...n,
-            tasks: (n.tasks ?? []).filter((t) => !keys.has(`${n.id}::${t.id}`)),
-          }))
-        : prev,
-    );
+    await deleteLocalTasks(items);
     setSelectedTasks(new Set());
     try {
       await delTasksFn({ data: { tasks: items } });
     } catch {
-      load();
+      void resync();
     }
   }
 
@@ -221,15 +175,14 @@ function Home() {
     // If any selected is unpinned, pin all; otherwise unpin all.
     const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
     const nextPinned = anyUnpinned;
-    setNotes((prev) =>
-      prev ? prev.map((n) => (selectedNotes.has(n.id) ? { ...n, pinned: nextPinned } : n)) : prev,
-    );
+    await Promise.all(ids.map((id) => patchLocalNote(id, { pinned: nextPinned })));
     setSelectedNotes(new Set());
     try {
       await Promise.all(ids.map((noteId) => pinNoteFn({ data: { noteId, pinned: nextPinned } })));
     } catch {
-      load();
+      void resync();
     }
+
   }
 
   const selectMode = noteSelectMode || taskSelectMode;
@@ -472,7 +425,7 @@ function Home() {
           </button>
         </div>
       ) : (
-        <Recorder onNoteReady={load} />
+        <Recorder onNoteReady={() => { void resync(); }} />
       )}
     </div>
   );

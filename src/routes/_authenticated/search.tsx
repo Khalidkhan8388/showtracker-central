@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useLocalNotes } from "@/hooks/use-local-notes";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
 import { useTheme } from "@/lib/theme";
@@ -217,7 +217,11 @@ function CaptureCard({
 function SearchPage() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
-  const [notes, setNotes] = useState<Note[]>([]);
+  const localNotes = useLocalNotes();
+  const notes = useMemo<Note[]>(
+    () => ((localNotes ?? []) as Note[]).filter((n) => n.heading !== "__custom__"),
+    [localNotes],
+  );
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
@@ -230,14 +234,8 @@ function SearchPage() {
 
   useEffect(() => {
     setRecents(loadRecents());
-    supabase
-      .from("voice_notes")
-      .select("id, heading, summary, tags, tasks, audio_path, image_paths, source_url, created_at")
-      .order("created_at", { ascending: false })
-      .then(({ data }) => {
-        setNotes(((data ?? []) as Note[]).filter((n) => n.heading !== "__custom__"));
-      });
   }, []);
+
 
   const signInFlightRef = useRef<Set<string>>(new Set());
   const signThumbsFor = useCallback((rows: Note[]) => {

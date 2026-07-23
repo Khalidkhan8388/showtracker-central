@@ -1,0 +1,140 @@
+import { supabase } from "@/integrations/supabase/client";
+import { db, normalizeRow, type LocalNote, type LocalTask } from "./local-db";
+
+// Module-level singletons — sync runs once per browser tab regardless of
+// how many components mount the hook.
+let started = false;
+let currentUserId: string | null = null;
+let channel: ReturnType<typeof supabase.channel> | null = null;
+let pulling: Promise<void> | null = null;
+
+const LAST_SYNC = (uid: string) => `last_sync:${uid}`;
+
+/**
+ * Boot the sync engine. Idempotent — safe to call from every hook mount.
+ * Hydrates Dexie with the current user's rows, then attaches a realtime
+ * channel that streams future changes into Dexie.
+ */
+export async function startSync(): Promise<void> {
+  if (started) return;
+  started = true;
+
+  const { data } = await supabase.auth.getUser();
+  await switchUser(data.user?.id ?? null);
+
+  supabase.auth.onAuthStateChange((evt, session) => {
+    if (evt !== "SIGNED_IN" && evt !== "SIGNED_OUT" && evt !== "USER_UPDATED") return;
+    const nextUid = session?.user?.id ?? null;
+    if (nextUid !== currentUserId) void switchUser(nextUid);
+  });
+}
+
+async function switchUser(uid: string | null) {
+  currentUserId = uid;
+  if (channel) {
+    supabase.removeChannel(channel);
+    channel = null;
+  }
+  if (!uid) {
+    // Signed out — clear the local mirror so the next user doesn't see stale rows.
+    await db.notes.clear();
+    await db.meta.clear();
+    return;
+  }
+  await pullSince(uid);
+  attachRealtime(uid);
+}
+
+async function pullSince(uid: string): Promise<void> {
+  if (pulling) return pulling;
+  pulling = (async () => {
+    try {
+      const meta = await db.meta.get(LAST_SYNC(uid));
+      const since = meta?.value ?? null;
+      let q = supabase
+        .from("voice_notes")
+        .select("*")
+        .eq("user_id", uid)
+        .order("updated_at", { ascending: true });
+      if (since) q = q.gt("updated_at", since);
+      const { data, error } = await q;
+      if (error || !data) return;
+      if (data.length > 0) {
+        const rows = data.map((r) => normalizeRow(r as Record<string, unknown>));
+        await db.notes.bulkPut(rows);
+        const newest = rows.reduce((a, r) => (r.updated_at > a ? r.updated_at : a), since ?? "");
+        if (newest) await db.meta.put({ key: LAST_SYNC(uid), value: newest });
+      }
+    } finally {
+      pulling = null;
+    }
+  })();
+  return pulling;
+}
+
+function attachRealtime(uid: string) {
+  channel = supabase
+    .channel(`sync_${uid}_${Math.random().toString(36).slice(2)}`)
+    .on(
+      "postgres_changes",
+      { event: "*", schema: "public", table: "voice_notes", filter: `user_id=eq.${uid}` },
+      async (payload) => {
+        if (payload.eventType === "DELETE") {
+          const oldRow = payload.old as { id?: string };
+          if (oldRow?.id) await db.notes.delete(oldRow.id);
+          return;
+        }
+        const row = normalizeRow(payload.new as Record<string, unknown>);
+        await db.notes.put(row);
+        const cur = await db.meta.get(LAST_SYNC(uid));
+        if (!cur || row.updated_at > cur.value) {
+          await db.meta.put({ key: LAST_SYNC(uid), value: row.updated_at });
+        }
+      },
+    )
+    .subscribe();
+}
+
+/** Force a re-pull from Supabase — used to roll back after a failed mutation. */
+export async function resync(): Promise<void> {
+  if (currentUserId) await pullSince(currentUserId);
+}
+
+/* ------------------------------ optimistic writes ------------------------------ */
+/*  UI mutations write to Dexie first (instant), then the caller fires the        */
+/*  server function. If it fails, the caller calls resync() to roll back.         */
+/* ------------------------------------------------------------------------------ */
+
+export async function patchLocalNote(id: string, patch: Partial<LocalNote>): Promise<void> {
+  const now = new Date().toISOString();
+  await db.notes.update(id, { ...patch, updated_at: now });
+}
+
+export async function deleteLocalNotes(ids: string[]): Promise<void> {
+  await db.notes.bulkDelete(ids);
+}
+
+export async function patchLocalTask(
+  noteId: string,
+  taskId: string,
+  patch: Partial<LocalTask>,
+): Promise<void> {
+  const note = await db.notes.get(noteId);
+  if (!note) return;
+  const tasks = (note.tasks ?? []).map((t) => (t.id === taskId ? { ...t, ...patch } : t));
+  await patchLocalNote(noteId, { tasks });
+}
+
+export async function deleteLocalTasks(items: Array<{ noteId: string; taskId: string }>): Promise<void> {
+  const byNote = new Map<string, Set<string>>();
+  for (const { noteId, taskId } of items) {
+    if (!byNote.has(noteId)) byNote.set(noteId, new Set());
+    byNote.get(noteId)!.add(taskId);
+  }
+  for (const [noteId, taskIds] of byNote) {
+    const note = await db.notes.get(noteId);
+    if (!note) continue;
+    const tasks = (note.tasks ?? []).filter((t) => !taskIds.has(t.id));
+    await patchLocalNote(noteId, { tasks });
+  }
+}
