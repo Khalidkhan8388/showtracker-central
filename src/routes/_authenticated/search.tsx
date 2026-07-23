@@ -231,6 +231,7 @@ function SearchPage() {
   const [recents, setRecents] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
+  const [pillHeight, setPillHeight] = useState(140);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
