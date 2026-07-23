@@ -71,21 +71,20 @@ function KindIcon({ kind, className }: { kind: ReturnType<typeof kindOf>; classN
   return <FileText className={cls} />;
 }
 
-// Soft deterministic pastel for text/voice capture cards
-const CAPTURE_TINTS = [
-  "#F4EFE6", // sand
-  "#EDE7DC", // linen
-  "#E8E4DA", // stone
-  "#F1EAD9", // cream
-  "#E9EDE4", // sage
-  "#EDE6E6", // blush
-  "#E4E7ED", // mist
+// Soft deterministic pastel for text/voice capture cards (light + dark palettes)
+const CAPTURE_TINTS_LIGHT = [
+  "#F4EFE6", "#EDE7DC", "#E8E4DA", "#F1EAD9", "#E9EDE4", "#EDE6E6", "#E4E7ED",
 ];
-function tintFor(id: string) {
+const CAPTURE_TINTS_DARK = [
+  "#26221B", "#221E17", "#1F1C16", "#25201A", "#1D2320", "#241E1E", "#1B1F26",
+];
+function tintFor(id: string, dark: boolean) {
+  const palette = dark ? CAPTURE_TINTS_DARK : CAPTURE_TINTS_LIGHT;
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
-  return CAPTURE_TINTS[h % CAPTURE_TINTS.length];
+  return palette[h % palette.length];
 }
+
 
 function hostOf(url: string | null | undefined) {
   if (!url) return "";
