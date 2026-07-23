@@ -36,5 +36,21 @@ function AuthGate() {
     );
   }
 
-  return <Outlet />;
+  return <RouteFader />;
 }
+
+/**
+ * Cheap enter-only fade+lift keyed by pathname. No exit animation, so it
+ * never renders the outgoing route with new params (which was the source
+ * of the earlier navigation crashes). Uses the Tailwind `fade-in`
+ * keyframe already registered in the design system.
+ */
+function RouteFader() {
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  return (
+    <div key={pathname} className="animate-fade-in">
+      <Outlet />
+    </div>
+  );
+}
+
