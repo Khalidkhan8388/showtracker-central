@@ -752,6 +752,34 @@ export const updateTextNote = createServerFn({ method: "POST" })
     return { ok: true as const };
   });
 
+const AppendImagesInput = z.object({
+  noteId: z.string().uuid(),
+  imagePaths: z.array(z.string().min(1).max(500)).min(1).max(20),
+});
+
+export const appendImagesToNote = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => AppendImagesInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabase } = context;
+    const { data: row, error: selErr } = await supabase
+      .from("voice_notes")
+      .select("image_paths")
+      .eq("id", data.noteId)
+      .single();
+    if (selErr || !row) throw new Error(selErr?.message ?? "Note not found");
+    const existing = Array.isArray((row as any).image_paths)
+      ? ((row as any).image_paths as unknown[]).filter((p): p is string => typeof p === "string" && !!p)
+      : [];
+    const merged = [...existing, ...data.imagePaths].slice(0, 40);
+    const { error } = await supabase
+      .from("voice_notes")
+      .update({ image_paths: merged })
+      .eq("id", data.noteId);
+    if (error) throw new Error(error.message);
+    return { ok: true as const, imagePaths: merged };
+  });
+
 const GenerateLinkLabelInput = z.object({ url: z.string().trim().url().max(2000) });
 
 export const generateLinkLabel = createServerFn({ method: "POST" })
