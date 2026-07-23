@@ -459,7 +459,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const disabled = busy;
 
   return (
-    <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex flex-col items-center gap-2 px-5">
+    <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40">
+      {/* Ancillary pills stack ABOVE the main pill without pushing it */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-[104px] flex flex-col items-center gap-2 px-5">
+
       {pending.length > 0 && (
         <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10">
           {pending.map((p, i) => (
@@ -687,8 +690,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         </div>
       )}
 
+      </div>
 
-
+      {/* Main pill — fixed position, only resizes */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center px-5">
       <div
         role="toolbar"
         aria-label="Capture actions"
@@ -701,6 +706,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             : "bg-white/85 ring-black/10 dark:bg-neutral-900/85 dark:ring-white/10"
         }`}
       >
+
         <input
           ref={fileRef}
           type="file"
@@ -776,8 +782,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           <span className={`font-semibold tracking-tight tabular-nums ${shrunk ? "text-xs" : "text-sm"}`}>{label}</span>
         </button>
       </div>
+      </div>
 
     </div>
+
   );
 }
 
