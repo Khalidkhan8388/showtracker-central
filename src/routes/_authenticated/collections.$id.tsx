@@ -44,6 +44,44 @@ function CollectionDetail() {
     [notes, memberIds],
   );
 
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  useEffect(() => {
+    const paths: string[] = [];
+    const pairs: Array<{ id: string; path: string }> = [];
+    for (const n of members) {
+      const p = Array.isArray((n as any).image_paths) ? (n as any).image_paths[0] : null;
+      if (!p) continue;
+      paths.push(p);
+      pairs.push({ id: n.id, path: p });
+    }
+    if (!paths.length) return;
+    // Prime from in-memory cache immediately
+    setThumbs((cur) => {
+      let next = cur;
+      for (const { id: nid, path } of pairs) {
+        const u = getCachedPhotoUrl(path);
+        if (u && next[nid] !== u) {
+          if (next === cur) next = { ...cur };
+          next[nid] = u;
+        }
+      }
+      return next;
+    });
+    void warmPhotoCache(paths).then(() => {
+      setThumbs((cur) => {
+        let next = cur;
+        for (const { id: nid, path } of pairs) {
+          const u = getCachedPhotoUrl(path);
+          if (u && next[nid] !== u) {
+            if (next === cur) next = { ...cur };
+            next[nid] = u;
+          }
+        }
+        return next;
+      });
+    });
+  }, [members]);
+
   if (collection === null) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-3 bg-background p-6 text-center">
