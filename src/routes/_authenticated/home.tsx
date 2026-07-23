@@ -1163,14 +1163,15 @@ const NoteCard = memo(function NoteCard({
 
           <div
             className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
+              hasImage && !isLink ? "scrim-fg-80" : "text-muted-foreground"
             }`}
           >
             {hasImage && !isLink && (
-              <h3 className="text-[13px] font-semibold leading-tight break-words text-white drop-shadow line-clamp-3 pr-5">
+              <h3 className="text-[13px] font-semibold leading-tight break-words scrim-fg line-clamp-3 pr-5">
                 {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             )}
+
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
