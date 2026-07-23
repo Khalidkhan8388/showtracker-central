@@ -780,6 +780,30 @@ export const appendImagesToNote = createServerFn({ method: "POST" })
     return { ok: true as const, imagePaths: merged };
   });
 
+const TranscribeClipInput = z.object({
+  audioPath: z.string().min(1).max(500),
+});
+
+export const transcribeAudioClip = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((data: unknown) => TranscribeClipInput.parse(data))
+  .handler(async ({ data, context }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { userId } = context;
+    if (!data.audioPath.startsWith(`${userId}/`)) throw new Error("Forbidden");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: file, error: dlErr } = await supabaseAdmin.storage
+      .from("voice-notes")
+      .download(data.audioPath);
+    if (dlErr || !file) throw new Error(`Download failed: ${dlErr?.message ?? "no file"}`);
+    const bytes = new Uint8Array(await file.arrayBuffer());
+    const mime = file.type || "audio/webm";
+    const transcript = await transcribeAudio(bytes, mime, apiKey);
+    if (!transcript) throw new Error("Empty transcription");
+    return { transcript };
+  });
+
 const GenerateLinkLabelInput = z.object({ url: z.string().trim().url().max(2000) });
 
 export const generateLinkLabel = createServerFn({ method: "POST" })

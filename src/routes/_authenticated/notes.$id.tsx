@@ -2,8 +2,8 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
-import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, FileText, Globe } from "lucide-react";
+import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
@@ -288,6 +288,92 @@ function NoteDetail() {
   const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
   const [addingImages, setAddingImages] = useState(false);
   const linkLabelFn = useServerFn(generateLinkLabel);
+  const transcribeClipFn = useServerFn(transcribeAudioClip);
+
+  // Voice-append recorder state
+  const [voiceRecording, setVoiceRecording] = useState(false);
+  const [voiceBusy, setVoiceBusy] = useState(false);
+  const [voiceElapsed, setVoiceElapsed] = useState(0);
+  const voiceRecRef = useRef<MediaRecorder | null>(null);
+  const voiceChunksRef = useRef<Blob[]>([]);
+  const voiceStreamRef = useRef<MediaStream | null>(null);
+  const voiceTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const voiceStartRef = useRef<number>(0);
+
+  function pickAudioMime(): string {
+    const candidates = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4", "audio/ogg"];
+    for (const c of candidates) {
+      if (typeof MediaRecorder !== "undefined" && MediaRecorder.isTypeSupported(c)) return c;
+    }
+    return "audio/webm";
+  }
+
+  async function startVoiceAppend() {
+    if (voiceRecording || voiceBusy) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      voiceStreamRef.current = stream;
+      const mime = pickAudioMime();
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      voiceRecRef.current = rec;
+      voiceChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) voiceChunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        const blob = new Blob(voiceChunksRef.current, { type: mime });
+        voiceChunksRef.current = [];
+        stream.getTracks().forEach((t) => t.stop());
+        voiceStreamRef.current = null;
+        await finishVoiceAppend(blob, mime);
+      };
+      rec.start();
+      voiceStartRef.current = Date.now();
+      setVoiceElapsed(0);
+      voiceTimerRef.current = setInterval(() => {
+        setVoiceElapsed(Math.floor((Date.now() - voiceStartRef.current) / 1000));
+      }, 250);
+      setVoiceRecording(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Microphone unavailable");
+    }
+  }
+
+  function stopVoiceAppend() {
+    const rec = voiceRecRef.current;
+    if (!rec) return;
+    if (voiceTimerRef.current) { clearInterval(voiceTimerRef.current); voiceTimerRef.current = null; }
+    setVoiceRecording(false);
+    setVoiceBusy(true);
+    rec.stop();
+  }
+
+  async function finishVoiceAppend(blob: Blob, mime: string) {
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const ext = mime.includes("mp4") ? "mp4" : mime.includes("ogg") ? "ogg" : "webm";
+      const path = `${uid}/clips/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+      const { error: upErr } = await supabase.storage
+        .from("voice-notes")
+        .upload(path, blob, { contentType: mime, upsert: false });
+      if (upErr) throw upErr;
+      const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
+      const clean = (transcript ?? "").trim();
+      if (!clean) throw new Error("Nothing transcribed");
+      appendToBody(clean);
+      toast.success("Voice added");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Transcription failed");
+    } finally {
+      setVoiceBusy(false);
+      setVoiceElapsed(0);
+    }
+  }
+
+  useEffect(() => () => {
+    if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
+    voiceStreamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
 
   async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -458,15 +544,13 @@ function NoteDetail() {
             <span>Home</span>
           </Link>
           <div className="flex items-center gap-0.5">
-            {!isVoice && (
-              <button
-                onClick={startEdit}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-                aria-label="Edit"
-              >
-                <Pencil className="h-5 w-5" />
-              </button>
-            )}
+            <button
+              onClick={startEdit}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
+              aria-label="Edit"
+            >
+              <Pencil className="h-5 w-5" />
+            </button>
             <button
               onClick={onShare}
               className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
@@ -821,6 +905,24 @@ function NoteDetail() {
                     className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted disabled:opacity-50"
                   >
                     {uploadingImg ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" strokeWidth={2} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={voiceRecording ? stopVoiceAppend : startVoiceAppend}
+                    disabled={voiceBusy}
+                    aria-label={voiceRecording ? "Stop recording" : "Record voice"}
+                    className={`inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full px-2.5 text-foreground hover:bg-muted disabled:opacity-50 ${voiceRecording ? "bg-red-500/10 text-red-600" : ""}`}
+                  >
+                    {voiceBusy ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : voiceRecording ? (
+                      <>
+                        <Square className="h-4 w-4 fill-current" />
+                        <span className="text-[11px] font-semibold tabular-nums">{voiceElapsed}s</span>
+                      </>
+                    ) : (
+                      <Mic className="h-5 w-5" strokeWidth={2} />
+                    )}
                   </button>
                   <button
                     type="button"
