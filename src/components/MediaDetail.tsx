@@ -61,7 +61,7 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
       </div>
 
-      <div className="-mt-20 flex items-end gap-4 px-1">
+      <div className="-mt-16 flex items-end gap-4 px-1">
         <div
           className="relative h-40 w-28 shrink-0 overflow-hidden rounded-2xl bg-neutral-800 shadow-2xl ring-1 ring-black/20"
           style={posterUrl ? { backgroundImage: `url(${posterUrl})`, backgroundSize: "cover", backgroundPosition: "center" } : undefined}
@@ -73,13 +73,16 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
           )}
         </div>
         <div className="min-w-0 flex-1 pb-1">
-          <div className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
             {isTv ? "TV Show" : "Movie"}
           </div>
-          <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">{media.title}</h1>
-          {media.tagline && <p className="mt-1 text-[12px] italic text-muted-foreground line-clamp-2">{media.tagline}</p>}
         </div>
+      </div>
+
+      <div className="mt-3 px-1">
+        <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">{media.title}</h1>
+        {media.tagline && <p className="mt-1 text-[13px] italic text-muted-foreground line-clamp-2">{media.tagline}</p>}
       </div>
 
       {/* Meta chips */}
