@@ -690,6 +690,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
 
       <div
+        role="toolbar"
+        aria-label="Capture actions"
+
         className={`pointer-events-auto inline-flex items-center gap-1 rounded-full shadow-2xl ring-1 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
           shrunk ? "scale-90 p-1 opacity-95" : "scale-100 p-1.5 opacity-100"
         } ${
