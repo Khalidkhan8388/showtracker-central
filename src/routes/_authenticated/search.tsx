@@ -36,7 +36,7 @@ type Note = {
   tasks: Array<{ id: string; text: string; done: boolean }> | null;
   audio_path: string | null;
   image_paths: string[] | null;
-  url: string | null;
+  source_url: string | null;
   created_at: string;
 };
 
@@ -58,7 +58,7 @@ function pushRecent(q: string) {
 
 function kindOf(n: Note): "voice" | "image" | "link" | "text" {
   if (n.audio_path) return "voice";
-  if (n.url) return "link";
+  if (n.source_url) return "link";
   if ((n.image_paths ?? []).length > 0) return "image";
   return "text";
 }
@@ -102,7 +102,7 @@ function SearchPage() {
     setRecents(loadRecents());
     supabase
       .from("voice_notes")
-      .select("id, heading, summary, tags, tasks, audio_path, image_paths, url, created_at")
+      .select("id, heading, summary, tags, tasks, audio_path, image_paths, source_url, created_at")
       .order("created_at", { ascending: false })
       .then(({ data }) => {
         setNotes(((data ?? []) as Note[]).filter((n) => n.heading !== "__custom__"));
