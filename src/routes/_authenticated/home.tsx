@@ -47,6 +47,8 @@ function Home() {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
   const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
+  const [addToCollectionOpen, setAddToCollectionOpen] = useState(false);
+
   const toggleFn = toggleTask;
   const delNotesFn = deleteNotes;
   const delTasksFn = deleteTasks;
