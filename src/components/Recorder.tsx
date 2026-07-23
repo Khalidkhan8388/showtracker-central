@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { createMediaNote, processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
