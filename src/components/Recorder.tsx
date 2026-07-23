@@ -691,7 +691,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         } ${
           recording
             ? "bg-destructive/70 ring-destructive/30 animate-pulse"
-            : "bg-foreground/60 ring-background/10"
+            : "bg-neutral-900/85 ring-white/10"
         }`}
       >
         <input
@@ -705,7 +705,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         <Link
           to="/search"
           aria-label="Search"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 ${
+          className={`inline-flex items-center justify-center rounded-full text-white/70 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-90 ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -715,7 +715,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+          className={`inline-flex items-center justify-center rounded-full text-white/70 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50 ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -725,7 +725,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setTextOpen(true)}
           disabled={disabled || recording}
           aria-label="Write text note"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+          className={`inline-flex items-center justify-center rounded-full text-white/70 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50 ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
@@ -735,23 +735,24 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
+          className={`inline-flex items-center justify-center rounded-full text-white/70 transition-all duration-300 hover:bg-white/10 hover:text-white active:scale-90 disabled:opacity-50 ${
             shrunk ? "h-9 w-9" : "h-11 w-11"
           }`}
         >
           <Link2 className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
         </button>
 
-        <div className="mx-1 h-6 w-px bg-background/10" />
+        <div className="mx-1 h-6 w-px bg-white/10" />
 
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className={`group inline-flex items-center gap-2.5 rounded-full bg-background/10 text-background transition-all duration-300 hover:bg-background/15 active:scale-[0.97] disabled:cursor-default ${
+          className={`group inline-flex items-center gap-2.5 rounded-full bg-white/10 text-white transition-all duration-300 hover:bg-white/15 active:scale-[0.97] disabled:cursor-default ${
             shrunk ? "py-1.5 pl-2.5 pr-4" : "py-2 pl-3 pr-5"
           }`}
         >
+
           <span className="relative flex items-center justify-center">
             {!recording && !showSpinner && (
               <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
