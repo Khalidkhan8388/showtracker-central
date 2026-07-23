@@ -133,6 +133,8 @@ export async function patchLocalNote(id: string, patch: Partial<LocalNote>): Pro
 }
 
 export async function deleteLocalNotes(ids: string[]): Promise<void> {
+  const now = Date.now();
+  for (const id of ids) tombstones.set(id, now);
   await db.notes.bulkDelete(ids);
 }
 
