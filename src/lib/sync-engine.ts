@@ -99,10 +99,14 @@ function attachRealtime(uid: string) {
       async (payload) => {
         if (payload.eventType === "DELETE") {
           const oldRow = payload.old as { id?: string };
-          if (oldRow?.id) await db.notes.delete(oldRow.id);
+          if (oldRow?.id) {
+            tombstones.set(oldRow.id, Date.now());
+            await db.notes.delete(oldRow.id);
+          }
           return;
         }
         const row = normalizeRow(payload.new as Record<string, unknown>);
+        if (isTombstoned(row.id)) return;
         await db.notes.put(row);
         const cur = await db.meta.get(LAST_SYNC(uid));
         if (!cur || row.updated_at > cur.value) {
