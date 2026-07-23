@@ -159,6 +159,12 @@
   --sidebar-border: rgba(84, 84, 88, 0.65);
   --sidebar-ring: #ffffff;
 
+  /* Scrim tokens — dark mode fades to black */
+  --scrim-strong: rgba(0, 0, 0, 0.85);
+  --scrim-mid: rgba(0, 0, 0, 0.4);
+  --scrim-fg: #ffffff;
+
+
 }
 
 @layer base {
