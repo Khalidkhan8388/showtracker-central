@@ -239,9 +239,23 @@ function SearchPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [pillHeight, setPillHeight] = useState(140);
+  const [tmdbHits, setTmdbHits] = useState<TmdbSearchHit[]>([]);
+  const [tmdbLoading, setTmdbLoading] = useState(false);
+  const [tmdbAdding, setTmdbAdding] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
+
+  // Track already-saved TMDB items so results show "Added" instead of a plus.
+  const savedMediaKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const n of (localNotes ?? []) as any[]) {
+      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at) {
+        s.add(`${n.media.type}:${n.media.tmdb_id}`);
+      }
+    }
+    return s;
+  }, [localNotes]);
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
