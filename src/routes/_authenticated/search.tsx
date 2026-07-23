@@ -231,8 +231,10 @@ function SearchPage() {
   const [aiLoading, setAiLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState(false);
+  const [kbOffset, setKbOffset] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
+  const pillRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
@@ -244,6 +246,24 @@ function SearchPage() {
     );
     io.observe(el);
     return () => io.disconnect();
+  }, []);
+
+  // Track on-screen keyboard via visualViewport so ONLY the search pill
+  // rides up with the keyboard — the page itself stays put.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const update = () => {
+      const offset = Math.max(0, window.innerHeight - vv.height - vv.offsetTop);
+      setKbOffset(offset);
+    };
+    update();
+    vv.addEventListener("resize", update);
+    vv.addEventListener("scroll", update);
+    return () => {
+      vv.removeEventListener("resize", update);
+      vv.removeEventListener("scroll", update);
+    };
   }, []);
   const searchFn = useServerFn(searchEverything);
 
@@ -372,7 +392,7 @@ function SearchPage() {
   const showTasks = matchingTasks.length > 0;
 
   return (
-    <div className="relative mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-background">
+    <div className="relative mx-auto flex h-screen w-full max-w-md flex-col overflow-hidden bg-background">
       {/* Minimal top bar */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
         <div className={`flex items-center gap-3 px-4 transition-all duration-200 ${collapsed ? "pb-2 pt-2" : "pb-3 pt-4"}`}>
@@ -557,7 +577,11 @@ function SearchPage() {
       </div>
 
       {/* Bottom-anchored search bar (above keyboard) — dark pill to match app UI */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+      <div
+        ref={pillRef}
+        className="pointer-events-none fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md will-change-transform"
+        style={{ transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined }}
+      >
         <div className="pointer-events-auto px-5 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
           {(query.trim() || aiMode) && (
             <div className="mb-2 flex items-center justify-between px-2 text-[11px] text-muted-foreground">
