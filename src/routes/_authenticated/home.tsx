@@ -835,13 +835,17 @@ const NoteCard = memo(function NoteCard({
   // Media (movie / TV) short-circuit — dedicated card, no shared chrome.
   const media = (note as any).media as import("@/lib/local-db").LocalMedia | null | undefined;
   if (media) {
-    const sizing = variant === "wide" || variant === "hero"
-      ? "aspect-[16/9] w-full"
-      : variant === "masonry"
-        ? "aspect-[2/3] w-full"
-        : fullWidth
-          ? "aspect-square w-full"
-          : "aspect-[2/3] w-40 shrink-0";
+    const isHeroV = variant === "hero";
+    const sizing = isHeroV
+      ? "w-full"
+      : variant === "wide"
+        ? "aspect-[16/9] w-full"
+        : variant === "masonry"
+          ? "aspect-[2/3] w-full"
+          : fullWidth
+            ? "aspect-square w-full"
+            : "aspect-[2/3] w-40 shrink-0";
+    const mediaVariant = isHeroV ? "hero" : variant === "masonry" ? "grid" : "row";
     return (
       <div
         role="button"
@@ -850,10 +854,11 @@ const NoteCard = memo(function NoteCard({
         {...lp.handlers}
         className={`${sizing} cursor-pointer select-none`}
       >
-        <MediaCard media={media} selectMode={selectMode} selected={selected} pinned={note.pinned} variant={variant === "masonry" ? "grid" : "row"} />
+        <MediaCard media={media} selectMode={selectMode} selected={selected} pinned={note.pinned} variant={mediaVariant} />
       </div>
     );
   }
+
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
