@@ -147,7 +147,7 @@ function HeroMedia({
 
   return (
     <div
-      className={`relative block w-full overflow-hidden rounded-[20px] bg-neutral-900 text-white shadow-sm ring-1 ring-black/10 transition-transform duration-200 active:scale-[0.985] ${
+      className={`relative block w-full overflow-hidden rounded-[20px] bg-neutral-900 shadow-sm ring-1 ring-black/10 transition-transform duration-200 active:scale-[0.985] scrim-fg ${
         selected ? "ring-2 ring-foreground" : ""
       }`}
     >
@@ -171,13 +171,13 @@ function HeroMedia({
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40" />
+        <div className="absolute inset-0 scrim-t-strong" />
       </div>
 
       {/* top badges */}
       <div className="relative z-10 flex items-start justify-between p-3">
         <div className="flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
             {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
             {isTv ? "TV" : "Movie"}
           </span>
@@ -222,31 +222,31 @@ function HeroMedia({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 text-[17px] font-bold leading-tight">{media.title}</h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/75">
+          <h3 className="line-clamp-2 text-[17px] font-bold leading-tight scrim-fg">{media.title}</h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] scrim-fg-70">
             {year && <span>{year}</span>}
             {media.vote_average != null && media.vote_average > 0 && (
               <span className="inline-flex items-center gap-0.5">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="font-semibold text-white">{media.vote_average.toFixed(1)}</span>
+                <span className="font-semibold scrim-fg">{media.vote_average.toFixed(1)}</span>
               </span>
             )}
             {isTv && total > 0 && (
-              <span className="font-medium text-white/85">{done}/{total} ep</span>
+              <span className="font-medium scrim-fg-80">{done}/{total} ep</span>
             )}
           </div>
 
           {media.overview && (
-            <p className="mt-2 line-clamp-4 text-[12px] leading-snug text-white/80">
+            <p className="mt-2 line-clamp-4 text-[12px] leading-snug scrim-fg-80">
               {media.overview}
             </p>
           )}
 
           {isTv && total > 0 && (
             <div className="mt-2.5">
-              <div className="h-1 w-full overflow-hidden rounded-full bg-white/15">
+              <div className="h-1 w-full overflow-hidden rounded-full scrim-track">
                 <div
-                  className="h-full rounded-full bg-white"
+                  className="h-full rounded-full scrim-fill"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -256,4 +256,5 @@ function HeroMedia({
       </div>
     </div>
   );
+
 }
