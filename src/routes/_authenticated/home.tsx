@@ -905,6 +905,7 @@ const TaskRow = memo(function TaskRow({
   noteHeading,
   noteId,
   onToggleDone,
+  onPin,
   onLongPress,
   onSelectTap,
   hideNoteHeading,
@@ -918,6 +919,7 @@ const TaskRow = memo(function TaskRow({
   noteHeading: string | null;
   noteId: string;
   onToggleDone: () => void;
+  onPin?: () => void;
   onLongPress: () => void;
   onSelectTap: () => void;
   hideNoteHeading?: boolean;
@@ -984,6 +986,20 @@ const TaskRow = memo(function TaskRow({
         )}
 
       </div>
+      {!selectMode && onPin && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin();
+          }}
+          aria-label={pinned ? "Unpin task" : "Pin task"}
+          className={`mt-0.5 shrink-0 rounded-full p-1 active:opacity-60 ${
+            pinned ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+        </button>
+      )}
     </div>
   );
 });
