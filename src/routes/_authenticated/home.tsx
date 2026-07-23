@@ -425,7 +425,7 @@ function Home() {
           </button>
         </div>
       ) : (
-        <Recorder onNoteReady={load} />
+        <Recorder onNoteReady={() => { void resync(); }} />
       )}
     </div>
   );
