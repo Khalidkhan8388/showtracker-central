@@ -175,7 +175,7 @@
    * text and lets us honour the user's OS-level font-size preference.
    */
   :root {
-    --app-scale: clamp(0.92, 0.72 + 0.0625 * 100vw / 16, 1.15);
+    --app-scale: 0.92;
     --user-scale: 1;
   }
 
@@ -190,7 +190,16 @@
     font-family: var(--font-sans);
   }
 
-  /* Larger screens: cap the scale so the mobile-max-w-md layout doesn't balloon. */
+  /* Numeric scale steps: `zoom` rejects viewport-unit clamp() values. */
+  @media (min-width: 360px) {
+    :root { --app-scale: 1; }
+  }
+  @media (min-width: 390px) {
+    :root { --app-scale: 1.06; }
+  }
+  @media (min-width: 430px) {
+    :root { --app-scale: 1.12; }
+  }
   @media (min-width: 480px) {
     :root { --app-scale: 1.15; }
   }
