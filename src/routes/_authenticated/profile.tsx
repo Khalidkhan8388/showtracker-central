@@ -128,34 +128,8 @@ function ProfilePage() {
         </div>
       </section>
 
-      {/* Accent */}
-      <section className="px-4 pt-6">
-        <SectionTitle>Accent color</SectionTitle>
-        <div className="rounded-2xl bg-card p-4">
-          <div className="flex flex-wrap gap-3">
-            {ACCENTS.map((a) => {
-              const selected = a.id === accent.id;
-              return (
-                <button
-                  key={a.id}
-                  onClick={() => setAccentId(a.id)}
-                  aria-label={a.name}
-                  className="relative h-10 w-10 rounded-full transition-transform active:scale-95"
-                  style={{
-                    background: a.primary,
-                    boxShadow: selected ? `0 0 0 2px var(--background), 0 0 0 4px ${a.primary}` : "none",
-                  }}
-                >
-                  {selected && (
-                    <Check className="absolute inset-0 m-auto h-5 w-5" style={{ color: a.foreground }} />
-                  )}
-                </button>
-              );
-            })}
-          </div>
-          <p className="mt-3 text-[12px] text-muted-foreground">{accent.name}</p>
-        </div>
-      </section>
+
+
 
       {/* Component size */}
       <section className="px-4 pt-6">
