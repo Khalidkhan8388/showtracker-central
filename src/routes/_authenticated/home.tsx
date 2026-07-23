@@ -589,7 +589,7 @@ const NoteCard = memo(function NoteCard({
       onClick={handleClick}
       {...lp.handlers}
       style={textNoteStyle}
-      className={`${base} ${sizing} cursor-pointer select-none`}
+      className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100`}
     >
       {/* Image-forward tile: image fills the card as background (only when not a link) */}
       {isSquareLike && hasImage && !isLink && (
