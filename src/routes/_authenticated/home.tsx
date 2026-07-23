@@ -50,6 +50,30 @@ function Home() {
   const delTasksFn = deleteTasks;
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskText, setNewTaskText] = useState("");
+  const newTaskInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
+  }, [addingTask]);
+
+  async function submitNewTask() {
+    const text = newTaskText.trim();
+    if (!text) {
+      setAddingTask(false);
+      return;
+    }
+    setNewTaskText("");
+    setAddingTask(false);
+    try {
+      await addCustomTask({ data: { text } });
+      void resync();
+    } catch {
+      setNewTaskText(text);
+      setAddingTask(true);
+    }
+  }
 
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
