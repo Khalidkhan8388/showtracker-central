@@ -306,6 +306,35 @@ function CollectionDetail() {
                 </button>
               </div>
             </div>
+            {hasTv && (
+              <div className="mb-3 flex justify-center">
+                <div className="inline-flex rounded-full bg-card p-1 ring-1 ring-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setTvView("posters")}
+                    className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      tvView === "posters" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    Posters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTvView("episodes")}
+                    className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      tvView === "episodes" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Episodes
+                  </button>
+                </div>
+              </div>
+            )}
+            {hasTv && tvView === "episodes" ? (
+              <EpisodeTracker members={mediaMembers} />
+            ) : (
+            <>
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
@@ -473,6 +502,8 @@ function CollectionDetail() {
                   );
                 })}
               </ul>
+            )}
+            </>
             )}
           </>
         )}
