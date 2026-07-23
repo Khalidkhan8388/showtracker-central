@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Local-only app — no auth/user identity.
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles, FolderPlus, Layers } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
@@ -10,6 +10,8 @@ import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync, clearPendingDelete } from "@/lib/sync-engine";
+import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
+
 
 
 
