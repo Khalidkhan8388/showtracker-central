@@ -660,34 +660,57 @@ const NoteCard = memo(function NoteCard({
           <Pin className="h-3.5 w-3.5 fill-foreground text-foreground" />
         </div>
       )}
-      {variant === "wide" ? (
-        <div className="flex items-start gap-3">
+      {isWideLike ? (
+        <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
               src={thumbUrl}
               alt=""
               loading="lazy"
               decoding="async"
-              className="h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+              className={
+                isHero
+                  ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                  : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+              }
             />
           )}
           <div className="min-w-0 flex-1">
-            {isLink && linkHost && (
-              <div className="mb-1.5">
-                <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
-                  {linkHost}
+            {isHero ? (
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+                  Latest
                 </span>
+                {isLink && linkHost && (
+                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+                    {linkHost}
+                  </span>
+                )}
               </div>
+            ) : (
+              isLink && linkHost && (
+                <div className="mb-1.5">
+                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+                    {linkHost}
+                  </span>
+                </div>
+              )
             )}
             <div className="flex items-center gap-2 pr-6">
-              <h3 className="truncate text-sm font-semibold">
+              <h3
+                className={
+                  isHero
+                    ? "font-serif text-[24px] font-normal leading-[1.15] tracking-tight text-foreground line-clamp-3"
+                    : "truncate text-sm font-semibold"
+                }
+              >
                 {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
               </h3>
             </div>
-            {note.summary && (
+            {note.summary && !isHero && (
               <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
             )}
-            <div className="mt-2 flex items-center gap-3 text-[11px] text-muted-foreground">
+            <div className={`mt-${isHero ? 3 : 2} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
               {note.tasks && note.tasks.length > 0 && (
