@@ -1,13 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, Bookmark, Loader2 } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow, format } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
-import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched, setWatchStatus } from "@/lib/media";
+import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
-
 
 
 
@@ -514,44 +513,6 @@ function CollectionDetail() {
                               loading="lazy"
                               className={`absolute inset-0 h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
                             />
-                            <div className="absolute right-1.5 top-1.5 z-10 flex flex-col gap-1">
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  const next = media!.watch_status === "watchlist" ? null : "watchlist";
-                                  void setWatchStatus(n.id, next as any);
-                                }}
-                                aria-label={media?.watch_status === "watchlist" ? "Remove from watchlist" : "Hold"}
-                                title="Hold (watchlist)"
-                                className={`grid h-7 w-7 place-items-center rounded-full shadow-md backdrop-blur-md transition active:scale-95 ${
-                                  media?.watch_status === "watchlist"
-                                    ? "bg-amber-500 text-white"
-                                    : "bg-white/90 text-neutral-900"
-                                }`}
-                              >
-                                <Bookmark className={`h-3.5 w-3.5 ${media?.watch_status === "watchlist" ? "fill-current" : ""}`} strokeWidth={2.5} />
-                              </button>
-                              <button
-                                type="button"
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  const next = media!.watch_status === "watched" ? "watchlist" : "watched";
-                                  void setWatchStatus(n.id, next);
-                                }}
-                                aria-label={media?.watch_status === "watched" ? "Unmark watched" : "Mark watched"}
-                                title="Tick (watched)"
-                                className={`grid h-7 w-7 place-items-center rounded-full shadow-md backdrop-blur-md transition active:scale-95 ${
-                                  media?.watch_status === "watched"
-                                    ? "bg-emerald-500 text-white"
-                                    : "bg-white/90 text-neutral-900"
-                                }`}
-                              >
-                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
-                              </button>
-                            </div>
                             <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
                               {media?.watch_status && (
                                 <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
@@ -574,7 +535,6 @@ function CollectionDetail() {
                               )}
                             </div>
                           </>
-
 
                         ) : thumb ? (
                           <>
