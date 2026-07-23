@@ -67,11 +67,6 @@ export function MediaCard({
           {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
           {isTv ? "TV" : "Movie"}
         </span>
-        {media.watch_status && (
-          <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold ${WATCH_COLORS[media.watch_status]}`}>
-            {WATCH_LABEL[media.watch_status]}
-          </span>
-        )}
       </div>
 
       {selectMode ? (
@@ -94,8 +89,13 @@ export function MediaCard({
         )
       )}
 
-      <div className={`absolute inset-x-0 bottom-0 z-10 p-3 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
-        <p className="line-clamp-2 text-[13px] font-semibold leading-tight">{media.title}</p>
+      <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
+        {media.watch_status && (
+          <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
+            {WATCH_LABEL[media.watch_status]}
+          </span>
+        )}
+        <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-white">{media.title}</p>
         <div className="mt-1 flex items-center gap-2 text-[10px] text-white/80">
           {year && <span>{year}</span>}
           {media.vote_average != null && media.vote_average > 0 && (
@@ -104,12 +104,18 @@ export function MediaCard({
               {media.vote_average.toFixed(1)}
             </span>
           )}
-          {isTv && total > 0 && (
-            <span>
-              {done}/{total} ep
-            </span>
-          )}
         </div>
+        {isTv && total > 0 && (
+          <div className="mt-1.5">
+            <div className="flex items-center justify-between text-[10px] font-medium text-white/85">
+              <span>{done}/{total} ep</span>
+              <span>{Math.round((done / total) * 100)}%</span>
+            </div>
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
+              <div className="h-full rounded-full bg-white" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
