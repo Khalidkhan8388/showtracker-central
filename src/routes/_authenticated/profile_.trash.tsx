@@ -142,7 +142,7 @@ function TrashPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
+      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background px-2 py-2">
         <Link
           to="/profile"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
@@ -185,7 +185,7 @@ function TrashPage() {
                       onLongPress={() => toggle(n.id)}
                       onToggleSel={() => toggle(n.id)}
                     />
-                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black px-2 py-0.5 text-[10px] font-medium text-white">
                       {remaining}d left
                     </div>
                   </div>
@@ -199,7 +199,7 @@ function TrashPage() {
       {/* Bottom pill — always visible with counts + actions */}
       <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-5">
         {selectMode ? (
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-2 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-2 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900 dark:text-white dark:ring-white/10">
             <button
               onClick={() => setSelected(new Set())}
               aria-label="Cancel"
@@ -211,7 +211,7 @@ function TrashPage() {
             <button
               disabled={busy}
               onClick={restoreSelected}
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold active:opacity-70 disabled:opacity-50"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore
@@ -227,10 +227,10 @@ function TrashPage() {
           </div>
         ) : (
           items.length > 0 && (
-            <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900 dark:text-white dark:ring-white/10">
               <button
                 onClick={() => setSelected(new Set(items.map((n) => n.id)))}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-semibold active:opacity-70"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Restore all
