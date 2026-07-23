@@ -686,12 +686,12 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
 
       <div
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full shadow-2xl ring-1 backdrop-blur-2xl backdrop-saturate-150 transition-all duration-300 ease-out ${
-          shrunk ? "scale-90 p-1 opacity-95" : "scale-100 p-1.5 opacity-100"
+        className={`pointer-events-auto flex items-center gap-1 rounded-full border transition-all duration-300 ease-out pb-[env(safe-area-inset-bottom)] ${
+          shrunk ? "scale-95 p-1 opacity-95" : "scale-100 p-1.5 opacity-100"
         } ${
           recording
-            ? "bg-destructive/70 ring-destructive/30 animate-pulse"
-            : "bg-foreground/60 ring-background/10"
+            ? "border-destructive/30 bg-destructive text-destructive-foreground shadow-[0_10px_40px_-8px_rgba(220,38,38,0.55)]"
+            : "border-black/[0.06] bg-background/85 text-foreground shadow-[0_10px_40px_-10px_rgba(0,0,0,0.35)] backdrop-blur-2xl backdrop-saturate-150"
         }`}
       >
         <input
@@ -702,71 +702,78 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           className="hidden"
           onChange={onPickImages}
         />
-        <Link
-          to="/search"
-          aria-label="Search"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 ${
-            shrunk ? "h-9 w-9" : "h-11 w-11"
-          }`}
-        >
-          <Search className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
-        </Link>
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={disabled}
-          aria-label="Attach image"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
-            shrunk ? "h-9 w-9" : "h-11 w-11"
-          }`}
-        >
-          <ImagePlus className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
-        </button>
-        <button
-          onClick={() => setTextOpen(true)}
-          disabled={disabled || recording}
-          aria-label="Write text note"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
-            shrunk ? "h-9 w-9" : "h-11 w-11"
-          }`}
-        >
-          <FileText className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
-        </button>
-        <button
-          onClick={() => setLinkOpen(true)}
-          disabled={disabled || recording}
-          aria-label="Save web link"
-          className={`inline-flex items-center justify-center rounded-full text-background/70 transition-all duration-300 hover:bg-background/10 hover:text-background active:scale-90 disabled:opacity-50 ${
-            shrunk ? "h-9 w-9" : "h-11 w-11"
-          }`}
-        >
-          <Link2 className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
-        </button>
 
-        <div className="mx-1 h-6 w-px bg-background/10" />
+        {!recording && (
+          <>
+            <Link
+              to="/search"
+              aria-label="Search"
+              className={`inline-flex items-center justify-center rounded-full text-foreground/70 transition-all hover:bg-foreground/5 hover:text-foreground active:scale-90 ${
+                shrunk ? "h-9 w-9" : "h-10 w-10"
+              }`}
+            >
+              <Search className={shrunk ? "h-[18px] w-[18px]" : "h-[19px] w-[19px]"} strokeWidth={2.25} />
+            </Link>
+            <button
+              onClick={() => fileRef.current?.click()}
+              disabled={disabled}
+              aria-label="Attach image"
+              className={`inline-flex items-center justify-center rounded-full text-foreground/70 transition-all hover:bg-foreground/5 hover:text-foreground active:scale-90 disabled:opacity-40 ${
+                shrunk ? "h-9 w-9" : "h-10 w-10"
+              }`}
+            >
+              <ImagePlus className={shrunk ? "h-[18px] w-[18px]" : "h-[19px] w-[19px]"} strokeWidth={2} />
+            </button>
+            <button
+              onClick={() => setTextOpen(true)}
+              disabled={disabled}
+              aria-label="Write text note"
+              className={`inline-flex items-center justify-center rounded-full text-foreground/70 transition-all hover:bg-foreground/5 hover:text-foreground active:scale-90 disabled:opacity-40 ${
+                shrunk ? "h-9 w-9" : "h-10 w-10"
+              }`}
+            >
+              <FileText className={shrunk ? "h-[18px] w-[18px]" : "h-[19px] w-[19px]"} strokeWidth={2} />
+            </button>
+            <button
+              onClick={() => setLinkOpen(true)}
+              disabled={disabled}
+              aria-label="Save web link"
+              className={`inline-flex items-center justify-center rounded-full text-foreground/70 transition-all hover:bg-foreground/5 hover:text-foreground active:scale-90 disabled:opacity-40 ${
+                shrunk ? "h-9 w-9" : "h-10 w-10"
+              }`}
+            >
+              <Link2 className={shrunk ? "h-[18px] w-[18px]" : "h-[19px] w-[19px]"} strokeWidth={2} />
+            </button>
+
+            <div className={`mx-0.5 w-px bg-foreground/10 ${shrunk ? "h-5" : "h-6"}`} />
+          </>
+        )}
 
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className={`group inline-flex items-center gap-2.5 rounded-full bg-background/10 text-background transition-all duration-300 hover:bg-background/15 active:scale-[0.97] disabled:cursor-default ${
-            shrunk ? "py-1.5 pl-2.5 pr-4" : "py-2 pl-3 pr-5"
-          }`}
+          className={`group inline-flex items-center gap-2 rounded-full font-semibold tracking-tight transition-all active:scale-[0.97] disabled:cursor-default ${
+            recording
+              ? "bg-destructive-foreground/15 text-destructive-foreground hover:bg-destructive-foreground/20"
+              : "bg-primary text-primary-foreground hover:opacity-90"
+          } ${shrunk ? "h-9 px-3 text-[13px]" : "h-10 px-4 text-[14px]"}`}
         >
           <span className="relative flex items-center justify-center">
-            {!recording && !showSpinner && (
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
-            )}
             {showSpinner ? (
-              <Loader2 className={shrunk ? "h-4 w-4 animate-spin" : "h-5 w-5 animate-spin"} />
+              <Loader2 className={shrunk ? "h-4 w-4 animate-spin" : "h-[18px] w-[18px] animate-spin"} />
             ) : recording ? (
-              <Square className={shrunk ? "h-3.5 w-3.5" : "h-4 w-4"} fill="currentColor" />
+              <Square className={shrunk ? "h-3 w-3" : "h-[13px] w-[13px]"} fill="currentColor" />
             ) : (
-              <Mic className={shrunk ? "h-4 w-4" : "h-5 w-5"} strokeWidth={2} />
+              <Mic className={shrunk ? "h-4 w-4" : "h-[18px] w-[18px]"} strokeWidth={2.25} />
             )}
           </span>
-          <span className={`font-semibold tracking-tight tabular-nums ${shrunk ? "text-xs" : "text-sm"}`}>{label}</span>
+          <span className="tabular-nums whitespace-nowrap">
+            {busy ? "Saving…" : recording ? mmss : "Record"}
+          </span>
         </button>
       </div>
+
 
     </div>
   );
