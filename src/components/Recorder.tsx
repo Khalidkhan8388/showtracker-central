@@ -150,7 +150,61 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextBody("");
     setTextMode("write");
     setTextFullscreen(false);
+    try { localStorage.removeItem("braintape:textDraft"); } catch {}
   }
+
+  function handleCancelText() {
+    const dirty = textHeading.trim().length > 0 || textBody.trim().length > 0;
+    if (dirty && !confirm("Discard this note?")) return;
+    resetTextComposer();
+    setTextOpen(false);
+    setInlineLinkOpen(false);
+    setInlineLinkUrl("");
+  }
+
+  // Persist draft while composer is open
+  useEffect(() => {
+    if (!textOpen) return;
+    try {
+      const raw = localStorage.getItem("braintape:textDraft");
+      if (raw) {
+        const d = JSON.parse(raw) as { h?: string; b?: string };
+        if (!textHeading && d.h) setTextHeading(d.h);
+        if (!textBody && d.b) setTextBody(d.b);
+      }
+    } catch {}
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textOpen]);
+
+  useEffect(() => {
+    if (!textOpen) return;
+    const t = setTimeout(() => {
+      try {
+        localStorage.setItem(
+          "braintape:textDraft",
+          JSON.stringify({ h: textHeading, b: textBody }),
+        );
+      } catch {}
+    }, 400);
+    return () => clearTimeout(t);
+  }, [textOpen, textHeading, textBody]);
+
+  // ⌘/Ctrl+Enter to save, Esc to cancel
+  useEffect(() => {
+    if (!textOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
+        e.preventDefault();
+        submitText();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        handleCancelText();
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [textOpen, textHeading, textBody]);
 
   async function submitText() {
     const heading = textHeading.trim();
