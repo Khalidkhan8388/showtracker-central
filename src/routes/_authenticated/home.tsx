@@ -64,7 +64,7 @@ function Home() {
     // unlike `scroll` events which pause until the fling settles.
     const io = new IntersectionObserver(
       ([entry]) => setCollapsed(!entry.isIntersecting),
-      { threshold: 0, rootMargin: "0px 0px -100% 0px" },
+      { threshold: 0 },
     );
     io.observe(el);
     return () => io.disconnect();
