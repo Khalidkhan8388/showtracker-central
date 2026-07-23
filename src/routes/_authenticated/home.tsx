@@ -740,62 +740,81 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
           <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
-      <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+      <div className="no-scrollbar flex snap-x snap-mandatory gap-4 overflow-x-auto px-4 pb-2 pt-1">
         <Link
           to="/collections"
-          className="flex aspect-square w-32 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
+          className="flex aspect-square w-32 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/70 bg-card/40 text-muted-foreground active:opacity-70"
         >
           <Plus className="h-5 w-5" />
           <span className="text-[11px] font-medium">New</span>
         </Link>
         {list.map((c) => {
           const ids = c.note_ids ?? [];
-          // Collect up to 4 poster/thumb previews for a mosaic
           const previews: string[] = [];
           for (const nid of ids) {
             const n = noteById.get(nid);
             const media = (n as any)?.media as import("@/lib/local-db").LocalMedia | undefined;
             if (media?.poster_path) {
-              previews.push(tmdbPoster(media.poster_path, "w185")!);
-              if (previews.length >= 4) break;
+              previews.push(tmdbPoster(media.poster_path, "w342")!);
+              if (previews.length >= 3) break;
             }
           }
+          const [p0, p1, p2] = previews;
           return (
             <Link
               key={c.id}
               to="/collections/$id"
               params={{ id: c.id }}
-              className="group flex w-32 shrink-0 snap-start flex-col gap-2 active:opacity-80"
+              className="group relative flex w-32 shrink-0 snap-start flex-col active:opacity-90"
             >
-              <div className="relative aspect-square overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
-                {previews.length === 0 ? (
-                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/25 via-primary/10 to-transparent">
-                    <Folder className="h-8 w-8 text-muted-foreground/60" />
-                  </div>
-                ) : previews.length === 1 ? (
-                  <img src={previews[0]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 bg-border/60">
-                    {[0, 1, 2, 3].map((i) => (
-                      <div key={i} className="relative overflow-hidden bg-card">
-                        {previews[i] ? (
-                          <img src={previews[i]} alt="" loading="lazy" className="h-full w-full object-cover" />
-                        ) : null}
-                      </div>
-                    ))}
+              {/* Stacked poster deck */}
+              <div className="relative h-40 w-full">
+                {/* back card 2 */}
+                {p2 && (
+                  <div
+                    className="absolute left-1/2 top-1 h-[92%] w-[78%] -translate-x-1/2 overflow-hidden rounded-xl bg-muted shadow-md ring-1 ring-border/50"
+                    style={{ transform: "translateX(-50%) rotate(-6deg)" }}
+                  >
+                    <img src={p2} alt="" loading="lazy" className="h-full w-full object-cover opacity-90" />
                   </div>
                 )}
-                <span className="absolute right-1.5 top-1.5 inline-flex items-center rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white/95 backdrop-blur-sm">
-                  {ids.length}
-                </span>
+                {/* back card 1 */}
+                {p1 && (
+                  <div
+                    className="absolute left-1/2 top-0.5 h-[96%] w-[84%] -translate-x-1/2 overflow-hidden rounded-xl bg-muted shadow-md ring-1 ring-border/60"
+                    style={{ transform: "translateX(-50%) rotate(5deg)" }}
+                  >
+                    <img src={p1} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  </div>
+                )}
+                {/* front card */}
+                <div className="absolute inset-x-0 top-0 h-full overflow-hidden rounded-2xl bg-card shadow-lg ring-1 ring-border/70">
+                  {p0 ? (
+                    <img src={p0} alt="" loading="lazy" className="h-full w-full object-cover" />
+                  ) : (
+                    <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/30 via-primary/10 to-transparent">
+                      <Folder className="h-9 w-9 text-muted-foreground/60" />
+                    </div>
+                  )}
+                  {/* gloss */}
+                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-white/10 via-transparent to-black/50" />
+                  {/* count chip */}
+                  <span className="absolute right-1.5 top-1.5 inline-flex items-center rounded-full bg-black/60 px-1.5 py-0.5 text-[10px] font-semibold text-white/95 backdrop-blur-sm">
+                    {ids.length}
+                  </span>
+                </div>
               </div>
-              <p className="line-clamp-1 px-0.5 text-[12px] font-semibold text-foreground">
+              <p className="mt-2 line-clamp-1 px-0.5 text-[13px] font-semibold text-foreground">
                 {c.title}
+              </p>
+              <p className="line-clamp-1 px-0.5 text-[10px] uppercase tracking-wider text-muted-foreground/80">
+                {ids.length} {ids.length === 1 ? "item" : "items"}
               </p>
             </Link>
           );
         })}
       </div>
+
 
     </div>
   );
