@@ -550,8 +550,8 @@ function SearchPage() {
                       return (
                         <div key={key} className="w-[120px] shrink-0">
                           <div
-                            className="relative overflow-hidden rounded-[15px] bg-muted"
-                            style={{ aspectRatio: "2 / 3" }}
+                            className="relative overflow-hidden bg-muted"
+                            style={{ aspectRatio: "2 / 3", borderRadius: 15 }}
                           >
                             {poster ? (
                               <img
@@ -572,14 +572,6 @@ function SearchPage() {
                                 )}
                               </div>
                             )}
-                            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
-                              {hit.type === "tv" ? (
-                                <Tv className="h-2.5 w-2.5" />
-                              ) : (
-                                <Film className="h-2.5 w-2.5" />
-                              )}
-                              {hit.type === "tv" ? "TV" : "Movie"}
-                            </span>
                             {hit.vote_average != null && hit.vote_average > 0 && (
                               <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
                                 <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
@@ -591,30 +583,41 @@ function SearchPage() {
                               onClick={() => addMedia(hit)}
                               disabled={saved || adding}
                               aria-label={saved ? "Already in library" : `Add ${hit.title}`}
-                              className={`absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
+                              className={`absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
                                 saved
                                   ? "bg-emerald-500 text-white"
                                   : "bg-white/95 text-neutral-900 active:scale-95"
-                              }`}
+                              } ${hit.vote_average != null && hit.vote_average > 0 ? "top-8" : ""}`}
                             >
                               {adding ? (
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
                               ) : saved ? (
-                                <Check className="h-4 w-4" strokeWidth={3} />
+                                <Check className="h-3.5 w-3.5" strokeWidth={3} />
                               ) : (
-                                <Plus className="h-4 w-4" strokeWidth={3} />
+                                <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                               )}
                             </button>
-                          </div>
-                          <div className="mt-1.5 line-clamp-1 text-[12px] font-medium leading-tight text-foreground">
-                            {hit.title}
-                          </div>
-                          <div className="line-clamp-1 text-[10px] text-muted-foreground">
-                            {hit.year ?? "—"}
+                            <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-8">
+                              <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+                                {hit.type === "tv" ? (
+                                  <Tv className="h-2.5 w-2.5" />
+                                ) : (
+                                  <Film className="h-2.5 w-2.5" />
+                                )}
+                                {hit.type === "tv" ? "TV" : "Movie"}
+                              </span>
+                              <p className="line-clamp-2 text-[12px] font-semibold leading-tight scrim-fg">
+                                {hit.title}
+                              </p>
+                              <p className="text-[10px] scrim-fg-70">
+                                {hit.year ?? "—"}
+                              </p>
+                            </div>
                           </div>
                         </div>
                       );
                     })}
+
               </div>
             </div>
           </section>
