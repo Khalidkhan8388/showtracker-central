@@ -20,18 +20,29 @@ export const ACCENTS: Accent[] = [
 
 type ThemeMode = "light" | "dark" | "system";
 
+export type SizeScaleId = "small" | "default" | "large" | "xlarge";
+export const SIZE_SCALES: { id: SizeScaleId; name: string; value: number }[] = [
+  { id: "small", name: "Small", value: 0.9 },
+  { id: "default", name: "Default", value: 1 },
+  { id: "large", name: "Large", value: 1.12 },
+  { id: "xlarge", name: "Extra Large", value: 1.25 },
+];
+
 type ThemeCtx = {
   mode: ThemeMode;
   setMode: (m: ThemeMode) => void;
   accent: Accent;
   setAccentId: (id: string) => void;
   isDark: boolean;
+  sizeScale: SizeScaleId;
+  setSizeScale: (id: SizeScaleId) => void;
 };
 
 const Ctx = createContext<ThemeCtx | null>(null);
 
 const MODE_KEY = "braintape.theme.mode";
 const ACCENT_KEY = "braintape.theme.accent";
+const SIZE_KEY = "braintape.theme.size";
 
 function applyAccent(a: Accent) {
   const r = document.documentElement;
