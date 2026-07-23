@@ -128,14 +128,18 @@ export const THEME_BOOT_SCRIPT = `
 (function(){try{
   var m = localStorage.getItem('${MODE_KEY}') || 'system';
   var a = localStorage.getItem('${ACCENT_KEY}') || 'yellow';
+  var s = localStorage.getItem('${SIZE_KEY}') || 'default';
   var accents = ${JSON.stringify(ACCENTS)};
+  var sizes = ${JSON.stringify(SIZE_SCALES)};
   var acc = accents.find(function(x){return x.id===a;}) || accents[0];
+  var sz = sizes.find(function(x){return x.id===s;}) || sizes[1];
   var r = document.documentElement;
   r.style.setProperty('--primary', acc.primary);
   r.style.setProperty('--primary-foreground', acc.foreground);
   r.style.setProperty('--ring', acc.primary);
   r.style.setProperty('--sidebar-primary', acc.primary);
   r.style.setProperty('--sidebar-ring', acc.primary);
+  r.style.setProperty('--user-scale', String(sz.value));
   var dark = m==='dark' || (m==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
   if(dark) r.classList.add('dark');
 }catch(e){}})();
