@@ -676,16 +676,13 @@ const NoteCard = memo(function NoteCard({
           )}
           <div className="min-w-0 flex-1">
             {isHero ? (
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Latest
-                </span>
-                {isLink && linkHost && (
-                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+              isLink && linkHost && (
+                <div className="mb-2">
+                  <span className="inline-block rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground/70">
                     {linkHost}
                   </span>
-                )}
-              </div>
+                </div>
+              )
             ) : (
               isLink && linkHost && (
                 <div className="mb-1.5">
