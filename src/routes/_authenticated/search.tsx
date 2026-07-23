@@ -331,6 +331,9 @@ function SearchPage() {
     setAiReasoning(null);
   }, [query]);
 
+
+
+
   const allTags = useMemo(() => {
     const counts = new Map<string, number>();
     for (const n of notes) for (const t of n.tags ?? []) counts.set(t, (counts.get(t) ?? 0) + 1);
@@ -368,6 +371,19 @@ function SearchPage() {
     }
     return out.slice(0, 20);
   }, [notes, query, activeTag, aiMode]);
+
+  // Keep the top of the results visible above the keyboard while typing.
+  useEffect(() => {
+    if (!query.trim()) return;
+    const root = scrollRef.current;
+    if (!root) return;
+    const id = requestAnimationFrame(() => {
+      root.scrollTo({ top: 0, behavior: "smooth" });
+    });
+    return () => cancelAnimationFrame(id);
+  }, [query, filteredNotes.length, matchingTasks.length, kbOffset]);
+
+
 
   async function runAiSearch(q?: string) {
     const term = (q ?? query).trim();
