@@ -625,8 +625,8 @@ const NoteCard = memo(function NoteCard({
       style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none`}
     >
-      {/* Square variant: image fills the card as background (only when not a link) */}
-      {variant === "square" && hasImage && !isLink && (
+      {/* Image-forward tile: image fills the card as background (only when not a link) */}
+      {isSquareLike && hasImage && !isLink && (
         <>
           <img
             src={thumbUrl}
