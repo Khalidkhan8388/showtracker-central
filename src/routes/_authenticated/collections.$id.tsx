@@ -302,10 +302,39 @@ function CollectionDetail() {
                 </button>
               </div>
             </div>
+            {hasMedia && (
+              <div className="-mx-4 mb-3 overflow-x-auto px-4">
+                <div className="inline-flex min-w-full gap-1.5">
+                  {(["all", "watchlist", "watching", "watched", "dropped"] as const).map((s) => {
+                    const active = statusFilter === s;
+                    const label = s === "all" ? "All" : WATCH_LABEL[s];
+                    const count = statusCounts[s];
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setStatusFilter(s)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card text-muted-foreground ring-1 ring-border/60 active:opacity-70"
+                        }`}
+                      >
+                        {label}
+                        <span className={`ml-1.5 text-[11px] ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
-                This collection is empty.
+                {hasMedia && statusFilter !== "all" ? "Nothing here for this status." : "This collection is empty."}
               </p>
+
             ) : view === "list" ? (
               <ul className="space-y-2">
                 {members.map((n) => (
