@@ -350,29 +350,28 @@ function Home() {
             )}
 
             {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
-              <div className="rounded-[28px] bg-card p-5 ring-1 ring-border/60">
-                <div className="mb-3 flex items-baseline justify-between">
+              <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
+                <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
                     Tasks
-
                   </span>
                   <Link
                     to="/tasks"
-                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
+                    className="inline-flex items-center gap-0.5 text-[12px] text-primary active:opacity-60"
                   >
                     <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                    <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                    <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                   </Link>
                 </div>
                 {derived.visible.length === 0 ? (
                   <Link
                     to="/tasks"
-                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                    className="block py-1 text-center text-[12px] text-primary active:opacity-70"
                   >
                     + Add a task
                   </Link>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul>
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
                       const isSel = selectedTasks.has(key);
@@ -386,6 +385,8 @@ function Home() {
                             text={t.text}
                             noteHeading={t.noteHeading}
                             noteId={t.noteId}
+                            hideNoteHeading
+                            compact
                             onToggleDone={() => onToggle(t.noteId, t.id)}
                             onLongPress={() => toggleTaskSel(key)}
                             onSelectTap={() => toggleTaskSel(key)}
@@ -397,6 +398,7 @@ function Home() {
                 )}
               </div>
             )}
+
 
             {(derived.strip.length > 0 || derived.grid.length > 0) && (
               <div className="columns-2 gap-3 [column-fill:_balance]">
@@ -821,6 +823,8 @@ const TaskRow = memo(function TaskRow({
   onToggleDone,
   onLongPress,
   onSelectTap,
+  hideNoteHeading,
+  compact,
 }: {
   selectMode: boolean;
   selected: boolean;
@@ -832,6 +836,8 @@ const TaskRow = memo(function TaskRow({
   onToggleDone: () => void;
   onLongPress: () => void;
   onSelectTap: () => void;
+  hideNoteHeading?: boolean;
+  compact?: boolean;
 }) {
   const lp = useLongPress(onLongPress);
   return (
@@ -844,10 +850,11 @@ const TaskRow = memo(function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+      className={`flex items-start gap-3 ${compact ? "px-1 py-1.5" : "px-4 py-3"} select-none transition-colors ${
         selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
+
       <button
         onClick={(e) => {
           e.stopPropagation();
@@ -868,14 +875,14 @@ const TaskRow = memo(function TaskRow({
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-[17px] leading-tight ${
+          className={`${compact ? "text-[14px]" : "text-[17px]"} leading-snug line-clamp-2 ${
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
           {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
-        {noteHeading && (
+        {!hideNoteHeading && noteHeading && (
           selectMode ? (
             <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {noteHeading}
@@ -891,6 +898,7 @@ const TaskRow = memo(function TaskRow({
             </Link>
           )
         )}
+
       </div>
     </div>
   );
