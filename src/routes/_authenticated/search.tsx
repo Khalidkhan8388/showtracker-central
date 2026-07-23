@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { searchEverything } from "@/lib/notes.functions";
+import { addTmdbMedia, searchEverything } from "@/lib/notes.functions";
+import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
+import { poster as posterUrl } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
@@ -18,6 +20,11 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   FileText,
+  Plus,
+  Check,
+  Film,
+  Tv,
+  Star,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
