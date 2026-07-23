@@ -73,16 +73,13 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
           )}
         </div>
         <div className="min-w-0 flex-1 pb-1">
-          <div className="inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+          <div className="mb-1.5 inline-flex items-center gap-1 rounded-full bg-muted px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
             {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
             {isTv ? "TV Show" : "Movie"}
           </div>
+          <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">{media.title}</h1>
+          {media.tagline && <p className="mt-1 text-[13px] italic text-muted-foreground line-clamp-2">{media.tagline}</p>}
         </div>
-      </div>
-
-      <div className="mt-3 px-1">
-        <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">{media.title}</h1>
-        {media.tagline && <p className="mt-1 text-[13px] italic text-muted-foreground line-clamp-2">{media.tagline}</p>}
       </div>
 
       {/* Meta chips */}
