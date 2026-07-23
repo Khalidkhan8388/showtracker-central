@@ -752,6 +752,14 @@ const NoteCard = memo(function NoteCard({
         </>
       ) : (
         <>
+          {isDarkVoice && (
+            <div className="relative z-10 flex items-center gap-2 text-white/90">
+              <AudioLines className="h-5 w-5" strokeWidth={1.75} />
+              {note.duration_seconds != null && (
+                <span className="text-[13px] font-medium tabular-nums">{formatDur(note.duration_seconds)}</span>
+              )}
+            </div>
+          )}
           {isLink && linkHost && (
             <div className="relative z-10">
               <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-background max-w-full truncate">
@@ -761,8 +769,8 @@ const NoteCard = memo(function NoteCard({
           )}
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
             <h3
-              className={`text-xs font-semibold leading-tight break-words ${
-                hasImage && !isLink ? "text-white drop-shadow" : ""
+              className={`text-[13px] font-medium leading-snug break-words line-clamp-3 ${
+                hasImage && !isLink ? "text-white drop-shadow" : isDarkVoice ? "text-white" : ""
               }`}
             >
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
@@ -770,22 +778,20 @@ const NoteCard = memo(function NoteCard({
           </div>
 
           <div
-            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
+            className={`relative z-10 mt-auto flex items-center gap-2 text-[10px] ${
+              hasImage && !isLink ? "text-white/85" : isDarkVoice ? "text-white/50" : "text-muted-foreground"
             }`}
           >
+            <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
               </span>
             )}
-            <div className="flex items-center gap-2">
-              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-              {note.duration_seconds != null && (
-                <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
-              )}
-            </div>
+            {!isDarkVoice && note.duration_seconds != null && (
+              <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
+            )}
           </div>
         </>
       )}
