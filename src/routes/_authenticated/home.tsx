@@ -239,8 +239,33 @@ function Home() {
     } catch {
       void resync();
     }
-
   }
+
+  async function togglePinSelectedTasks() {
+    const keys = Array.from(selectedTasks);
+    if (keys.length === 0 || !notes) return;
+    const items = keys
+      .map((k) => {
+        const [noteId, taskId] = k.split("::");
+        const n = notes.find((x) => x.id === noteId);
+        const t = n?.tasks?.find((x: any) => x.id === taskId);
+        return t ? { noteId, taskId, pinned: !!t.pinned } : null;
+      })
+      .filter(Boolean) as { noteId: string; taskId: string; pinned: boolean }[];
+    if (items.length === 0) return;
+    const anyUnpinned = items.some((t) => !t.pinned);
+    const nextPinned = anyUnpinned;
+    await Promise.all(items.map((t) => patchLocalTask(t.noteId, t.taskId, { pinned: nextPinned })));
+    setSelectedTasks(new Set());
+    try {
+      await Promise.all(
+        items.map((t) => pinTask({ data: { noteId: t.noteId, taskId: t.taskId, pinned: nextPinned } })),
+      );
+    } catch {
+      void resync();
+    }
+  }
+
 
   const selectMode = noteSelectMode || taskSelectMode;
 
