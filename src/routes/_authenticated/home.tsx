@@ -603,6 +603,8 @@ const NoteCard = memo(function NoteCard({
 
 
 
+  const isProcessing = note.status !== "ready" && note.status !== "failed";
+
   return (
     <div
       role="button"
@@ -610,8 +612,9 @@ const NoteCard = memo(function NoteCard({
       onClick={handleClick}
       {...lp.handlers}
       style={textNoteStyle}
-      className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100`}
+      className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${isProcessing ? "analyzing-shimmer" : ""}`}
     >
+
       {/* Image-forward tile: image fills the card as background (only when not a link) */}
       {isSquareLike && hasImage && !isLink && (
         <>
