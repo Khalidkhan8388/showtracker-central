@@ -552,15 +552,16 @@ function CollectionDetail() {
                               loading="lazy"
                               className="absolute inset-0 h-full w-full object-cover"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <div className="absolute inset-0 scrim-t" />
                             <div className="relative z-10 mt-auto p-3">
-                              <p className="line-clamp-2 text-[13px] font-semibold text-white">
+                              <p className="line-clamp-2 text-[13px] font-semibold scrim-fg">
                                 {n.heading ?? "Untitled"}
                               </p>
-                              <p className="mt-0.5 text-[10px] text-white/70">
+                              <p className="mt-0.5 text-[10px] scrim-fg-70">
                                 {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                               </p>
                             </div>
+
                           </>
                         ) : (
                           <div className="flex h-full w-full flex-col justify-between p-3">
