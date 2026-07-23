@@ -583,16 +583,16 @@ function CollectionsRow() {
 
   return (
     <div className="-mx-4">
-      <div className="flex items-center justify-between px-5 pb-3">
-        <span className="text-[15px] font-semibold uppercase tracking-[0.18em] text-foreground">
+      <div className="flex items-center justify-between px-5 pb-2">
+        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Collections
         </span>
         <Link
           to="/collections"
           aria-label="Open collections"
-          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-foreground active:opacity-70"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
         >
-          <ChevronRight className="h-5 w-5" strokeWidth={2.5} />
+          <ChevronRight className="h-4 w-4" />
         </Link>
       </div>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
