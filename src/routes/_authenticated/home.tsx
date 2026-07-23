@@ -56,11 +56,18 @@ function Home() {
   const taskSelectMode = selectedTasks.size > 0;
 
   const [collapsed, setCollapsed] = useState(false);
+  const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
-    const onScroll = () => setCollapsed(window.scrollY > 24);
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    const el = sentinelRef.current;
+    if (!el) return;
+    // IntersectionObserver fires reliably during iOS momentum scrolling,
+    // unlike `scroll` events which pause until the fling settles.
+    const io = new IntersectionObserver(
+      ([entry]) => setCollapsed(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "0px 0px -100% 0px" },
+    );
+    io.observe(el);
+    return () => io.disconnect();
   }, []);
 
 
