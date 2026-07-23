@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+// Local-only app — no auth/user identity.
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
@@ -140,15 +140,8 @@ function Home() {
   }, [notes, signThumbsFor]);
 
 
-  const [userInitial, setUserInitial] = useState<string>("?");
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      const em = data.user?.email ?? "";
-      setUserInitial((em[0] || "?").toUpperCase());
-    });
-  }, []);
   function ProfileInitial() {
-    return <span>{userInitial}</span>;
+    return <span>B</span>;
   }
 
 

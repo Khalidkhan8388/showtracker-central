@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { supabase } from "@/integrations/supabase/client";
-import { processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
+import { createMediaNote, processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
+import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
@@ -79,22 +79,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     if (files.length === 0) return;
     setUploadingMd(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      const paths = await uploadImages(uid, files);
       const urls: string[] = [];
-      for (const p of paths) {
-        const { data, error } = await supabase.storage
-          .from("voice-notes")
-          .createSignedUrl(p, 60 * 60 * 24 * 365 * 10);
-        if (error || !data) throw error ?? new Error("Could not sign URL");
-        urls.push(data.signedUrl);
+      for (const f of files) {
+        const path = await storeLocalPhoto(f, f.type);
+        const url = await getPhotoUrl(path);
+        if (url) urls.push(url);
       }
       const snippet = urls.map((u) => `\n![](${u})\n`).join("");
       insertAtCursor(snippet);
     } catch (err: any) {
-      toast.error(err?.message ?? "Upload failed");
+      toast.error(err?.message ?? "Could not attach image");
     } finally {
       setUploadingMd(false);
     }
@@ -327,7 +321,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       updatePending([...pendingRef.current, ...next]);
     } else {
       // create image-only note immediately
-      submitImageOnly(files).catch((err: any) => toast.error(err?.message ?? "Upload failed"));
+      submitImageOnly(files).catch((err: any) => toast.error(err?.message ?? "Could not save images"));
       next.forEach((p) => URL.revokeObjectURL(p.previewUrl));
     }
   }
@@ -339,41 +333,19 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     updatePending(copy);
   }
 
-  async function uploadImages(uid: string, files: File[]): Promise<string[]> {
-    const paths: string[] = [];
-    for (const f of files) {
-      const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
-      const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage
-        .from("voice-notes")
-        .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
-      if (error) throw error;
-      paths.push(path);
-    }
-    return paths;
-  }
-
   async function submitImageOnly(files: File[]) {
     setBusy(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
-      const paths = await uploadImages(uid, files);
-      const { data: inserted, error: insErr } = await supabase
-        .from("voice_notes")
-        .insert({ user_id: uid, image_paths: paths, status: "uploaded" })
-        .select("id")
-        .single();
-      if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
+      const { noteId } = await createMediaNote({
+        audioBlob: null,
+        audioMime: null,
+        durationSeconds: null,
+        imageBlobs: files,
+      });
       setBusy(false);
       onNoteReady?.();
-      processFn({ data: { noteId: inserted.id } })
-        .then(() => onNoteReady?.())
-        .catch((e) => {
-          toast.error(e?.message ?? "Processing failed");
-          onNoteReady?.();
-        });
+      // analyzeMediaFn runs in the background inside createMediaNote; nothing else to do.
+      void noteId;
     } catch (err: any) {
       setBusy(false);
       throw err;
@@ -390,55 +362,23 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         setBusy(false);
         return;
       }
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
+      const durationSeconds =
+        blob.size >= 2048 ? Math.max(1, Math.round((Date.now() - startRef.current) / 1000)) : null;
 
-      let audioPath: string | null = null;
-      let duration: number | null = null;
-      if (blob.size >= 2048) {
-        const ext = mime.includes("mp4") ? "m4a" : mime.includes("ogg") ? "ogg" : "webm";
-        audioPath = `${uid}/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("voice-notes")
-          .upload(audioPath, blob, { contentType: mime, upsert: false });
-        if (upErr) throw upErr;
-        duration = Math.max(1, Math.round((Date.now() - startRef.current) / 1000));
-      }
-
-      let imagePaths: string[] = [];
-      if (attachedImages.length > 0) {
-        imagePaths = await uploadImages(
-          uid,
-          attachedImages.map((p) => p.file),
-        );
-      }
-
-      const { data: inserted, error: insErr } = await supabase
-        .from("voice_notes")
-        .insert({
-          user_id: uid,
-          audio_path: audioPath,
-          duration_seconds: duration,
-          image_paths: imagePaths,
-          status: "uploaded",
-        })
-        .select("id")
-        .single();
-      if (insErr || !inserted) throw insErr ?? new Error("Insert failed");
+      const { noteId } = await createMediaNote({
+        audioBlob: blob.size >= 2048 ? blob : null,
+        audioMime: blob.size >= 2048 ? mime : null,
+        durationSeconds,
+        imageBlobs: attachedImages.map((p) => p.file),
+      });
+      void noteId;
 
       attachedImages.forEach((p) => URL.revokeObjectURL(p.previewUrl));
       updatePending([]);
       setBusy(false);
       onNoteReady?.();
-      processFn({ data: { noteId: inserted.id } })
-        .then(() => onNoteReady?.())
-        .catch((e) => {
-          toast.error(e?.message ?? "Processing failed");
-          onNoteReady?.();
-        });
     } catch (err: any) {
-      toast.error(err?.message ?? "Upload failed");
+      toast.error(err?.message ?? "Could not save note");
       setBusy(false);
     }
   }
