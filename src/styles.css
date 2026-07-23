@@ -242,27 +242,20 @@
 
 /* ---------- Motion system ---------- */
 @keyframes route-enter {
-  0% { opacity: 0; }
-  100% { opacity: 1; }
+  0% { opacity: 0; transform: translate3d(0, 6px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
 }
 
 .route-enter {
-  animation: route-enter 160ms ease-out backwards;
-  will-change: opacity;
+  animation: route-enter 180ms cubic-bezier(0.22, 1, 0.36, 1) backwards;
+  will-change: opacity, transform;
 }
-
-/* Fixed bottom pills sit inside .route-enter; promote them to their own
- * compositor layer so shadows / ring / blur paint in the same frame as
- * the route fade instead of appearing a tick later. */
-.route-enter .fixed {
-  transform: translateZ(0);
-}
-
 
 @keyframes card-pop {
-  0% { opacity: 0; transform: translateY(10px) scale(0.97); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
+  0% { opacity: 0; transform: translate3d(0, 8px, 0); }
+  100% { opacity: 1; transform: translate3d(0, 0, 0); }
 }
+
 
 
 
