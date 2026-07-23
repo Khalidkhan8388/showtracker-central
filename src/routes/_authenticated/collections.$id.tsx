@@ -310,15 +310,32 @@ function CollectionDetail() {
             ) : (
               <ul className="grid grid-cols-2 gap-3">
                 {members.map((n) => {
+                  const media = (n as any).media as { poster_path?: string | null; title?: string } | undefined;
+                  const posterUrl = media?.poster_path ? tmdbPoster(media.poster_path, "w342") : null;
                   const thumb = thumbs[n.id];
+                  const isMedia = !!posterUrl;
                   return (
                     <li key={n.id} className="relative">
                       <Link
                         to="/notes/$id"
                         params={{ id: n.id }}
-                        className="relative flex aspect-square flex-col justify-between overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60 active:opacity-80"
+                        className={`relative flex ${isMedia ? "aspect-[2/3]" : "aspect-square"} flex-col justify-between overflow-hidden rounded-2xl bg-card shadow-sm ring-1 ring-border/60 active:opacity-80`}
                       >
-                        {thumb ? (
+                        {isMedia ? (
+                          <>
+                            <img
+                              src={posterUrl!}
+                              alt={media?.title ?? n.heading ?? "Poster"}
+                              loading="lazy"
+                              className="absolute inset-0 h-full w-full object-cover"
+                            />
+                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent p-2.5 pt-8">
+                              <p className="line-clamp-2 text-[12px] font-semibold text-white">
+                                {media?.title ?? n.heading ?? "Untitled"}
+                              </p>
+                            </div>
+                          </>
+                        ) : thumb ? (
                           <>
                             <img
                               src={thumb}
