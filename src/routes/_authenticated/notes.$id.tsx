@@ -520,7 +520,15 @@ function NoteDetail() {
       }
       await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
       await load();
-      toast.success(files.length === 1 ? "Image added" : `${files.length} images added`);
+      toast.success(files.length === 1 ? "Image added — refreshing…" : `${files.length} images added — refreshing…`);
+      // Re-run AI so summary/tasks reflect the new photos.
+      try {
+        await processFn({ data: { noteId: id } });
+        await load();
+        toast.success("Note updated");
+      } catch (err: any) {
+        toast.error(err?.message ?? "Refresh failed");
+      }
     } catch (err: any) {
       toast.error(err?.message ?? "Upload failed");
     } finally {
