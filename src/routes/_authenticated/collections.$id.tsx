@@ -283,59 +283,69 @@ function CollectionDetail() {
                 <Plus className="h-4 w-4" />
                 Add memories
               </button>
-              <div className="inline-flex rounded-full bg-card p-1 ring-1 ring-border/60">
-                <button
-                  type="button"
-                  aria-label="List view"
-                  onClick={() => setViewMode("list")}
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                    view === "list" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <ListIcon className="h-4 w-4" />
-                </button>
-                <button
-                  type="button"
-                  aria-label="Grid view"
-                  onClick={() => setViewMode("grid")}
-                  className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
-                    view === "grid" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
-                  }`}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </button>
+            </div>
+            <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+                {hasTv && (
+                  <>
+                    <button
+                      type="button"
+                      onClick={() => setTvView("posters")}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                        tvView === "posters"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                      Posters
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTvView("episodes")}
+                      className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                        tvView === "episodes"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <CalendarClock className="h-3.5 w-3.5" />
+                      Episodes
+                    </button>
+                  </>
+                )}
+                {(!hasTv || tvView === "posters") && (
+                  <>
+                    {hasTv && <span className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />}
+                    <button
+                      type="button"
+                      aria-label="List view"
+                      onClick={() => setViewMode("list")}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                        view === "list"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <ListIcon className="h-4 w-4" />
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Grid view"
+                      onClick={() => setViewMode("grid")}
+                      className={`inline-flex h-8 w-8 items-center justify-center rounded-full transition-colors ${
+                        view === "grid"
+                          ? "bg-primary text-primary-foreground shadow-sm"
+                          : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                      }`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                  </>
+                )}
               </div>
             </div>
-            {hasTv && (
-              <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-                <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
-                  <button
-                    type="button"
-                    onClick={() => setTvView("posters")}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
-                      tvView === "posters"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
-                    }`}
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                    Posters
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setTvView("episodes")}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
-                      tvView === "episodes"
-                        ? "bg-primary text-primary-foreground shadow-sm"
-                        : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
-                    }`}
-                  >
-                    <CalendarClock className="h-3.5 w-3.5" />
-                    Episodes
-                  </button>
-                </div>
-              </div>
-            )}
+
             {hasTv && tvView === "episodes" ? (
               <EpisodeTracker members={mediaMembers} />
             ) : (
