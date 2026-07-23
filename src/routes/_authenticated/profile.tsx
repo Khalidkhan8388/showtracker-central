@@ -1,7 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight } from "lucide-react";
+import { useRef, useState } from "react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
+import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
