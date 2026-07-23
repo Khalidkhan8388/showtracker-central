@@ -267,15 +267,18 @@ function Home() {
         <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
           <div className="min-w-0">
             <h1
-              key={collapsed ? "sm" : "lg"}
-              className={`font-bold tracking-tight leading-none animate-[fade-in_150ms_ease-out] ${
+              className={`font-bold tracking-tight leading-none transition-all duration-200 ${
                 collapsed ? "text-[20px]" : "text-[32px]"
               }`}
             >
               Braintape
             </h1>
-            {notes && notes.length > 0 && !collapsed && (
-              <p className="mt-1 text-[13px] text-muted-foreground animate-[fade-in_150ms_ease-out]">
+            {notes && notes.length > 0 && (
+              <p
+                className={`overflow-hidden text-muted-foreground transition-all duration-200 ${
+                  collapsed ? "mt-0 max-h-0 opacity-0" : "mt-1 max-h-5 text-[13px] opacity-100"
+                }`}
+              >
                 {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
               </p>
             )}
