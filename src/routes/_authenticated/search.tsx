@@ -147,17 +147,18 @@ function CaptureCard({
           className="block w-full object-cover"
           style={{ aspectRatio: "3 / 4" }}
         />
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3">
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 scrim-t p-3">
           {host && (
-            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-medium scrim-fg backdrop-blur-sm">
               <LinkIcon className="h-2.5 w-2.5" />
               {host}
             </div>
           )}
-          <div className="line-clamp-2 text-[13px] font-semibold leading-tight text-white">
+          <div className="line-clamp-2 text-[13px] font-semibold leading-tight scrim-fg">
             {highlight(heading, q)}
           </div>
         </div>
+
       </button>
     );
   }

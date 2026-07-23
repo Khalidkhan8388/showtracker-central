@@ -520,27 +520,28 @@ function CollectionDetail() {
                               loading="lazy"
                               className={`absolute inset-0 h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
                             />
-                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8">
+                            <div className="absolute inset-x-0 bottom-0 scrim-t p-2.5 pt-8">
                               {media?.watch_status && (
                                 <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
                                   {WATCH_LABEL[media.watch_status]}
                                 </span>
                               )}
-                              <p className="line-clamp-2 text-[12px] font-semibold text-white">
+                              <p className="line-clamp-2 text-[12px] font-semibold scrim-fg">
                                 {media?.title ?? n.heading ?? "Untitled"}
                               </p>
                               {isTvMedia && tvTotal > 0 && (
                                 <div className="mt-1.5">
-                                  <div className="flex items-center justify-between text-[10px] font-medium text-white/85">
+                                  <div className="flex items-center justify-between text-[10px] font-medium scrim-fg-80">
                                     <span>{tvDone}/{tvTotal} ep</span>
                                     <span>{tvPct}%</span>
                                   </div>
-                                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
-                                    <div className="h-full rounded-full bg-white" style={{ width: `${tvPct}%` }} />
+                                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full scrim-track">
+                                    <div className="h-full rounded-full scrim-fill" style={{ width: `${tvPct}%` }} />
                                   </div>
                                 </div>
                               )}
                             </div>
+
                           </>
 
                         ) : thumb ? (
@@ -551,15 +552,16 @@ function CollectionDetail() {
                               loading="lazy"
                               className="absolute inset-0 h-full w-full object-cover"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
+                            <div className="absolute inset-0 scrim-t" />
                             <div className="relative z-10 mt-auto p-3">
-                              <p className="line-clamp-2 text-[13px] font-semibold text-white">
+                              <p className="line-clamp-2 text-[13px] font-semibold scrim-fg">
                                 {n.heading ?? "Untitled"}
                               </p>
-                              <p className="mt-0.5 text-[10px] text-white/70">
+                              <p className="mt-0.5 text-[10px] scrim-fg-70">
                                 {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
                               </p>
                             </div>
+
                           </>
                         ) : (
                           <div className="flex h-full w-full flex-col justify-between p-3">

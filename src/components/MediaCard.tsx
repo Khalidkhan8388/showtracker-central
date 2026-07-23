@@ -60,7 +60,7 @@ export function MediaCard({
           {isTv ? <Tv className="h-10 w-10 text-white/40" /> : <Film className="h-10 w-10 text-white/40" />}
         </div>
       )}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-0 scrim-t" />
 
       <div className="absolute left-2 top-2 z-10 flex items-center gap-1.5">
         <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
@@ -89,14 +89,14 @@ export function MediaCard({
         )
       )}
 
-      <div className={`absolute inset-x-0 bottom-0 z-10 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
+      <div className={`absolute inset-x-0 bottom-0 z-10 scrim-t p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
         {media.watch_status && (
           <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
             {WATCH_LABEL[media.watch_status]}
           </span>
         )}
-        <p className="line-clamp-2 text-[13px] font-semibold leading-tight text-white">{media.title}</p>
-        <div className="mt-1 flex items-center gap-2 text-[10px] text-white/80">
+        <p className="line-clamp-2 text-[13px] font-semibold leading-tight scrim-fg">{media.title}</p>
+        <div className="mt-1 flex items-center gap-2 text-[10px] scrim-fg-80">
           {year && <span>{year}</span>}
           {media.vote_average != null && media.vote_average > 0 && (
             <span className="inline-flex items-center gap-0.5">
@@ -107,16 +107,17 @@ export function MediaCard({
         </div>
         {isTv && total > 0 && (
           <div className="mt-1.5">
-            <div className="flex items-center justify-between text-[10px] font-medium text-white/85">
+            <div className="flex items-center justify-between text-[10px] font-medium scrim-fg-80">
               <span>{done}/{total} ep</span>
               <span>{Math.round((done / total) * 100)}%</span>
             </div>
-            <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
-              <div className="h-full rounded-full bg-white" style={{ width: `${Math.round((done / total) * 100)}%` }} />
+            <div className="mt-1 h-1 w-full overflow-hidden rounded-full scrim-track">
+              <div className="h-full rounded-full scrim-fill" style={{ width: `${Math.round((done / total) * 100)}%` }} />
             </div>
           </div>
         )}
       </div>
+
     </div>
   );
 }
@@ -146,7 +147,7 @@ function HeroMedia({
 
   return (
     <div
-      className={`relative block w-full overflow-hidden rounded-[20px] bg-neutral-900 text-white shadow-sm ring-1 ring-black/10 transition-transform duration-200 active:scale-[0.985] ${
+      className={`relative block w-full overflow-hidden rounded-[20px] bg-neutral-900 shadow-sm ring-1 ring-black/10 transition-transform duration-200 active:scale-[0.985] scrim-fg ${
         selected ? "ring-2 ring-foreground" : ""
       }`}
     >
@@ -170,13 +171,13 @@ function HeroMedia({
             onError={(e) => { (e.currentTarget as HTMLImageElement).style.display = "none"; }}
           />
         ) : null}
-        <div className="absolute inset-0 bg-gradient-to-t from-black via-black/80 to-black/40" />
+        <div className="absolute inset-0 scrim-t-strong" />
       </div>
 
       {/* top badges */}
       <div className="relative z-10 flex items-start justify-between p-3">
         <div className="flex items-center gap-1.5">
-          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide backdrop-blur-sm">
+          <span className="inline-flex items-center gap-1 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
             {isTv ? <Tv className="h-2.5 w-2.5" /> : <Film className="h-2.5 w-2.5" />}
             {isTv ? "TV" : "Movie"}
           </span>
@@ -221,31 +222,31 @@ function HeroMedia({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <h3 className="line-clamp-2 text-[17px] font-bold leading-tight">{media.title}</h3>
-          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] text-white/75">
+          <h3 className="line-clamp-2 text-[17px] font-bold leading-tight scrim-fg">{media.title}</h3>
+          <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] scrim-fg-70">
             {year && <span>{year}</span>}
             {media.vote_average != null && media.vote_average > 0 && (
               <span className="inline-flex items-center gap-0.5">
                 <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-                <span className="font-semibold text-white">{media.vote_average.toFixed(1)}</span>
+                <span className="font-semibold scrim-fg">{media.vote_average.toFixed(1)}</span>
               </span>
             )}
             {isTv && total > 0 && (
-              <span className="font-medium text-white/85">{done}/{total} ep</span>
+              <span className="font-medium scrim-fg-80">{done}/{total} ep</span>
             )}
           </div>
 
           {media.overview && (
-            <p className="mt-2 line-clamp-4 text-[12px] leading-snug text-white/80">
+            <p className="mt-2 line-clamp-4 text-[12px] leading-snug scrim-fg-80">
               {media.overview}
             </p>
           )}
 
           {isTv && total > 0 && (
             <div className="mt-2.5">
-              <div className="h-1 w-full overflow-hidden rounded-full bg-white/15">
+              <div className="h-1 w-full overflow-hidden rounded-full scrim-track">
                 <div
-                  className="h-full rounded-full bg-white"
+                  className="h-full rounded-full scrim-fill"
                   style={{ width: `${progressPct}%` }}
                 />
               </div>
@@ -255,4 +256,5 @@ function HeroMedia({
       </div>
     </div>
   );
+
 }

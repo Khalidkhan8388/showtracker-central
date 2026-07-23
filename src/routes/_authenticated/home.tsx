@@ -795,14 +795,15 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
               )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-6">
+              <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-6">
                 <span className="mb-0.5 inline-block rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">
                   {ids.length}
                 </span>
-                <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-white">
+                <p className="line-clamp-2 text-[12px] font-semibold leading-tight scrim-fg">
                   {c.title}
                 </p>
               </div>
+
             </Link>
           );
         })}
@@ -1015,7 +1016,7 @@ const NoteCard = memo(function NoteCard({
             decoding="async"
             className="pointer-events-none absolute inset-0 h-full w-full object-cover"
           />
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
+          <div className="pointer-events-none absolute inset-0 scrim-t" />
           {imageCount > 1 && (
             <div className="absolute left-2 top-2 z-10 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               +{imageCount - 1}
