@@ -246,16 +246,17 @@ function SearchPage() {
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
 
-  // Track already-saved TMDB items so results show "Added" instead of a plus.
-  const savedMediaKeys = useMemo(() => {
-    const s = new Set<string>();
+  // Map tmdb key -> current watch_status (or "none" if not saved).
+  const savedMediaStatus = useMemo(() => {
+    const m = new Map<string, "watchlist" | "watching" | "watched" | "dropped">();
     for (const n of (localNotes ?? []) as any[]) {
-      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at) {
-        s.add(`${n.media.type}:${n.media.tmdb_id}`);
+      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at && n.media.watch_status) {
+        m.set(`${n.media.type}:${n.media.tmdb_id}`, n.media.watch_status);
       }
     }
-    return s;
+    return m;
   }, [localNotes]);
+
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
