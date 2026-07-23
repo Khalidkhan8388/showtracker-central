@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
@@ -446,7 +446,8 @@ function NoteDetail() {
   const processing = note.status !== "ready" && note.status !== "failed";
   const isVoice = note.duration_seconds != null;
   const isLink = !!note.source_url;
-  const isText = !isVoice && !isLink;
+  const isImage = !isVoice && !isLink && Array.isArray(note.image_paths) && note.image_paths.length > 0;
+  const isText = !isVoice && !isLink && !isImage;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -618,8 +619,8 @@ function NoteDetail() {
 
         {/* Kind pill */}
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-          <span>{isVoice ? "Voice" : isLink ? "Web" : "Note"}</span>
+          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+          <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
         </div>
 
         <h1 className="text-[30px] font-bold leading-[1.1] tracking-tight">
@@ -712,7 +713,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {note.tasks && note.tasks.length > 0 && (
+        {!isImage && note.tasks && note.tasks.length > 0 && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
