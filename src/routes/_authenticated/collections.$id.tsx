@@ -536,7 +536,8 @@ function CollectionDetail() {
                                     <span>{tvPct}%</span>
                                   </div>
                                   <div className="mt-1 h-1 w-full overflow-hidden rounded-full bg-white/20">
-                                    <div className="h-full rounded-full bg-white" style={{ width: `${tvPct}%` }} />
+                                    <div className="h-full rounded-full bg-primary" style={{ width: `${tvPct}%` }} />
+
                                   </div>
                                 </div>
                               )}
