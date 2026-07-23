@@ -4,7 +4,7 @@ import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIco
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { deleteAccount } from "@/lib/account.functions";
-import { ACCENTS, useTheme } from "@/lib/theme";
+import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -18,7 +18,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 });
 
 function ProfilePage() {
-  const { mode, setMode, accent, setAccentId } = useTheme();
+  const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
   const [email, setEmail] = useState<string>("");
   const [uid, setUid] = useState<string>("");
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -125,6 +125,37 @@ function ProfilePage() {
           </div>
           <p className="mt-3 text-[12px] text-muted-foreground">{accent.name}</p>
         </div>
+      </section>
+
+      {/* Component size */}
+      <section className="px-4 pt-6">
+        <SectionTitle>Component size</SectionTitle>
+        <div className="overflow-hidden rounded-2xl bg-card">
+          {SIZE_SCALES.map((s, i) => {
+            const selected = s.id === sizeScale;
+            return (
+              <button
+                key={s.id}
+                onClick={() => setSizeScale(s.id)}
+                className={`flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 ${
+                  i > 0 ? "border-t border-border/60" : ""
+                }`}
+              >
+                <span
+                  className="font-semibold text-foreground"
+                  style={{ fontSize: `${13 * s.value}px` }}
+                >
+                  Aa
+                </span>
+                <span className="flex-1 text-[15px]">{s.name}</span>
+                {selected && <Check className="h-5 w-5 text-primary" />}
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+          Scales the entire app to your preferred size.
+        </p>
       </section>
 
       {/* Account */}

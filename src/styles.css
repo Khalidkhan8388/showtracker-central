@@ -176,10 +176,11 @@
    */
   :root {
     --app-scale: clamp(0.92, 0.72 + 0.0625 * 100vw / 16, 1.15);
+    --user-scale: 1;
   }
 
   html {
-    zoom: var(--app-scale);
+    zoom: calc(var(--app-scale) * var(--user-scale));
     font-size: 100%; /* respects the user's browser/OS font-size setting */
     -webkit-text-size-adjust: 100%;
     text-size-adjust: 100%;
