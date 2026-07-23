@@ -152,13 +152,20 @@ function CollectionDetail() {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center gap-2 px-4 py-3">
-          <Link
-            to="/collections"
+          <button
+            type="button"
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) {
+                window.history.back();
+              } else {
+                navigate({ to: "/collections" });
+              }
+            }}
             aria-label="Back"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
           >
             <ChevronLeft className="h-5 w-5" />
-          </Link>
+          </button>
           {editingTitle ? (
             <form
               className="flex flex-1 items-center gap-2"
