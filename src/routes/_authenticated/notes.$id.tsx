@@ -411,6 +411,38 @@ function NoteDetail() {
     }
   }
 
+  const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
+  const [addingImages, setAddingImages] = useState(false);
+
+  async function onAddImagesToSaved(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = "";
+    if (files.length === 0 || !note) return;
+    setAddingImages(true);
+    try {
+      const { data: userRes } = await supabase.auth.getUser();
+      const uid = userRes.user?.id;
+      if (!uid) throw new Error("Not signed in");
+      const paths: string[] = [];
+      for (const f of files) {
+        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
+        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
+        const { error: upErr } = await supabase.storage
+          .from("voice-notes")
+          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
+        if (upErr) throw upErr;
+        paths.push(path);
+      }
+      await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
+      await load();
+      toast.success(files.length === 1 ? "Image added" : `${files.length} images added`);
+    } catch (err: any) {
+      toast.error(err?.message ?? "Upload failed");
+    } finally {
+      setAddingImages(false);
+    }
+  }
+
   const renderedBody = note.transcript ? resolveWikiLinks(note.transcript, wikiIndex) : "";
 
   return (
