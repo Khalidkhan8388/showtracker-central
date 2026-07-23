@@ -96,13 +96,28 @@ async function extractStructured(
   transcript: string | null,
   images: Array<{ mime: string; base64: string }>,
   apiKey: string,
+  prior?: { heading?: string | null; summary?: string | null; tasks?: string[] } | null,
 ): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userBlocks: Array<Record<string, unknown>> = [];
+  const priorHasContent =
+    !!prior && (((prior.heading ?? "").trim().length > 0) || ((prior.summary ?? "").trim().length > 0) || ((prior.tasks?.length ?? 0) > 0));
+  if (priorHasContent) {
+    const priorText =
+      `EXISTING NOTE (previous content — DO NOT discard, MERGE it with the new material into one cohesive note):\n` +
+      `- Heading: ${prior?.heading || "(none)"}\n` +
+      `- Summary: ${prior?.summary || "(none)"}\n` +
+      `- Tasks:\n${(prior?.tasks ?? []).map((t) => `  • ${t}`).join("\n") || "  (none)"}\n\n` +
+      `Treat the transcript and images below as ADDITIONAL entries appended to the same note. ` +
+      `Produce ONE unified heading, ONE cohesive summary that weaves the previous content together with the new content (do not list them separately, do not drop earlier details), and a merged, de-duplicated task list preserving still-relevant prior tasks.`;
+    userBlocks.push({ type: "text", text: priorText });
+  }
   const intro = transcript
-    ? `Transcript from the voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
+    ? `${priorHasContent ? "New" : ""} Transcript from ${priorHasContent ? "an additional" : "the"} voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
     : images.length > 0
-      ? "There is no voice transcript. Analyze the attached image(s) and produce the structured note based on them alone."
-      : "No content provided.";
+      ? (priorHasContent
+          ? "Newly attached image(s) — analyze them and merge into the note."
+          : "There is no voice transcript. Analyze the attached image(s) and produce the structured note based on them alone.")
+      : "No new content provided.";
   userBlocks.push({ type: "text", text: intro });
   for (const img of images) {
     userBlocks.push({
@@ -179,6 +194,20 @@ export const processVoiceNote = createServerFn({ method: "POST" })
       .map((p) => (typeof p === "string" ? p : ""))
       .filter(Boolean);
 
+    const { data: priorRow } = await supabase
+      .from("voice_notes")
+      .select("heading, summary, tasks")
+      .eq("id", note.id)
+      .single();
+    const priorTasksArr = Array.isArray((priorRow as any)?.tasks) ? ((priorRow as any).tasks as Array<{ text?: string }>) : [];
+    const prior = priorRow
+      ? {
+          heading: (priorRow as any).heading ?? "",
+          summary: (priorRow as any).summary ?? "",
+          tasks: priorTasksArr.map((t) => String(t?.text ?? "")).filter((s) => s.trim().length > 0),
+        }
+      : null;
+
     if (!note.audio_path && imagePaths.length === 0) {
       throw new Error("Note has no audio and no images");
     }
@@ -213,12 +242,25 @@ export const processVoiceNote = createServerFn({ method: "POST" })
         images.push({ mime, base64: bytesToBase64(bytes) });
       }
 
-      const structured = await extractStructured(transcript, images, apiKey);
+      const structured = await extractStructured(transcript, images, apiKey, prior);
       // Image-only notes (no audio) should not have AI-generated tasks — they're
       // rarely actionable and mostly noise. Users can still add custom tasks.
       const skipTasks = !note.audio_path && imagePaths.length > 0;
       const effectiveTasks = skipTasks ? [] : structured.tasks;
-      const tasksPayload = effectiveTasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
+      // Preserve done/pending state for tasks whose text matches a prior task.
+      const priorTaskMap = new Map<string, { done: boolean; pending: boolean }>();
+      for (const t of priorTasksArr) {
+        const key = String((t as any)?.text ?? "").trim().toLowerCase();
+        if (!key) continue;
+        priorTaskMap.set(key, {
+          done: Boolean((t as any)?.done),
+          pending: (t as any)?.pending === undefined ? false : Boolean((t as any)?.pending),
+        });
+      }
+      const tasksPayload = effectiveTasks.map((text, i) => {
+        const match = priorTaskMap.get(text.trim().toLowerCase());
+        return { id: `t${i}`, text, done: match?.done ?? false, pending: match?.pending ?? true };
+      });
 
       await supabase
         .from("voice_notes")
