@@ -356,11 +356,59 @@ function NoteDetail() {
 
   const processing = note.status !== "ready" && note.status !== "failed";
   const isVoice = note.duration_seconds != null;
-  const isText = !isVoice;
+  const isLink = !!note.source_url;
+  const isText = !isVoice && !isLink;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
+
+  function formatDuration(sec: number) {
+    const m = Math.floor(sec / 60);
+    const s = Math.round(sec % 60);
+    return m > 0 ? `${m}m ${s}s` : `${s}s`;
+  }
+  function relativeTime(iso: string) {
+    const then = new Date(iso).getTime();
+    const diff = Date.now() - then;
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return "Just now";
+    if (mins < 60) return `${mins}m ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs}h ago`;
+    const days = Math.round(hrs / 24);
+    if (days < 7) return `${days}d ago`;
+    return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  const readingMinutes = note.transcript
+    ? Math.max(1, Math.round(note.transcript.trim().split(/\s+/).length / 220))
+    : 0;
+  const doneCount = note.tasks?.filter((t) => t.done).length ?? 0;
+  const taskTotal = note.tasks?.length ?? 0;
+
+  async function onShare() {
+    const url = typeof window !== "undefined" ? window.location.href : "";
+    const title = note?.heading ?? "Note";
+    const text = note?.summary ?? note?.transcript?.slice(0, 200) ?? "";
+    try {
+      if (navigator.share) {
+        await navigator.share({ title, text, url });
+      } else {
+        await navigator.clipboard.writeText(url);
+        toast.success("Link copied");
+      }
+    } catch {}
+  }
+
+  async function copyTranscript() {
+    if (!note?.transcript) return;
+    try {
+      await navigator.clipboard.writeText(note.transcript);
+      toast.success("Copied");
+    } catch {
+      toast.error("Copy failed");
+    }
+  }
 
   const renderedBody = note.transcript ? resolveWikiLinks(note.transcript, wikiIndex) : "";
 
