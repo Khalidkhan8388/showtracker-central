@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, addCustomTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
