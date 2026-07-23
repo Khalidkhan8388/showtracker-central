@@ -333,6 +333,25 @@ function CollectionDetail() {
                 </button>
               </div>
             </div>
+            <div className="mb-3 flex items-center justify-end">
+              <label className="relative inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-[12px] font-semibold text-foreground ring-1 ring-border/60 active:opacity-70">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Sort:</span>
+                <span>
+                  {sort === "recent" ? "Recently added" : sort === "released" ? "Released date" : "Name"}
+                </span>
+                <select
+                  aria-label="Sort by"
+                  value={sort}
+                  onChange={(e) => setSortKey(e.target.value as typeof sort)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                >
+                  <option value="recent">Recently added</option>
+                  <option value="released">Released date</option>
+                  <option value="name">Name</option>
+                </select>
+              </label>
+            </div>
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
