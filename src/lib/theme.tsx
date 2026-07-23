@@ -61,18 +61,27 @@ function applyMode(mode: ThemeMode) {
   return dark;
 }
 
+function applySize(id: SizeScaleId) {
+  const found = SIZE_SCALES.find((s) => s.id === id) ?? SIZE_SCALES[1];
+  document.documentElement.style.setProperty("--user-scale", String(found.value));
+}
+
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [mode, setModeState] = useState<ThemeMode>("system");
   const [accent, setAccent] = useState<Accent>(ACCENTS[0]);
   const [isDark, setIsDark] = useState(false);
+  const [sizeScale, setSizeScaleState] = useState<SizeScaleId>("default");
 
   useEffect(() => {
     const storedMode = (localStorage.getItem(MODE_KEY) as ThemeMode | null) ?? "system";
     const storedAccentId = localStorage.getItem(ACCENT_KEY) ?? "yellow";
+    const storedSize = (localStorage.getItem(SIZE_KEY) as SizeScaleId | null) ?? "default";
     const found = ACCENTS.find((a) => a.id === storedAccentId) ?? ACCENTS[0];
     setModeState(storedMode);
     setAccent(found);
+    setSizeScaleState(storedSize);
     applyAccent(found);
+    applySize(storedSize);
     setIsDark(applyMode(storedMode));
 
     const mq = window.matchMedia("(prefers-color-scheme: dark)");
