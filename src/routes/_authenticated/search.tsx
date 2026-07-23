@@ -239,22 +239,41 @@ function SearchPage() {
 
   const signInFlightRef = useRef<Set<string>>(new Set());
   const signThumbsFor = useCallback((rows: Note[]) => {
-    const toSign: Array<{ id: string; path: string }> = [];
+    const paths: string[] = [];
+    const toFetch: Array<{ id: string; path: string }> = [];
     for (const n of rows) {
       const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
       if (!p) continue;
-      const cached = getCachedSignedUrl(p);
+      paths.push(p);
+      const cached = getCachedPhotoUrl(p);
       if (cached) {
         setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
         continue;
       }
       if (signInFlightRef.current.has(p)) continue;
       signInFlightRef.current.add(p);
-      toSign.push({ id: n.id, path: p });
+      toFetch.push({ id: n.id, path: p });
     }
-    if (toSign.length === 0) return;
+    if (paths.length) {
+      void warmPhotoCache(paths).then(() => {
+        setThumbs((cur) => {
+          let next = cur;
+          for (const n of rows) {
+            const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
+            if (!p) continue;
+            const u = getCachedPhotoUrl(p);
+            if (u && next[n.id] !== u) {
+              if (next === cur) next = { ...cur };
+              next[n.id] = u;
+            }
+          }
+          return next;
+        });
+      });
+    }
+    if (toFetch.length === 0) return;
     Promise.all(
-      toSign.map(async ({ id, path }) => ({ id, path, url: await signPath(path) })),
+      toFetch.map(async ({ id, path }) => ({ id, path, url: await getPhotoUrl(path) })),
     ).then((pairs) => {
       setThumbs((cur) => {
         const next = { ...cur };
@@ -270,6 +289,7 @@ function SearchPage() {
   useEffect(() => {
     signThumbsFor(notes);
   }, [notes, signThumbsFor]);
+
 
   useEffect(() => {
     setAiIds(null);
