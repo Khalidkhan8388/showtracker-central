@@ -697,16 +697,7 @@ function NoteDetail() {
                   </a>
                 ))}
               </div>
-            ) : (
-              <button
-                onClick={() => viewAddImagesRef.current?.click()}
-                disabled={addingImages}
-                className="flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-6 text-[13px] text-muted-foreground active:opacity-60 disabled:opacity-50"
-              >
-                <ImagePlus className="h-5 w-5" />
-                Attach photos
-              </button>
-            )}
+            ) : null}
           </section>
         )}
 
