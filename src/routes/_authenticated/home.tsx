@@ -567,23 +567,27 @@ const NoteCard = memo(function NoteCard({
   const isWideLike = variant === "wide" || isHero;
   const isSquareLike = variant === "square" || isMasonry;
 
-  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
-  const useTint = isMasonry && !isText && !hasImage;
+  // Voice-only masonry tiles get a dark treatment; other non-text/non-image tiles get a soft tint.
+  const isDarkVoice = isMasonry && isVoice && !hasImage && !isLink;
+  const useTint = isMasonry && !isText && !hasImage && !isDarkVoice;
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
   const base = isText
     ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
     : isHero
-      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+      ? "relative block overflow-hidden rounded-[28px] p-6 transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
-      : useTint
-        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+      : isDarkVoice
+        ? "relative block overflow-hidden rounded-[24px] p-4 transition-all text-white " +
           (selected ? "ring-2 ring-foreground" : "")
-        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
-          (selected
-            ? "border-foreground bg-muted shadow-sm"
-            : "bg-card hover:bg-muted/50");
+        : useTint
+          ? "relative block overflow-hidden rounded-[24px] p-4 transition-all " +
+            (selected ? "ring-2 ring-foreground" : "")
+          : "relative block overflow-hidden rounded-[24px] border border-border/60 p-3 transition-colors " +
+            (selected
+              ? "border-foreground bg-muted shadow-sm"
+              : "bg-card hover:bg-muted/50");
 
   let sizing: string;
   if (isHero) {
@@ -593,7 +597,7 @@ const NoteCard = memo(function NoteCard({
   } else if (isMasonry) {
     sizing = hasImage && !isLink
       ? "flex aspect-[4/5] w-full flex-col gap-2"
-      : "flex w-full flex-col gap-3 min-h-[7rem]";
+      : "flex aspect-square w-full flex-col gap-3";
   } else if (fullWidth) {
     sizing = "flex aspect-square w-full flex-col gap-3";
   } else {
@@ -602,9 +606,13 @@ const NoteCard = memo(function NoteCard({
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: "#ffffff" }
-    : tintBg
-      ? { backgroundColor: tintBg }
-      : undefined;
+    : isHero
+      ? { backgroundColor: "#EFECE4" }
+      : isDarkVoice
+        ? { backgroundColor: "#1c1c1e" }
+        : tintBg
+          ? { backgroundColor: tintBg }
+          : undefined;
 
 
   return (
