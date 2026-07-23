@@ -625,6 +625,17 @@ function SearchPage() {
               id="search-input"
               ref={inputRef}
               autoFocus
+              type="search"
+              inputMode="search"
+              enterKeyHint="search"
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              name="braintape-search"
+              data-form-type="other"
+              data-lpignore="true"
+              data-1p-ignore="true"
               value={query}
               onChange={(e) => {
                 setQuery(e.target.value);
@@ -640,6 +651,7 @@ function SearchPage() {
               placeholder="Search captures, tasks, tags…"
               className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/40"
             />
+
             {query && (
               <button
                 onClick={() => {
