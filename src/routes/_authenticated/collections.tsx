@@ -34,10 +34,11 @@ function CollectionsPage() {
     navigate({ to: "/collections/$id", params: { id: row.id } });
   }
 
-  function countFor(ids: string[]): number {
-    if (!notes) return ids.length;
+  function countFor(ids: string[] | undefined): number {
+    const list = ids ?? [];
+    if (!notes) return list.length;
     const alive = new Set(notes.map((n) => n.id));
-    return ids.filter((i) => alive.has(i)).length;
+    return list.filter((i) => alive.has(i)).length;
   }
 
   return (
