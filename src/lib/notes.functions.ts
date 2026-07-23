@@ -444,13 +444,18 @@ export async function generateLinkLabel({ data }: { data: { url: string } }) {
 export async function addTmdbMedia({
   data,
 }: {
-  data: { type: "movie" | "tv"; tmdb_id: number };
+  data: { type: "movie" | "tv"; tmdb_id: number; status?: "watchlist" | "watching" | "watched" | "dropped" };
 }) {
-  // Check if already saved to avoid duplicates.
+  const desiredStatus = data.status ?? "watchlist";
+  // Check if already saved — just update status.
   const existing = await db.notes
     .filter((n) => !n.deleted_at && n.media?.type === data.type && n.media?.tmdb_id === data.tmdb_id)
     .first();
-  if (existing) return { ok: true as const, noteId: existing.id, duplicate: true as const };
+  if (existing) {
+    const { setWatchStatus } = await import("./media");
+    await setWatchStatus(existing.id, desiredStatus);
+    return { ok: true as const, noteId: existing.id, duplicate: true as const };
+  }
 
   const { lookupTmdbByIdFn } = await import("./tmdb.functions");
   const media = await lookupTmdbByIdFn({ data: { type: data.type, tmdb_id: data.tmdb_id } });
@@ -464,8 +469,8 @@ export async function addTmdbMedia({
     tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
     media: {
       ...media,
-      watch_status: "watchlist",
-      watched_at: null,
+      watch_status: desiredStatus,
+      watched_at: desiredStatus === "watched" ? new Date().toISOString() : null,
       watched_episodes: [],
     },
   });
@@ -478,6 +483,7 @@ export async function addTmdbMedia({
   } catch {}
   return { ok: true as const, noteId: note.id, duplicate: false as const };
 }
+
 
 export async function searchEverything({
   data,
