@@ -4,7 +4,7 @@ import { useLocalNotes } from "@/hooks/use-local-notes";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
 import { useTheme } from "@/lib/theme";
-import { getCachedSignedUrl, signPath } from "@/lib/signed-url-cache";
+import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
 import {
   Search,
