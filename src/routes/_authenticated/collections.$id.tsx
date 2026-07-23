@@ -38,14 +38,42 @@ function CollectionDetail() {
   }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
-  const members = useMemo(
+  const allMembers = useMemo(
     () => (notes ?? []).filter((n) => memberIds.has(n.id) && !n.deleted_at),
     [notes, memberIds],
   );
+  const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const mediaMembers = useMemo(
+    () => allMembers.filter((n) => !!(n as any).media),
+    [allMembers],
+  );
+  const hasMedia = mediaMembers.length > 0;
+  const statusCounts = useMemo(() => {
+    const c: Record<WatchStatus | "all", number> = {
+      all: mediaMembers.length,
+      watchlist: 0,
+      watching: 0,
+      watched: 0,
+      dropped: 0,
+    };
+    for (const n of mediaMembers) {
+      const s = ((n as any).media?.watch_status ?? null) as WatchStatus | null;
+      if (s) c[s]++;
+    }
+    return c;
+  }, [mediaMembers]);
+  const members = useMemo(() => {
+    if (!hasMedia || statusFilter === "all") return allMembers;
+    return allMembers.filter((n) => {
+      const m = (n as any).media;
+      return m && m.watch_status === statusFilter;
+    });
+  }, [allMembers, hasMedia, statusFilter]);
   const candidates = useMemo(
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
   );
+
 
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
