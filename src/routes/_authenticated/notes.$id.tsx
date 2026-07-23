@@ -552,45 +552,8 @@ function NoteDetail() {
             <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
             <span>Home</span>
           </Link>
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={startEdit}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-              aria-label="Edit"
-            >
-              <Pencil className="h-5 w-5" />
-            </button>
-            <button
-              onClick={onShare}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={async () => {
-                const next = !note.pinned;
-                setNote({ ...note, pinned: next });
-                try {
-                  await pinFn({ data: { noteId: id, pinned: next } });
-                } catch (e: any) {
-                  toast.error(e?.message ?? "Failed");
-                  load();
-                }
-              }}
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${note.pinned ? "text-primary" : "text-muted-foreground"}`}
-              aria-label={note.pinned ? "Unpin" : "Pin"}
-            >
-              <Pin className={`h-5 w-5 ${note.pinned ? "fill-primary" : ""}`} />
-            </button>
-            <button
-              onClick={onDelete}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-destructive active:opacity-60"
-              aria-label="Delete"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-          </div>
+          <div />
+
         </div>
       </header>
 
@@ -963,6 +926,57 @@ function NoteDetail() {
           </div>
         </div>
       )}
+
+      {!editing && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
+          <div
+            role="toolbar"
+            aria-label="Note actions"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10"
+          >
+            <button
+              onClick={startEdit}
+              aria-label="Edit"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 active:scale-90 dark:text-white/80 dark:hover:bg-white/10"
+            >
+              <Pencil aria-hidden="true" className="h-5 w-5" />
+            </button>
+            <button
+              onClick={onShare}
+              aria-label="Share"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 active:scale-90 dark:text-white/80 dark:hover:bg-white/10"
+            >
+              <Share2 aria-hidden="true" className="h-5 w-5" />
+            </button>
+            <button
+              onClick={async () => {
+                const next = !note.pinned;
+                setNote({ ...note, pinned: next });
+                try {
+                  await pinFn({ data: { noteId: id, pinned: next } });
+                } catch (e: any) {
+                  toast.error(e?.message ?? "Failed");
+                  load();
+                }
+              }}
+              aria-label={note.pinned ? "Unpin" : "Pin"}
+              aria-pressed={note.pinned}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5 active:scale-90 dark:hover:bg-white/10 ${note.pinned ? "text-primary" : "text-neutral-700 dark:text-white/80"}`}
+            >
+              <Pin aria-hidden="true" className={`h-5 w-5 ${note.pinned ? "fill-current" : ""}`} />
+            </button>
+            <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
+            <button
+              onClick={onDelete}
+              aria-label="Delete"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-destructive hover:bg-destructive/10 active:scale-90"
+            >
+              <Trash2 aria-hidden="true" className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
     </div>
+
   );
 }
