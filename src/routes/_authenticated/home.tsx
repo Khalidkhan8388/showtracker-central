@@ -9,6 +9,9 @@ import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.funct
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedSignedUrl, signPath } from "@/lib/signed-url-cache";
+import { useLocalNotes } from "@/hooks/use-local-notes";
+import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync } from "@/lib/sync-engine";
+
 
 
 export const Route = createFileRoute("/_authenticated/home")({
