@@ -13,6 +13,18 @@ const GATEWAY = "https://ai.gateway.lovable.dev/v1";
 const AudioSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 const ImageSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 
+// ---------- shared fetch helper (with timeout) ---------------------------
+
+async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
+  const controller = new AbortController();
+  const t = setTimeout(() => controller.abort(), ms);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(t);
+  }
+}
+
 // ---------- transcription -------------------------------------------------
 
 async function transcribeBytes(base64: string, mime: string, apiKey: string): Promise<string> {
@@ -27,11 +39,11 @@ async function transcribeBytes(base64: string, mime: string, apiKey: string): Pr
   const form = new FormData();
   form.append("model", "openai/gpt-4o-mini-transcribe");
   form.append("file", new Blob([bytes], { type: mime }), `recording.${ext}`);
-  const res = await fetch(`${GATEWAY}/audio/transcriptions`, {
+  const res = await fetchWithTimeout(`${GATEWAY}/audio/transcriptions`, {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}` },
     body: form,
-  });
+  }, 90_000);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`Transcription failed (${res.status}): ${body.slice(0, 200)}`);
