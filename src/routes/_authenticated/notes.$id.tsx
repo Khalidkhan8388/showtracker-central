@@ -568,21 +568,54 @@ function NoteDetail() {
           </a>
         )}
 
-        {imageUrls.length > 0 && (
+        {!isText && (
           <section className="mt-6">
-            <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
-              {imageUrls.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
-                  <img
-                    src={url}
-                    alt=""
-                    loading={i === 0 ? "eager" : "lazy"}
-                    decoding="async"
-                    className="w-full object-cover shadow-sm transition-transform duration-200 active:scale-[0.98]"
-                  />
-                </a>
-              ))}
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Photos {imageUrls.length > 0 && <span className="ml-1 text-muted-foreground/70 tabular-nums">· {imageUrls.length}</span>}
+              </h2>
+              <button
+                onClick={() => viewAddImagesRef.current?.click()}
+                disabled={addingImages}
+                className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-primary active:opacity-60 disabled:opacity-50"
+                aria-label="Add photos"
+              >
+                {addingImages ? <Loader2 className="h-3 w-3 animate-spin" /> : <ImagePlus className="h-3 w-3" />}
+                {addingImages ? "Uploading…" : "Add"}
+              </button>
             </div>
+            <input
+              ref={viewAddImagesRef}
+              type="file"
+              accept="image/*"
+              multiple
+              hidden
+              onChange={onAddImagesToSaved}
+            />
+            {imageUrls.length > 0 ? (
+              <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
+                {imageUrls.map((url, i) => (
+                  <a key={i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
+                    <img
+                      src={url}
+                      alt=""
+                      loading={i === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      className="w-full object-cover shadow-sm transition-transform duration-200 active:scale-[0.98]"
+                    />
+                  </a>
+                ))}
+              </div>
+            ) : (
+              <button
+                onClick={() => viewAddImagesRef.current?.click()}
+                disabled={addingImages}
+                className="flex w-full flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-border bg-card/50 px-4 py-6 text-[13px] text-muted-foreground active:opacity-60 disabled:opacity-50"
+              >
+                <ImagePlus className="h-5 w-5" />
+                Attach photos
+              </button>
+            )}
           </section>
         )}
 
