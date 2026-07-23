@@ -302,6 +302,29 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
   const url = /^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`;
   const note = newNote({ source_url: url, status: "processing" });
   await db.notes.put(note);
+  // 1) Try TMDB detection first — movies/TV get a dedicated card + detail page.
+  try {
+    const { lookupTmdbFn } = await import("./tmdb.functions");
+    const media = await lookupTmdbFn({ data: { url } });
+    if (media) {
+      await updateNote(note.id, {
+        status: "ready",
+        heading: media.title,
+        summary: media.tagline || media.overview.slice(0, 240) || null,
+        tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+        media: {
+          ...media,
+          watch_status: "watchlist",
+          watched_at: null,
+          watched_episodes: [],
+        },
+      });
+      return { ok: true as const, noteId: note.id, media: true as const };
+    }
+  } catch {
+    // Fall through to normal AI link processing.
+  }
+  // 2) Fall back to standard AI enrichment
   try {
     const result = await analyzeWebLinkFn({ data: { url } });
     const tasksPayload: LocalTask[] = result.tasks.map((t, i) => ({
