@@ -599,9 +599,9 @@ function EpisodeTracker({ members }: { members: Array<{ id: string; heading: str
 
   return (
     <div className="space-y-5">
+      <EpSection title="Recently aired" rows={recent} emptyText="Nothing aired recently." showDate />
       <EpSection title="Next up" rows={nextUp} emptyText="You're all caught up." />
       <EpSection title="Upcoming" rows={upcoming} emptyText="Nothing scheduled." showDate />
-      <EpSection title="Recently aired" rows={recent} emptyText="Nothing aired recently." showDate />
     </div>
   );
 }
