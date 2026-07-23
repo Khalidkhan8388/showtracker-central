@@ -199,7 +199,7 @@ function TrashPage() {
       {/* Bottom pill — always visible with counts + actions */}
       <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-5">
         {selectMode ? (
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-2 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-2 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
             <button
               onClick={() => setSelected(new Set())}
               aria-label="Cancel"
@@ -227,7 +227,7 @@ function TrashPage() {
           </div>
         ) : (
           items.length > 0 && (
-            <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
+            <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
               <button
                 onClick={() => setSelected(new Set(items.map((n) => n.id)))}
                 className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70"
