@@ -388,14 +388,7 @@ function Home() {
                     <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                   </Link>
                 </div>
-                {derived.visible.length === 0 ? (
-                  <Link
-                    to="/tasks"
-                    className="block py-1 text-center text-[12px] text-primary active:opacity-70"
-                  >
-                    + Add a task
-                  </Link>
-                ) : (
+                {derived.visible.length > 0 && (
                   <ul>
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
@@ -421,6 +414,41 @@ function Home() {
                     })}
                   </ul>
                 )}
+                <div className="mt-2 flex justify-center">
+                  {addingTask ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void submitNewTask();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-full bg-yellow-400/15 px-3 py-1.5 ring-1 ring-yellow-400/40"
+                    >
+                      <input
+                        ref={newTaskInputRef}
+                        value={newTaskText}
+                        onChange={(e) => setNewTaskText(e.target.value)}
+                        onBlur={() => void submitNewTask()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setNewTaskText("");
+                            setAddingTask(false);
+                          }
+                        }}
+                        placeholder="New task"
+                        maxLength={500}
+                        className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
+                      />
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAddingTask(true)}
+                      className="inline-flex items-center rounded-full bg-yellow-400/20 px-3 py-1 text-[12px] font-semibold text-yellow-600 ring-1 ring-yellow-400/40 active:opacity-70 dark:text-yellow-300"
+                    >
+                      + Add a task
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
