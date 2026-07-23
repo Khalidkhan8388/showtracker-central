@@ -37,6 +37,15 @@ function CollectionDetail() {
     setView(v);
     if (typeof window !== "undefined") localStorage.setItem("collection-view", v);
   }
+  type SortKey = "recent" | "released" | "name";
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "recent";
+    return ((localStorage.getItem("collection-sort") as SortKey) ?? "recent");
+  });
+  function setSortKey(s: SortKey) {
+    setSort(s);
+    if (typeof window !== "undefined") localStorage.setItem("collection-sort", s);
+  }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
   const allMembers = useMemo(
