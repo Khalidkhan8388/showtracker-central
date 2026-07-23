@@ -830,8 +830,8 @@ const TaskRow = memo(function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
-        selected ? "bg-muted" : "active:bg-muted"
+      className={`flex items-center gap-3 rounded-2xl px-4 py-3 select-none transition-colors ${
+        selected ? "bg-foreground/80 text-background" : "bg-[#1c1c1e] text-white active:bg-[#2a2a2c]"
       }`}
     >
       <button
@@ -844,40 +844,32 @@ const TaskRow = memo(function TaskRow({
           onToggleDone();
         }}
         aria-label={done ? "Mark as not done" : "Mark as done"}
-        className="mt-0.5 shrink-0"
+        className="shrink-0"
       >
         {done ? (
-          <CheckCircle2 className="h-5 w-5 text-primary" />
+          <CheckCircle2 className="h-5 w-5 text-white/60" />
         ) : (
-          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+          <Circle className="h-5 w-5 text-white/50" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-[17px] leading-tight ${
-            done ? "text-muted-foreground line-through" : "text-foreground"
+          className={`text-[14px] leading-snug truncate ${
+            done ? "text-white/40 line-through" : "text-white"
           }`}
         >
-          {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
+          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
         {noteHeading && (
-          selectMode ? (
-            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-              {noteHeading}
-            </span>
-          ) : (
-            <Link
-              to="/notes/$id"
-              params={{ id: noteId }}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
-            >
-              {noteHeading}
-            </Link>
-          )
+          <span className="mt-0.5 block truncate text-[11px] text-white/40">
+            {noteHeading}
+          </span>
         )}
       </div>
+      <span className="shrink-0 text-[11px] tabular-nums text-white/40">
+        <Clock className="mr-1 inline h-3 w-3 -translate-y-0.5" strokeWidth={2} />
+      </span>
     </div>
   );
 });
