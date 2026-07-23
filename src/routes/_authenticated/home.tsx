@@ -297,6 +297,8 @@ function Home() {
       </header>
 
       <section className="flex-1 px-4 pb-32 pt-2">
+        <div ref={sentinelRef} aria-hidden="true" className="h-6 -mt-2" />
+
         {notes === null ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
