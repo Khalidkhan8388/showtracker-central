@@ -214,7 +214,11 @@ export const processVoiceNote = createServerFn({ method: "POST" })
       }
 
       const structured = await extractStructured(transcript, images, apiKey);
-      const tasksPayload = structured.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
+      // Image-only notes (no audio) should not have AI-generated tasks — they're
+      // rarely actionable and mostly noise. Users can still add custom tasks.
+      const skipTasks = !note.audio_path && imagePaths.length > 0;
+      const effectiveTasks = skipTasks ? [] : structured.tasks;
+      const tasksPayload = effectiveTasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
 
       await supabase
         .from("voice_notes")
