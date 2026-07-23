@@ -297,18 +297,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-8">
-            {/* Latest hero */}
-            {derived.latest && (
-              <LatestHero
-                note={derived.latest}
-                thumbUrl={thumbs[derived.latest.id]}
-                selected={selectedNotes.has(derived.latest.id)}
-                selectMode={noteSelectMode}
-                onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                onLongPress={() => toggleNoteSel(derived.latest.id)}
-                onToggleSel={() => toggleNoteSel(derived.latest.id)}
-              />
-            )}
+
 
             {/* Suggested tasks */}
             {derived.suggested.length > 0 && (
