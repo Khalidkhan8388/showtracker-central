@@ -334,50 +334,24 @@ function Home() {
             <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {derived.latest && (
-              <div>
-                <SectionHeader>Latest</SectionHeader>
-                <NoteCard
-                  note={derived.latest}
-                  variant="wide"
-                  thumbUrl={thumbs[derived.latest.id]}
-                  selected={selectedNotes.has(derived.latest.id)}
-                  selectMode={noteSelectMode}
-                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                  onLongPress={() => toggleNoteSel(derived.latest.id)}
-                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                />
-              </div>
-            )}
-
-            {derived.strip.length > 0 && (
-              <div>
-                <SectionHeader>Pinned & Recent</SectionHeader>
-                <div className="-mx-4 overflow-x-auto pb-1">
-                  <div className="flex gap-3 px-4">
-                    {derived.strip.map((n) => (
-                      <NoteCard
-                        key={n.id}
-                        note={n}
-                        variant="square"
-                        thumbUrl={thumbs[n.id]}
-                        selected={selectedNotes.has(n.id)}
-                        selectMode={noteSelectMode}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => toggleNoteSel(n.id)}
-                        onToggleSel={() => toggleNoteSel(n.id)}
-                      />
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <NoteCard
+                note={derived.latest}
+                variant="hero"
+                thumbUrl={thumbs[derived.latest.id]}
+                selected={selectedNotes.has(derived.latest.id)}
+                selectMode={noteSelectMode}
+                onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                onLongPress={() => toggleNoteSel(derived.latest.id)}
+                onToggleSel={() => toggleNoteSel(derived.latest.id)}
+              />
             )}
 
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
-                className="flex items-center justify-between rounded-2xl bg-primary px-4 py-3 shadow-sm active:opacity-80"
+                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
               >
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-primary-foreground" />
@@ -389,63 +363,61 @@ function Home() {
               </Link>
             )}
 
-            <div>
-              <div className="mb-2 flex items-baseline justify-between px-1">
-                <h2 className="text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-                  Tasks
-                </h2>
-                <Link
-                  to="/tasks"
-                  className="inline-flex items-center gap-0.5 text-[15px] text-primary active:opacity-60"
-                >
-                  <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                  <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                </Link>
+            {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
+              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
+                <div className="mb-3 flex items-baseline justify-between">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
+                    Tasks
+                  </span>
+                  <Link
+                    to="/tasks"
+                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
+                  >
+                    <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                    <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
+                  </Link>
+                </div>
+                {derived.visible.length === 0 ? (
+                  <Link
+                    to="/tasks"
+                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                  >
+                    + Add a task
+                  </Link>
+                ) : (
+                  <ul className="space-y-1">
+                    {derived.visible.map((t) => {
+                      const key: TaskKey = `${t.noteId}::${t.id}`;
+                      const isSel = selectedTasks.has(key);
+                      return (
+                        <li key={key}>
+                          <TaskRow
+                            selectMode={taskSelectMode}
+                            selected={isSel}
+                            done={t.done}
+                            pinned={Boolean(t.pinned)}
+                            text={t.text}
+                            noteHeading={t.noteHeading}
+                            noteId={t.noteId}
+                            onToggleDone={() => onToggle(t.noteId, t.id)}
+                            onLongPress={() => toggleTaskSel(key)}
+                            onSelectTap={() => toggleTaskSel(key)}
+                          />
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
               </div>
-              {derived.visible.length === 0 ? (
-                <Link
-                  to="/tasks"
-                  className="flex items-center justify-center rounded-2xl bg-card px-4 py-5 text-[15px] text-primary shadow-sm active:opacity-70"
-                >
-                  + Add a task
-                </Link>
-              ) : (
-                <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-                  {derived.visible.map((t, i) => {
-                    const key: TaskKey = `${t.noteId}::${t.id}`;
-                    const isSel = selectedTasks.has(key);
-                    return (
-                      <li key={key}>
-                        <TaskRow
-                          selectMode={taskSelectMode}
-                          selected={isSel}
-                          done={t.done}
-                          pinned={Boolean(t.pinned)}
-                          text={t.text}
-                          noteHeading={t.noteHeading}
-                          noteId={t.noteId}
-                          onToggleDone={() => onToggle(t.noteId, t.id)}
-                          onLongPress={() => toggleTaskSel(key)}
-                          onSelectTap={() => toggleTaskSel(key)}
-                        />
-                        {i < derived.visible.length - 1 && <div className="ml-12 h-px bg-border" />}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-            </div>
+            )}
 
-            {derived.grid.length > 0 && (
-              <div>
-                <SectionHeader>More Notes</SectionHeader>
-                <div className="grid grid-cols-2 gap-3">
-                  {derived.grid.map((n) => (
+            {(derived.strip.length > 0 || derived.grid.length > 0) && (
+              <div className="columns-2 gap-3 [column-fill:_balance]">
+                {[...derived.strip, ...derived.grid].map((n) => (
+                  <div key={n.id} className="mb-3 break-inside-avoid">
                     <NoteCard
-                      key={n.id}
                       note={n}
-                      variant="square"
-                      fullWidth
+                      variant="masonry"
                       thumbUrl={thumbs[n.id]}
                       selected={selectedNotes.has(n.id)}
                       selectMode={noteSelectMode}
@@ -453,13 +425,14 @@ function Home() {
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
                     />
-                  ))}
-                </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
         )}
       </section>
+
 
 
 
