@@ -230,6 +230,8 @@ function SearchPage() {
   const [aiReasoning, setAiReasoning] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
   const [recents, setRecents] = useState<string[]>([]);
+  const [collapsed, setCollapsed] = useState(false);
+  const scrollRef = useRef<HTMLDivElement>(null);
   const searchFn = useServerFn(searchEverything);
 
   useEffect(() => {
