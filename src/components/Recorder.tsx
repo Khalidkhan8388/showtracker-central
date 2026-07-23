@@ -782,8 +782,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           <span className={`font-semibold tracking-tight tabular-nums ${shrunk ? "text-xs" : "text-sm"}`}>{label}</span>
         </button>
       </div>
+      </div>
 
     </div>
+
   );
 }
 
