@@ -552,45 +552,8 @@ function NoteDetail() {
             <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
             <span>Home</span>
           </Link>
-          <div className="flex items-center gap-0.5">
-            <button
-              onClick={startEdit}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-              aria-label="Edit"
-            >
-              <Pencil className="h-5 w-5" />
-            </button>
-            <button
-              onClick={onShare}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
-              aria-label="Share"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
-            <button
-              onClick={async () => {
-                const next = !note.pinned;
-                setNote({ ...note, pinned: next });
-                try {
-                  await pinFn({ data: { noteId: id, pinned: next } });
-                } catch (e: any) {
-                  toast.error(e?.message ?? "Failed");
-                  load();
-                }
-              }}
-              className={`inline-flex h-9 w-9 items-center justify-center rounded-full active:opacity-60 ${note.pinned ? "text-primary" : "text-muted-foreground"}`}
-              aria-label={note.pinned ? "Unpin" : "Pin"}
-            >
-              <Pin className={`h-5 w-5 ${note.pinned ? "fill-primary" : ""}`} />
-            </button>
-            <button
-              onClick={onDelete}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-destructive active:opacity-60"
-              aria-label="Delete"
-            >
-              <Trash2 className="h-5 w-5" />
-            </button>
-          </div>
+          <div />
+
         </div>
       </header>
 
