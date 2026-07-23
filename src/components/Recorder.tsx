@@ -628,7 +628,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
             </div>
           </div>
         </div>
-      )}
+      , document.body)}
 
       </div>
 
