@@ -108,14 +108,16 @@ function NoteDetail() {
   async function onToggle(taskId: string) {
     if (!note) return;
     const cur = note.tasks?.find((t) => t.id === taskId);
-    await patchLocalTask(id, taskId, { done: !(cur?.done ?? false) });
+    const nextDone = !(cur?.done ?? false);
+    await patchLocalTask(id, taskId, { done: nextDone });
     try {
-      await toggleFn({ data: { noteId: id, taskId } });
+      await toggleFn({ data: { noteId: id, taskId, done: nextDone } });
     } catch (e: any) {
       toast.error(e?.message ?? "Failed");
       void resync();
     }
   }
+
 
 
   async function onDelete() {
