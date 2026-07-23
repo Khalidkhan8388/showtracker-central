@@ -10,6 +10,51 @@ export type LocalTask = {
   pending?: boolean;
 };
 
+export type WatchStatus = "watchlist" | "watching" | "watched" | "dropped";
+
+export type LocalMediaEpisode = {
+  season_number: number;
+  episode_number: number;
+  name: string;
+  overview: string;
+  air_date: string | null;
+  runtime: number | null;
+  still_path: string | null;
+};
+
+export type LocalMediaSeason = {
+  season_number: number;
+  name: string;
+  episode_count: number;
+  air_date: string | null;
+  poster_path: string | null;
+  episodes: LocalMediaEpisode[];
+};
+
+export type LocalMedia = {
+  type: "movie" | "tv";
+  tmdb_id: number;
+  imdb_id: string | null;
+  title: string;
+  tagline: string | null;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  release_date: string | null;
+  last_air_date?: string | null;
+  runtime: number | null;
+  genres: string[];
+  vote_average: number | null;
+  homepage: string | null;
+  number_of_seasons?: number;
+  number_of_episodes?: number;
+  seasons?: LocalMediaSeason[];
+  watch_status: WatchStatus | null;
+  watched_at: string | null;
+  // Set of "S{season}E{ep}" identifiers watched (tv only)
+  watched_episodes: string[];
+};
+
 export type LocalNote = {
   id: string;
   user_id: string;
@@ -28,6 +73,7 @@ export type LocalNote = {
   audio_path: string | null;
   error: string | null;
   deleted_at: string | null;
+  media?: LocalMedia | null;
 };
 
 export type MetaRow = { key: string; value: string };
