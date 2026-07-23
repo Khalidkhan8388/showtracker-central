@@ -288,12 +288,20 @@ function Home() {
             )}
           </div>
           <Link
+            to="/collections"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-muted text-foreground active:opacity-70"
+            aria-label="Collections"
+          >
+            <Layers className="h-4 w-4" />
+          </Link>
+          <Link
             to="/profile"
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold active:opacity-70"
             aria-label="Profile"
           >
             <ProfileInitial />
           </Link>
+
 
         </div>
 
