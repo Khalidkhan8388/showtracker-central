@@ -121,7 +121,7 @@
   --popover: #1c1c1e;
   --popover-foreground: #ffffff;
 
-  --primary: #ffc700;
+  --primary: #ffffff;
   --primary-foreground: #000000;
 
   --secondary: #1c1c1e;
@@ -136,22 +136,23 @@
 
   --border: rgba(84, 84, 88, 0.65);
   --input: rgba(84, 84, 88, 0.65);
-  --ring: #ffc700;
+  --ring: #ffffff;
 
-  --chart-1: #ffc700;
-  --chart-2: #ffffff;
-  --chart-3: #8e8e93;
-  --chart-4: #c7c7cc;
-  --chart-5: #ebebf5;
+  --chart-1: #ffffff;
+  --chart-2: #8e8e93;
+  --chart-3: #c7c7cc;
+  --chart-4: #ebebf5;
+  --chart-5: #48484a;
 
   --sidebar: #1c1c1e;
   --sidebar-foreground: #ffffff;
-  --sidebar-primary: #ffc700;
+  --sidebar-primary: #ffffff;
   --sidebar-primary-foreground: #000000;
   --sidebar-accent: #2c2c2e;
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(84, 84, 88, 0.65);
-  --sidebar-ring: #ffc700;
+  --sidebar-ring: #ffffff;
+
 }
 
 @layer base {
