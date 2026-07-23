@@ -79,5 +79,6 @@ export function normalizeRow(r: Record<string, unknown>): LocalNote {
     tags: Array.isArray(r.tags) ? (r.tags as string[]) : [],
     audio_path: (r.audio_path as string | null) ?? null,
     error: (r.error as string | null) ?? null,
+    deleted_at: (r.deleted_at as string | null) ?? null,
   };
 }
