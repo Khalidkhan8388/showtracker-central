@@ -300,7 +300,7 @@ function Home() {
   // Memoized derivations — only recompute when notes actually change.
   const derived = useMemo(() => {
     if (!notes) return null;
-    const displayNotes = notes.filter((n) => n.heading !== "__custom__");
+    const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
     const [latest, ...rest] = displayNotes;
     const pinnedRest = rest.filter((n) => n.pinned);
     const unpinnedRest = rest.filter((n) => !n.pinned);
