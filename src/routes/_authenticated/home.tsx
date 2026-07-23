@@ -10,7 +10,7 @@ import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync } from "@/lib/sync-engine";
+import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync, clearPendingDelete } from "@/lib/sync-engine";
 
 
 
