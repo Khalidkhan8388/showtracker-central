@@ -423,13 +423,15 @@ function SearchPage() {
         </div>
       </header>
 
-      {/* Scroll body — reserves space for bottom search bar */}
+      {/* Scroll body — content is bottom-anchored so results sit just above the search pill */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 pt-1"
+        className="flex flex-1 flex-col overflow-y-auto px-4 pt-1"
         style={{ paddingBottom: 132 + kbOffset }}
       >
         <div ref={sentinelRef} aria-hidden="true" className="h-2" />
+        <div className="mt-auto">
+
 
         {/* AI reasoning bubble */}
         {aiMode && aiReasoning && !aiLoading && (
