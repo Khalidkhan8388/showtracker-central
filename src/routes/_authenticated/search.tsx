@@ -130,7 +130,7 @@ function CaptureCard({
     return (
       <button
         onClick={onOpen}
-        className="group relative block w-full overflow-hidden rounded-[22px] bg-muted text-left active:opacity-90"
+        className="group relative block w-full overflow-hidden rounded-[15px] bg-muted text-left active:opacity-90"
       >
         <img
           src={thumb}
@@ -159,7 +159,7 @@ function CaptureCard({
     return (
       <button
         onClick={onOpen}
-        className="block w-full overflow-hidden rounded-[22px] bg-[#1a1a1a] p-4 text-left active:opacity-80"
+        className="block w-full overflow-hidden rounded-[15px] bg-[#1a1a1a] p-4 text-left active:opacity-80"
       >
         <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/80">
           <LinkIcon className="h-2.5 w-2.5" />
@@ -182,7 +182,7 @@ function CaptureCard({
   return (
     <button
       onClick={onOpen}
-      className="block w-full overflow-hidden rounded-[22px] p-4 text-left active:opacity-80"
+      className="block w-full overflow-hidden rounded-[15px] p-4 text-left active:opacity-80"
       style={{ backgroundColor: bg }}
     >
       <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-medium text-foreground/70">
