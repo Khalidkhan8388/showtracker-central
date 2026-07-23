@@ -1,5 +1,55 @@
 import { supabase } from "@/integrations/supabase/client";
 import { db, normalizeRow, type LocalNote, type LocalTask } from "./local-db";
+import { deleteNotes as deleteNotesFn } from "./notes.functions";
+
+const PENDING_DELETE_KEY = (uid: string) => `pending_delete:${uid}`;
+
+async function readPendingDeletes(uid: string): Promise<Set<string>> {
+  const row = await db.meta.get(PENDING_DELETE_KEY(uid));
+  if (!row?.value) return new Set();
+  try {
+    return new Set(JSON.parse(row.value) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+async function writePendingDeletes(uid: string, ids: Set<string>): Promise<void> {
+  await db.meta.put({ key: PENDING_DELETE_KEY(uid), value: JSON.stringify([...ids]) });
+}
+
+export async function markPendingDelete(ids: string[]): Promise<void> {
+  if (!currentUserId || ids.length === 0) return;
+  const set = await readPendingDeletes(currentUserId);
+  for (const id of ids) set.add(id);
+  await writePendingDeletes(currentUserId, set);
+}
+
+export async function clearPendingDelete(ids: string[]): Promise<void> {
+  if (!currentUserId || ids.length === 0) return;
+  const set = await readPendingDeletes(currentUserId);
+  for (const id of ids) set.delete(id);
+  await writePendingDeletes(currentUserId, set);
+}
+
+/**
+ * Retry any soft-deletes that never confirmed with the cloud. Runs on every
+ * sync boot so a delete performed offline (or one whose server call failed)
+ * eventually reaches Supabase — otherwise the next pullSince would resurrect
+ * the row with `deleted_at = null` and it would reappear on refresh.
+ */
+export async function flushPendingDeletes(): Promise<void> {
+  if (!currentUserId) return;
+  const pending = await readPendingDeletes(currentUserId);
+  if (pending.size === 0) return;
+  const ids = [...pending];
+  try {
+    await deleteNotesFn({ data: { noteIds: ids } });
+    await clearPendingDelete(ids);
+  } catch {
+    // keep pending; will retry on next boot
+  }
+}
 
 // Module-level singletons — sync runs once per browser tab regardless of
 // how many components mount the hook.
