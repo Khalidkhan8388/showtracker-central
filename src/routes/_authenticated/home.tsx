@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, addCustomTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
@@ -50,6 +50,30 @@ function Home() {
   const delTasksFn = deleteTasks;
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
+  const [addingTask, setAddingTask] = useState(false);
+  const [newTaskText, setNewTaskText] = useState("");
+  const newTaskInputRef = useRef<HTMLInputElement | null>(null);
+
+  useEffect(() => {
+    if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
+  }, [addingTask]);
+
+  async function submitNewTask() {
+    const text = newTaskText.trim();
+    if (!text) {
+      setAddingTask(false);
+      return;
+    }
+    setNewTaskText("");
+    setAddingTask(false);
+    try {
+      await addCustomTask({ data: { text } });
+      void resync();
+    } catch {
+      setNewTaskText(text);
+      setAddingTask(true);
+    }
+  }
 
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
@@ -364,14 +388,7 @@ function Home() {
                     <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
                   </Link>
                 </div>
-                {derived.visible.length === 0 ? (
-                  <Link
-                    to="/tasks"
-                    className="block py-1 text-center text-[12px] text-primary active:opacity-70"
-                  >
-                    + Add a task
-                  </Link>
-                ) : (
+                {derived.visible.length > 0 && (
                   <ul>
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
@@ -397,6 +414,41 @@ function Home() {
                     })}
                   </ul>
                 )}
+                <div className="mt-2 flex justify-center">
+                  {addingTask ? (
+                    <form
+                      onSubmit={(e) => {
+                        e.preventDefault();
+                        void submitNewTask();
+                      }}
+                      className="flex w-full items-center gap-2 rounded-full bg-yellow-400/15 px-3 py-1.5 ring-1 ring-yellow-400/40"
+                    >
+                      <input
+                        ref={newTaskInputRef}
+                        value={newTaskText}
+                        onChange={(e) => setNewTaskText(e.target.value)}
+                        onBlur={() => void submitNewTask()}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setNewTaskText("");
+                            setAddingTask(false);
+                          }
+                        }}
+                        placeholder="New task"
+                        maxLength={500}
+                        className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
+                      />
+                    </form>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => setAddingTask(true)}
+                      className="inline-flex items-center rounded-full bg-yellow-400/20 px-3 py-1 text-[12px] font-semibold text-yellow-600 ring-1 ring-yellow-400/40 active:opacity-70 dark:text-yellow-300"
+                    >
+                      + Add a task
+                    </button>
+                  )}
+                </div>
               </div>
             )}
 
