@@ -331,16 +331,7 @@ function SearchPage() {
     setAiReasoning(null);
   }, [query]);
 
-  // Keep the top of the results visible above the keyboard while typing.
-  useEffect(() => {
-    if (!query.trim()) return;
-    const root = scrollRef.current;
-    if (!root) return;
-    const id = requestAnimationFrame(() => {
-      root.scrollTo({ top: 0, behavior: "smooth" });
-    });
-    return () => cancelAnimationFrame(id);
-  }, [query, filteredNotes.length, matchingTasks.length, kbOffset]);
+
 
 
   const allTags = useMemo(() => {
