@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, ArrowUpDown } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
@@ -37,6 +37,15 @@ function CollectionDetail() {
     setView(v);
     if (typeof window !== "undefined") localStorage.setItem("collection-view", v);
   }
+  type SortKey = "recent" | "released" | "name";
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "recent";
+    return ((localStorage.getItem("collection-sort") as SortKey) ?? "recent");
+  });
+  function setSortKey(s: SortKey) {
+    setSort(s);
+    if (typeof window !== "undefined") localStorage.setItem("collection-sort", s);
+  }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
   const allMembers = useMemo(
@@ -66,12 +75,31 @@ function CollectionDetail() {
     return c;
   }, [mediaMembers]);
   const members = useMemo(() => {
-    if (!hasMedia || statusFilter === "all") return allMembers;
-    return allMembers.filter((n) => {
-      const m = (n as any).media;
-      return m && m.watch_status === statusFilter;
-    });
-  }, [allMembers, hasMedia, statusFilter]);
+    const base = !hasMedia || statusFilter === "all"
+      ? allMembers
+      : allMembers.filter((n) => {
+          const m = (n as any).media;
+          return m && m.watch_status === statusFilter;
+        });
+    const arr = [...base];
+    if (sort === "name") {
+      arr.sort((a, b) => {
+        const at = ((a as any).media?.title ?? a.heading ?? "").toString().toLowerCase();
+        const bt = ((b as any).media?.title ?? b.heading ?? "").toString().toLowerCase();
+        return at.localeCompare(bt);
+      });
+    } else if (sort === "released") {
+      const dateOf = (n: any) => {
+        const m = n.media;
+        const d = m?.release_date || m?.first_air_date || null;
+        return d ? new Date(d).getTime() : 0;
+      };
+      arr.sort((a, b) => dateOf(b) - dateOf(a));
+    } else {
+      arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return arr;
+  }, [allMembers, hasMedia, statusFilter, sort]);
   const candidates = useMemo(
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
@@ -304,6 +332,25 @@ function CollectionDetail() {
                   <LayoutGrid className="h-4 w-4" />
                 </button>
               </div>
+            </div>
+            <div className="mb-3 flex items-center justify-end">
+              <label className="relative inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-[12px] font-semibold text-foreground ring-1 ring-border/60 active:opacity-70">
+                <ArrowUpDown className="h-3.5 w-3.5 text-muted-foreground" />
+                <span className="text-muted-foreground">Sort:</span>
+                <span>
+                  {sort === "recent" ? "Recently added" : sort === "released" ? "Released date" : "Name"}
+                </span>
+                <select
+                  aria-label="Sort by"
+                  value={sort}
+                  onChange={(e) => setSortKey(e.target.value as typeof sort)}
+                  className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                >
+                  <option value="recent">Recently added</option>
+                  <option value="released">Released date</option>
+                  <option value="name">Name</option>
+                </select>
+              </label>
             </div>
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
