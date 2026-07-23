@@ -4,6 +4,7 @@ import { z } from "zod";
 const TMDB = "https://api.themoviedb.org/3";
 
 export type TmdbEpisode = {
+  season_number: number;
   episode_number: number;
   name: string;
   overview: string;
