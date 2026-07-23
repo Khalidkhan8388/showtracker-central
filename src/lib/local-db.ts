@@ -132,6 +132,15 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v6: add optional `media` payload on notes (movies / TV shows via TMDB).
+    // No new index — schema string only changes if we add one, so keep identical.
+    this.version(6).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
   }
 }
 
