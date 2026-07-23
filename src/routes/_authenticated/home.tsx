@@ -823,6 +823,8 @@ const TaskRow = memo(function TaskRow({
   onToggleDone,
   onLongPress,
   onSelectTap,
+  hideNoteHeading,
+  compact,
 }: {
   selectMode: boolean;
   selected: boolean;
@@ -834,6 +836,8 @@ const TaskRow = memo(function TaskRow({
   onToggleDone: () => void;
   onLongPress: () => void;
   onSelectTap: () => void;
+  hideNoteHeading?: boolean;
+  compact?: boolean;
 }) {
   const lp = useLongPress(onLongPress);
   return (
@@ -846,10 +850,11 @@ const TaskRow = memo(function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
+      className={`flex items-start gap-3 ${compact ? "px-1 py-1.5" : "px-4 py-3"} select-none transition-colors ${
         selected ? "bg-muted" : "active:bg-muted"
       }`}
     >
+
       <button
         onClick={(e) => {
           e.stopPropagation();
