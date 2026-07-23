@@ -378,23 +378,13 @@ function NoteDetail() {
             <span>Home</span>
           </Link>
           <div className="flex items-center gap-1">
-            {isText && !editing && (
+            {isText && (
               <button
                 onClick={startEdit}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
                 aria-label="Edit"
               >
                 <Pencil className="h-5 w-5" />
-              </button>
-            )}
-            {isText && editing && (
-              <button
-                onClick={saveEdit}
-                disabled={saving}
-                className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[15px] font-semibold text-primary-foreground active:opacity-70 disabled:opacity-60"
-              >
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" />}
-                Done
               </button>
             )}
             <button
