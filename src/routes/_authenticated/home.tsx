@@ -708,7 +708,7 @@ const NoteCard = memo(function NoteCard({
               </h3>
             </div>
             {note.summary && (
-              <p className={`mt-${isHero ? 2 : 1} line-clamp-2 text-${isHero ? "[13px]" : "xs"} text-muted-foreground`}>{note.summary}</p>
+              <p className={`${isHero ? "mt-2 text-[13px]" : "mt-1 text-xs"} line-clamp-2 text-muted-foreground`}>{note.summary}</p>
             )}
             <div className={`mt-${isHero ? 3 : 2} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
