@@ -517,110 +517,187 @@ function NoteDetail() {
           </section>
         )}
 
-        {editing ? (
-          <section className="mt-4">
-            <input
-              ref={editFileRef}
-              type="file"
-              accept="image/*"
-              multiple
-              hidden
-              onChange={onPickImages}
-            />
-
-
-            <div className="mb-3 flex flex-wrap items-center gap-2">
-              <button
-                type="button"
-                onClick={() => editFileRef.current?.click()}
-                disabled={uploadingImg}
-                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60 disabled:opacity-60"
-              >
-                {uploadingImg ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-                Image
-              </button>
-              <button
-                type="button"
-                onClick={() => setAddingLink((v) => !v)}
-                className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
-              >
-                <Link2 className="h-3.5 w-3.5" />
-                Link
-              </button>
-              <span className="ml-auto text-[11px] text-muted-foreground">
-                <code className="rounded bg-muted px-1">[[Title]]</code> links notes
-              </span>
-            </div>
-
-            {addingLink && (
-              <div className="mb-3 flex items-center gap-2 rounded-2xl bg-muted px-3 py-2">
-                <Link2 className="h-4 w-4 text-muted-foreground" />
-                <input
-                  autoFocus
-                  value={linkDraft}
-                  onChange={(e) => setLinkDraft(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") commitLink();
-                    if (e.key === "Escape") { setAddingLink(false); setLinkDraft(""); }
-                  }}
-                  placeholder="https://…"
-                  className="flex-1 bg-transparent text-[14px] outline-none placeholder:text-muted-foreground/60"
-                />
-                <button
-                  onClick={commitLink}
-                  className="rounded-full bg-primary px-2.5 py-1 text-[12px] font-semibold text-primary-foreground active:opacity-70"
-                >
-                  Add
-                </button>
-              </div>
-            )}
-
-            <BlockEditor
-              value={draftBody}
-              onChange={setDraftBody}
-              onRemoveImage={removeImageFromBody}
-              onRemoveLink={removeLinkFromBody}
-              placeholder="Start writing… # for heading, - for list, > for quote"
-              wikiIndex={wikiIndex}
-            />
-
-
-{(() => {
-              const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
-              if (!m || allNotes.length === 0) return null;
-              const q = m[1].trim().toLowerCase();
-              const matches = allNotes
-                .filter((n) => !q || n.heading.toLowerCase().includes(q))
-                .slice(0, 12);
-              if (matches.length === 0) return null;
-              return (
-                <div className="mt-4">
-                  <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
-                    Link to a note
-                  </p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {matches.map((n) => (
-                      <button
-                        key={n.id}
-                        onClick={() => insertWikiLinkForTitle(n.heading)}
-                        className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
-                      >
-                        {n.heading}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              );
-            })()}
+        {note.transcript && (
+          <section className="mt-6">
+            <Markdown className="text-foreground">{renderedBody}</Markdown>
           </section>
-        ) : (
-          note.transcript && (
-            <section className="mt-6">
-              <Markdown className="text-foreground">{renderedBody}</Markdown>
-            </section>
-          )
         )}
       </div>
+
+      {/* Full-screen edit overlay */}
+      {editing && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-background">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
+            <div className="flex h-12 w-full items-center justify-between">
+              <button
+                onClick={cancelEdit}
+                className="rounded-full px-2 py-1 text-[15px] text-primary active:opacity-60"
+              >
+                Cancel
+              </button>
+              <span className="text-[15px] font-semibold tracking-tight text-foreground">Editing</span>
+              <button
+                onClick={saveEdit}
+                disabled={saving}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground active:opacity-70 disabled:opacity-50"
+              >
+                {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Save
+              </button>
+            </div>
+          </header>
+
+          <div className="flex flex-1 flex-col overflow-hidden">
+            <div className="flex-1 overflow-y-auto px-5 pt-5 pb-40">
+              <input
+                autoFocus
+                type="text"
+                placeholder="Title"
+                value={draftHeading}
+                onChange={(e) => setDraftHeading(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    const first = document.querySelector<HTMLTextAreaElement>('[data-block-editor] textarea');
+                    first?.focus();
+                  }
+                }}
+                maxLength={200}
+                className="w-full bg-transparent text-[28px] font-bold leading-tight tracking-tight text-foreground outline-none placeholder:text-muted-foreground/50"
+              />
+              <div className="mt-4" data-block-editor>
+                <BlockEditor
+                  value={draftBody}
+                  onChange={setDraftBody}
+                  fullscreen
+                  onRemoveImage={removeImageFromBody}
+                  onRemoveLink={removeLinkFromBody}
+                  placeholder="Start writing… # heading · - list · > quote · [[Title]] links a note"
+                  wikiIndex={wikiIndex}
+                />
+              </div>
+
+              {(() => {
+                const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
+                if (!m || allNotes.length === 0) return null;
+                const q = m[1].trim().toLowerCase();
+                const matches = allNotes
+                  .filter((n) => !q || n.heading.toLowerCase().includes(q))
+                  .slice(0, 12);
+                if (matches.length === 0) return null;
+                return (
+                  <div className="mt-4">
+                    <p className="mb-1.5 px-1 text-[11px] uppercase tracking-wide text-muted-foreground">
+                      Link to a note
+                    </p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {matches.map((n) => (
+                        <button
+                          key={n.id}
+                          onClick={() => insertWikiLinkForTitle(n.heading)}
+                          className="max-w-full truncate rounded-full bg-muted px-2.5 py-1 text-[12px] text-primary active:opacity-60"
+                        >
+                          {n.heading}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            {/* Sticky bottom toolbar */}
+            <div className="pointer-events-none absolute inset-x-0 bottom-0 flex justify-center px-4 pb-[calc(env(safe-area-inset-bottom)+16px)]">
+              <div className="pointer-events-auto flex w-full max-w-md flex-col gap-2">
+                <input
+                  ref={editFileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  hidden
+                  onChange={onPickImages}
+                />
+                {addingLink && (
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
+                    <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
+                    <input
+                      autoFocus
+                      type="url"
+                      inputMode="url"
+                      value={linkDraft}
+                      onChange={(e) => setLinkDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") { e.preventDefault(); commitLink(); }
+                        if (e.key === "Escape") { setAddingLink(false); setLinkDraft(""); }
+                      }}
+                      placeholder="Paste a link…"
+                      className="flex-1 bg-transparent px-2 py-1.5 text-sm text-foreground outline-none placeholder:text-muted-foreground"
+                    />
+                    <button
+                      onClick={() => { setAddingLink(false); setLinkDraft(""); }}
+                      aria-label="Cancel"
+                      className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground hover:bg-muted"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                    <button
+                      onClick={commitLink}
+                      disabled={!linkDraft.trim()}
+                      className="inline-flex items-center rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground disabled:opacity-50"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
+                  <button
+                    type="button"
+                    onClick={() => editFileRef.current?.click()}
+                    disabled={uploadingImg}
+                    aria-label="Add image"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted disabled:opacity-50"
+                  >
+                    {uploadingImg ? <Loader2 className="h-5 w-5 animate-spin" /> : <ImagePlus className="h-5 w-5" strokeWidth={2} />}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAddingLink((v) => !v)}
+                    aria-label="Add link"
+                    className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted ${addingLink ? "bg-muted" : ""}`}
+                  >
+                    <Link2 className="h-5 w-5" strokeWidth={2} />
+                  </button>
+                  <div className="mx-1 h-5 w-px bg-border" />
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n- ")}
+                    aria-label="Bullet list"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-lg leading-none">•</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("\n# ")}
+                    aria-label="Heading"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-sm font-bold">H</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => insertAtCursor("[[]]")}
+                    aria-label="Link a note"
+                    className="inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted"
+                  >
+                    <span className="text-xs font-semibold tracking-tighter">[[ ]]</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
