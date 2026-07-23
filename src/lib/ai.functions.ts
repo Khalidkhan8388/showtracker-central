@@ -258,7 +258,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
     const effective = text && text.length >= 30
       ? text
       : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable content; summarize from the URL and title.)`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -269,7 +269,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) throw new Error(`AI failed (${res.status})`);
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
@@ -310,7 +310,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
     const content = data.heading
       ? `Title: ${data.heading}\n\nNote:\n${data.body}`
       : `Note:\n${data.body}\n\n(No title — generate one.)`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -321,7 +321,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) return { heading: data.heading, summary: "", tasks: [], tags: [] };
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
@@ -395,7 +395,7 @@ export const semanticRankFn = createServerFn({ method: "POST" })
 Given a query and a JSON catalog of notes (id, heading, summary, tags), return the most relevant note ids ordered by relevance.
 Only include notes that are genuinely relevant. If nothing fits, return [].
 Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is one short sentence.`;
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -406,7 +406,7 @@ Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is o
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) throw new Error(`Search failed (${res.status})`);
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
