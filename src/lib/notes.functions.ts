@@ -327,9 +327,10 @@ export const deleteNote = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => DeleteInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("voice_notes")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: now, updated_at: now })
       .eq("id", data.noteId);
     if (error) throw new Error(error.message);
     return { ok: true as const };
@@ -342,9 +343,10 @@ export const deleteNotes = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => DeleteNotesInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("voice_notes")
-      .update({ deleted_at: new Date().toISOString() })
+      .update({ deleted_at: now, updated_at: now })
       .in("id", data.noteIds);
     if (error) throw new Error(error.message);
     return { ok: true as const };
@@ -357,9 +359,10 @@ export const restoreNotes = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => RestoreNotesInput.parse(data))
   .handler(async ({ data, context }) => {
     const { supabase } = context;
+    const now = new Date().toISOString();
     const { error } = await supabase
       .from("voice_notes")
-      .update({ deleted_at: null })
+      .update({ deleted_at: null, updated_at: now })
       .in("id", data.noteIds);
     if (error) throw new Error(error.message);
     return { ok: true as const };
