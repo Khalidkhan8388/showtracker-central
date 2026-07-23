@@ -17,7 +17,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
 });
 
 function ProfilePage() {
-  const { mode, setMode, accent, setAccentId, sizeScale, setSizeScale } = useTheme();
+  const { mode, setMode, sizeScale, setSizeScale } = useTheme();
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [exporting, setExporting] = useState(false);
