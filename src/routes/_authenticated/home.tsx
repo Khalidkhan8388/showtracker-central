@@ -77,15 +77,15 @@ function Home() {
   }
 
   // Sign only images we haven't signed yet — cache is keyed by storage path so
-  // task/pin updates don't churn signed URLs.
-  const signedCacheRef = useRef<Map<string, string>>(new Map());
+  // Signed URL cache is module-level so it survives route unmounts/remounts;
+  // this stops thumbnails from re-signing every time we transition back.
   const signInFlightRef = useRef<Set<string>>(new Set());
   const signThumbsFor = useCallback((rows: Note[]) => {
     const toSign: Array<{ id: string; path: string }> = [];
     for (const n of rows) {
       const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
       if (!p) continue;
-      const cached = signedCacheRef.current.get(p);
+      const cached = getCachedSignedUrl(p);
       if (cached) {
         setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
         continue;
@@ -96,21 +96,13 @@ function Home() {
     }
     if (toSign.length === 0) return;
     Promise.all(
-      toSign.map(async ({ id, path }) => {
-        const { data: s } = await supabase.storage
-          .from("voice-notes")
-          .createSignedUrl(path, 3600);
-        return { id, path, url: s?.signedUrl ?? "" };
-      }),
+      toSign.map(async ({ id, path }) => ({ id, path, url: await signPath(path) })),
     ).then((pairs) => {
       setThumbs((cur) => {
         const next = { ...cur };
         for (const { id, path, url } of pairs) {
           signInFlightRef.current.delete(path);
-          if (url) {
-            signedCacheRef.current.set(path, url);
-            next[id] = url;
-          }
+          if (url) next[id] = url;
         }
         return next;
       });
