@@ -1,5 +1,55 @@
 import { supabase } from "@/integrations/supabase/client";
 import { db, normalizeRow, type LocalNote, type LocalTask } from "./local-db";
+import { deleteNotes as deleteNotesFn } from "./notes.functions";
+
+const PENDING_DELETE_KEY = (uid: string) => `pending_delete:${uid}`;
+
+async function readPendingDeletes(uid: string): Promise<Set<string>> {
+  const row = await db.meta.get(PENDING_DELETE_KEY(uid));
+  if (!row?.value) return new Set();
+  try {
+    return new Set(JSON.parse(row.value) as string[]);
+  } catch {
+    return new Set();
+  }
+}
+
+async function writePendingDeletes(uid: string, ids: Set<string>): Promise<void> {
+  await db.meta.put({ key: PENDING_DELETE_KEY(uid), value: JSON.stringify([...ids]) });
+}
+
+export async function markPendingDelete(ids: string[]): Promise<void> {
+  if (!currentUserId || ids.length === 0) return;
+  const set = await readPendingDeletes(currentUserId);
+  for (const id of ids) set.add(id);
+  await writePendingDeletes(currentUserId, set);
+}
+
+export async function clearPendingDelete(ids: string[]): Promise<void> {
+  if (!currentUserId || ids.length === 0) return;
+  const set = await readPendingDeletes(currentUserId);
+  for (const id of ids) set.delete(id);
+  await writePendingDeletes(currentUserId, set);
+}
+
+/**
+ * Retry any soft-deletes that never confirmed with the cloud. Runs on every
+ * sync boot so a delete performed offline (or one whose server call failed)
+ * eventually reaches Supabase — otherwise the next pullSince would resurrect
+ * the row with `deleted_at = null` and it would reappear on refresh.
+ */
+export async function flushPendingDeletes(): Promise<void> {
+  if (!currentUserId) return;
+  const pending = await readPendingDeletes(currentUserId);
+  if (pending.size === 0) return;
+  const ids = [...pending];
+  try {
+    await deleteNotesFn({ data: { noteIds: ids } });
+    await clearPendingDelete(ids);
+  } catch {
+    // keep pending; will retry on next boot
+  }
+}
 
 // Module-level singletons — sync runs once per browser tab regardless of
 // how many components mount the hook.
@@ -58,6 +108,7 @@ async function switchUser(uid: string | null) {
     return;
   }
   await pullSince(uid);
+  await flushPendingDeletes();
   attachRealtime(uid);
 }
 
@@ -76,9 +127,13 @@ async function pullSince(uid: string): Promise<void> {
       const { data, error } = await q;
       if (error || !data) return;
       if (data.length > 0) {
+        const pending = await readPendingDeletes(uid);
         const rows = data
           .map((r) => normalizeRow(r as Record<string, unknown>))
-          .filter((r) => !isTombstoned(r.id));
+          .filter((r) => !isTombstoned(r.id))
+          // If the user deleted the note locally but the server hasn't
+          // confirmed yet, keep it soft-deleted so it doesn't resurface.
+          .map((r) => (pending.has(r.id) ? { ...r, deleted_at: r.deleted_at ?? new Date().toISOString() } : r));
         if (rows.length > 0) await db.notes.bulkPut(rows);
         const newest = rows.reduce((a, r) => (r.updated_at > a ? r.updated_at : a), since ?? "");
         if (newest) await db.meta.put({ key: LAST_SYNC(uid), value: newest });
@@ -102,12 +157,17 @@ function attachRealtime(uid: string) {
           if (oldRow?.id) {
             tombstones.set(oldRow.id, Date.now());
             await db.notes.delete(oldRow.id);
+            await clearPendingDelete([oldRow.id]);
           }
           return;
         }
         const row = normalizeRow(payload.new as Record<string, unknown>);
         if (isTombstoned(row.id)) return;
-        await db.notes.put(row);
+        const pending = await readPendingDeletes(uid);
+        const finalRow = pending.has(row.id)
+          ? { ...row, deleted_at: row.deleted_at ?? new Date().toISOString() }
+          : row;
+        await db.notes.put(finalRow);
         const cur = await db.meta.get(LAST_SYNC(uid));
         if (!cur || row.updated_at > cur.value) {
           await db.meta.put({ key: LAST_SYNC(uid), value: row.updated_at });
@@ -138,6 +198,9 @@ export async function deleteLocalNotes(ids: string[]): Promise<void> {
   for (const id of ids) {
     await db.notes.update(id, { deleted_at: now, updated_at: now });
   }
+  // Track as pending so a failed server call / offline delete is retried on
+  // next boot and pullSince won't resurrect the row before it confirms.
+  await markPendingDelete(ids);
 }
 
 export async function restoreLocalNotes(ids: string[]): Promise<void> {
@@ -145,12 +208,14 @@ export async function restoreLocalNotes(ids: string[]): Promise<void> {
   for (const id of ids) {
     await db.notes.update(id, { deleted_at: null, updated_at: now });
   }
+  await clearPendingDelete(ids);
 }
 
 export async function hardDeleteLocalNotes(ids: string[]): Promise<void> {
   const now = Date.now();
   for (const id of ids) tombstones.set(id, now);
   await db.notes.bulkDelete(ids);
+  await clearPendingDelete(ids);
 }
 
 export async function patchLocalTask(

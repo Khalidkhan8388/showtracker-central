@@ -9,7 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, patchLocalTask, resync } from "@/lib/sync-engine";
+import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
 
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
@@ -120,11 +120,13 @@ function NoteDetail() {
 
   async function onDelete() {
     if (!confirm("Delete this note?")) return;
+    await deleteLocalNotes([id]);
+    navigate({ to: "/home" });
     try {
       await deleteFn({ data: { noteId: id } });
-      navigate({ to: "/home" });
+      await clearPendingDelete([id]);
     } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
+      toast.error(e?.message ?? "Delete will retry when back online");
     }
   }
 
