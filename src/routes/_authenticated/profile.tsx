@@ -40,6 +40,41 @@ function ProfilePage() {
     }
   }
 
+  async function handleExport() {
+    setExporting(true);
+    try {
+      await downloadExport();
+      toast.success("Backup downloaded");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Export failed");
+    } finally {
+      setExporting(false);
+    }
+  }
+
+  function pickImport(mode: ImportMode) {
+    setImportMode(mode);
+    fileInputRef.current?.click();
+  }
+
+  async function handleImportFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = "";
+    if (!file || !importMode) return;
+    setImporting(true);
+    try {
+      const summary = await importFromFile(file, importMode);
+      toast.success(`Imported ${summary.notes} notes, ${summary.photos + summary.audios} files`);
+      if (typeof window !== "undefined") window.location.assign("/home");
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Import failed");
+    } finally {
+      setImporting(false);
+      setImportMode(null);
+    }
+  }
+
+
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
