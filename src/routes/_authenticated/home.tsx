@@ -707,8 +707,8 @@ const NoteCard = memo(function NoteCard({
                 {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
               </h3>
             </div>
-            {note.summary && !isHero && (
-              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{note.summary}</p>
+            {note.summary && (
+              <p className={`mt-${isHero ? 2 : 1} line-clamp-2 text-${isHero ? "[13px]" : "xs"} text-muted-foreground`}>{note.summary}</p>
             )}
             <div className={`mt-${isHero ? 3 : 2} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
