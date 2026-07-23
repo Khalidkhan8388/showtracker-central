@@ -199,7 +199,7 @@ function SearchPage() {
         </div>
 
         <div className="px-5 pt-1 pb-3">
-          <h1 className="text-[34px] font-bold leading-[1.05] tracking-tight text-foreground">
+          <h1 className="font-serif text-[40px] leading-[1.05] tracking-tight text-foreground">
             Search
           </h1>
         </div>
