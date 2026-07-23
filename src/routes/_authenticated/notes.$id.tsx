@@ -472,18 +472,9 @@ function NoteDetail() {
     if (files.length === 0 || !note) return;
     setAddingImages(true);
     try {
-      const { data: userRes } = await supabase.auth.getUser();
-      const uid = userRes.user?.id;
-      if (!uid) throw new Error("Not signed in");
       const paths: string[] = [];
       for (const f of files) {
-        const ext = f.type === "image/png" ? "png" : f.type === "image/webp" ? "webp" : "jpg";
-        const path = `${uid}/images/${Date.now()}-${crypto.randomUUID()}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from("voice-notes")
-          .upload(path, f, { contentType: f.type || "image/jpeg", upsert: false });
-        if (upErr) throw upErr;
-        paths.push(path);
+        paths.push(await storeLocalPhoto(f, f.type));
       }
       await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
       await load();
