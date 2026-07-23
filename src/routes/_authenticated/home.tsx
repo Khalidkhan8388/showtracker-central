@@ -10,7 +10,7 @@ import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync, clearPendingDelete } from "@/lib/sync-engine";
-import { useCollections, addNotesToCollection, createCollection } from "@/lib/collections";
+import { useCollections, addNotesToCollection, createCollection, backfillMediaCollections } from "@/lib/collections";
 import { MediaCard } from "@/components/MediaCard";
 
 
@@ -61,6 +61,12 @@ function Home() {
   useEffect(() => {
     if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
   }, [addingTask]);
+
+  // Auto-file existing movie/TV notes into their collections (one-time per mount).
+  useEffect(() => {
+    void backfillMediaCollections();
+  }, []);
+
 
   async function submitNewTask() {
     const text = newTaskText.trim();

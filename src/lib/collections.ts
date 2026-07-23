@@ -22,6 +22,33 @@ export async function createCollection(title: string): Promise<LocalCollection> 
   return row;
 }
 
+export async function ensureCollectionByTitle(title: string): Promise<LocalCollection> {
+  const t = title.trim();
+  const existing = (await db.collections.toArray()).find(
+    (c) => c.title.trim().toLowerCase() === t.toLowerCase(),
+  );
+  if (existing) return existing;
+  return createCollection(t);
+}
+
+export const MOVIES_COLLECTION = "Movies";
+export const TV_COLLECTION = "TV Shows";
+
+/** Auto-file every movie/TV note into the right collection. Safe to run repeatedly. */
+export async function backfillMediaCollections(): Promise<void> {
+  const notes = await db.notes.toArray();
+  const movieIds = notes.filter((n) => n.media?.type === "movie" && !n.deleted_at).map((n) => n.id);
+  const tvIds = notes.filter((n) => n.media?.type === "tv" && !n.deleted_at).map((n) => n.id);
+  if (movieIds.length) {
+    const c = await ensureCollectionByTitle(MOVIES_COLLECTION);
+    await addNotesToCollection(c.id, movieIds);
+  }
+  if (tvIds.length) {
+    const c = await ensureCollectionByTitle(TV_COLLECTION);
+    await addNotesToCollection(c.id, tvIds);
+  }
+}
+
 export async function renameCollection(id: string, title: string): Promise<void> {
   const t = title.trim();
   if (!t) return;

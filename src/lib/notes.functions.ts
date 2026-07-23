@@ -319,6 +319,11 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           watched_episodes: [],
         },
       });
+      try {
+        const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } = await import("./collections");
+        const c = await ensureCollectionByTitle(media.type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
+        await addNotesToCollection(c.id, [note.id]);
+      } catch {}
       return { ok: true as const, noteId: note.id, media: true as const };
     }
   } catch {
