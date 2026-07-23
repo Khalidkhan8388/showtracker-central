@@ -48,9 +48,10 @@ function AuthGate() {
 function RouteFader() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   return (
-    <div key={pathname} className="animate-fade-in">
+    <div key={pathname} className="route-enter">
       <Outlet />
     </div>
   );
 }
+
 
