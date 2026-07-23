@@ -374,22 +374,9 @@ function Home() {
             )}
 
             {(true) && (
-
               <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
-                <div className="mb-1.5 flex items-center justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                    Tasks
-                  </span>
-                  <Link
-                    to="/tasks"
-                    className="inline-flex items-center gap-0.5 text-[12px] text-primary active:opacity-60"
-                  >
-                    <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                    <ChevronRight className="h-3.5 w-3.5" strokeWidth={2.5} />
-                  </Link>
-                </div>
                 {derived.visible.length > 0 && (
-                  <ul>
+                  <ul className="mb-2">
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
                       const isSel = selectedTasks.has(key);
@@ -414,41 +401,44 @@ function Home() {
                     })}
                   </ul>
                 )}
-                <div className="mt-2 flex justify-center">
-                  {addingTask ? (
-                    <form
-                      onSubmit={(e) => {
-                        e.preventDefault();
-                        void submitNewTask();
+                {addingTask ? (
+                  <form
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      void submitNewTask();
+                    }}
+                    className="flex w-full items-center gap-2 rounded-[28px] bg-primary px-5 py-3.5 shadow-sm"
+                  >
+                    <Plus className="h-4 w-4 shrink-0 text-primary-foreground" />
+                    <input
+                      ref={newTaskInputRef}
+                      value={newTaskText}
+                      onChange={(e) => setNewTaskText(e.target.value)}
+                      onBlur={() => void submitNewTask()}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setNewTaskText("");
+                          setAddingTask(false);
+                        }
                       }}
-                      className="flex w-full items-center gap-2 rounded-full bg-yellow-400/15 px-3 py-1.5 ring-1 ring-yellow-400/40"
-                    >
-                      <input
-                        ref={newTaskInputRef}
-                        value={newTaskText}
-                        onChange={(e) => setNewTaskText(e.target.value)}
-                        onBlur={() => void submitNewTask()}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            setNewTaskText("");
-                            setAddingTask(false);
-                          }
-                        }}
-                        placeholder="New task"
-                        maxLength={500}
-                        className="flex-1 bg-transparent text-[13px] text-foreground outline-none placeholder:text-muted-foreground"
-                      />
-                    </form>
-                  ) : (
-                    <button
-                      type="button"
-                      onClick={() => setAddingTask(true)}
-                      className="inline-flex items-center rounded-full bg-yellow-400/20 px-3 py-1 text-[12px] font-semibold text-yellow-600 ring-1 ring-yellow-400/40 active:opacity-70 dark:text-yellow-300"
-                    >
-                      + Add a task
-                    </button>
-                  )}
-                </div>
+                      placeholder="Add a task"
+                      maxLength={500}
+                      className="flex-1 bg-transparent text-[15px] font-semibold text-primary-foreground outline-none placeholder:text-primary-foreground/60"
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setAddingTask(true)}
+                    className="flex w-full items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
+                  >
+                    <div className="flex items-center gap-2">
+                      <Plus className="h-4 w-4 text-primary-foreground" />
+                      <span className="text-[15px] font-semibold text-primary-foreground">Add a task</span>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+                  </button>
+                )}
               </div>
             )}
 
