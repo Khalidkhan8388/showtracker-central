@@ -908,6 +908,24 @@ function NoteDetail() {
                   </button>
                   <button
                     type="button"
+                    onClick={voiceRecording ? stopVoiceAppend : startVoiceAppend}
+                    disabled={voiceBusy}
+                    aria-label={voiceRecording ? "Stop recording" : "Record voice"}
+                    className={`inline-flex h-10 min-w-10 items-center justify-center gap-1 rounded-full px-2.5 text-foreground hover:bg-muted disabled:opacity-50 ${voiceRecording ? "bg-red-500/10 text-red-600" : ""}`}
+                  >
+                    {voiceBusy ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : voiceRecording ? (
+                      <>
+                        <Square className="h-4 w-4 fill-current" />
+                        <span className="text-[11px] font-semibold tabular-nums">{voiceElapsed}s</span>
+                      </>
+                    ) : (
+                      <Mic className="h-5 w-5" strokeWidth={2} />
+                    )}
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => setAddingLink((v) => !v)}
                     aria-label="Add link"
                     className={`inline-flex h-10 w-10 items-center justify-center rounded-full text-foreground hover:bg-muted ${addingLink ? "bg-muted" : ""}`}
