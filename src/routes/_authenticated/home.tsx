@@ -222,10 +222,10 @@ function Home() {
   const derived = useMemo(() => {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__");
-    const [latest, ...rest] = displayNotes;
-    const pinnedRest = rest.filter((n) => n.pinned);
-    const unpinnedRest = rest.filter((n) => !n.pinned);
+    const pinnedRest = displayNotes.filter((n) => n.pinned);
+    const unpinnedRest = displayNotes.filter((n) => !n.pinned);
     const wall = [...pinnedRest, ...unpinnedRest];
+
 
     const allTasksRaw = notes.flatMap((n) =>
       (n.tasks ?? []).map((t) => ({
