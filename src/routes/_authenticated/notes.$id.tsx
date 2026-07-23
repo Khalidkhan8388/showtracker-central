@@ -425,8 +425,8 @@ function NoteDetail() {
             <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
             <span>Home</span>
           </Link>
-          <div className="flex items-center gap-1">
-            {isText && (
+          <div className="flex items-center gap-0.5">
+            {!isVoice && (
               <button
                 onClick={startEdit}
                 className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
@@ -435,6 +435,13 @@ function NoteDetail() {
                 <Pencil className="h-5 w-5" />
               </button>
             )}
+            <button
+              onClick={onShare}
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-primary active:opacity-60"
+              aria-label="Share"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
             <button
               onClick={async () => {
                 const next = !note.pinned;
@@ -462,7 +469,7 @@ function NoteDetail() {
         </div>
       </header>
 
-      <div className="px-4 pt-2">
+      <div className="px-5 pt-3">
         {processing && (
           <div className="mb-4 flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 text-[13px] text-muted-foreground shadow-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
@@ -485,36 +492,60 @@ function NoteDetail() {
           </div>
         )}
 
-        <h1 className="text-[28px] font-bold leading-tight tracking-tight">
+        {/* Kind pill */}
+        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+          <span>{isVoice ? "Voice" : isLink ? "Web" : "Note"}</span>
+        </div>
+
+        <h1 className="text-[30px] font-bold leading-[1.1] tracking-tight">
           {note.heading ?? (processing ? "Processing…" : "Untitled")}
         </h1>
-        <p className="mt-1 text-[13px] text-muted-foreground">
-          {new Date(note.created_at).toLocaleString()}
+
+        <p
+          className="mt-1.5 text-[13px] text-muted-foreground"
+          title={new Date(note.created_at).toLocaleString()}
+        >
+          {relativeTime(note.created_at)}
+          {isVoice && note.duration_seconds != null && (
+            <> · {formatDuration(note.duration_seconds)}</>
+          )}
+          {isText && readingMinutes > 0 && (
+            <> · {readingMinutes} min read</>
+          )}
         </p>
 
-        {note.source_url && !editing && (
+        {note.source_url && (
           <a
             href={note.source_url}
             target="_blank"
             rel="noreferrer"
-            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-muted px-3 py-1.5 text-[13px] text-primary active:opacity-60"
+            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-yellow-400/20 px-2.5 py-1 text-[13px] font-medium text-yellow-700 no-underline active:opacity-60"
           >
-            <Link2 className="h-3.5 w-3.5 shrink-0" />
+            {linkHost ? (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${linkHost}&sz=32`}
+                alt=""
+                className="h-3.5 w-3.5 flex-shrink-0 rounded-sm"
+              />
+            ) : (
+              <Link2 className="h-3.5 w-3.5 shrink-0" />
+            )}
             <span className="truncate">{linkHost ?? note.source_url}</span>
           </a>
         )}
 
-        {imageUrls.length > 0 && !editing && (
+        {imageUrls.length > 0 && (
           <section className="mt-6">
             <div className={`grid gap-2 ${imageUrls.length === 1 ? "grid-cols-1" : "grid-cols-2"}`}>
               {imageUrls.map((url, i) => (
-                <a key={i} href={url} target="_blank" rel="noreferrer" className="block">
+                <a key={i} href={url} target="_blank" rel="noreferrer" className="block overflow-hidden rounded-2xl">
                   <img
                     src={url}
                     alt=""
                     loading={i === 0 ? "eager" : "lazy"}
                     decoding="async"
-                    className="w-full rounded-2xl object-cover shadow-sm"
+                    className="w-full object-cover shadow-sm transition-transform duration-200 active:scale-[0.98]"
                   />
                 </a>
               ))}
@@ -522,9 +553,9 @@ function NoteDetail() {
           </section>
         )}
 
-        {!editing && !isText && note.summary && (
+        {!isText && note.summary && (
           <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
             </h2>
             <div className="rounded-2xl bg-card px-4 py-3 shadow-sm">
@@ -533,17 +564,22 @@ function NoteDetail() {
           </section>
         )}
 
-        {!editing && note.tasks && note.tasks.length > 0 && (
+        {note.tasks && note.tasks.length > 0 && (
           <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-              Tasks
-            </h2>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Tasks
+              </h2>
+              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
+                {doneCount}/{taskTotal}
+              </span>
+            </div>
             <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
               {note.tasks.map((t, i) => (
                 <li key={t.id}>
                   <button
                     onClick={() => onToggle(t.id)}
-                    className="flex w-full items-start gap-3 px-4 py-3 text-left active:bg-muted"
+                    className="flex w-full items-start gap-3 px-4 py-3.5 text-left active:bg-muted"
                   >
                     {t.done ? (
                       <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
@@ -567,7 +603,21 @@ function NoteDetail() {
 
         {note.transcript && (
           <section className="mt-6">
-            <Markdown className="text-foreground">{renderedBody}</Markdown>
+            {isVoice && (
+              <div className="mb-2 flex items-center justify-between px-1">
+                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Transcript
+                </h2>
+                <button
+                  onClick={copyTranscript}
+                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-foreground active:opacity-60"
+                  aria-label="Copy transcript"
+                >
+                  <Copy className="h-3 w-3" /> Copy
+                </button>
+              </div>
+            )}
+            <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
           </section>
         )}
       </div>
