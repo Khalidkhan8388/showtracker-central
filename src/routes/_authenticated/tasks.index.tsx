@@ -65,22 +65,25 @@ function TasksPage() {
   const selectMode = selected.size > 0;
 
   async function onToggle(noteId: string, taskId: string, done: boolean) {
-    await patchLocalTask(noteId, taskId, { done: !done });
+    const nextDone = !done;
+    await patchLocalTask(noteId, taskId, { done: nextDone });
     try {
-      await toggleFn({ data: { noteId, taskId } });
+      await toggleFn({ data: { noteId, taskId, done: nextDone } });
     } catch {
       void resync();
     }
   }
 
   async function onPin(noteId: string, taskId: string, pinned: boolean) {
-    await patchLocalTask(noteId, taskId, { pinned: !pinned });
+    const nextPinned = !pinned;
+    await patchLocalTask(noteId, taskId, { pinned: nextPinned });
     try {
-      await pinFn({ data: { noteId, taskId } });
+      await pinFn({ data: { noteId, taskId, pinned: nextPinned } });
     } catch {
       void resync();
     }
   }
+
 
   function toggleSel(key: TaskKey) {
     setSelected((prev) => {
