@@ -584,7 +584,7 @@ function EpisodeTracker({ members }: { members: Array<{ id: string; heading: str
   const recent = useMemo(() => {
     const cutoff = now - 1000 * 60 * 60 * 24 * 30;
     return allEps
-      .filter((r) => r.airMs !== null && r.airMs <= now && r.airMs >= cutoff)
+      .filter((r) => r.watched && r.airMs !== null && r.airMs <= now && r.airMs >= cutoff)
       .sort((a, b) => b.airMs! - a.airMs!)
       .slice(0, 40);
   }, [allEps, now]);
