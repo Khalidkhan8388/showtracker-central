@@ -54,6 +54,8 @@ function Home() {
   const [addingTask, setAddingTask] = useState(false);
   const [newTaskText, setNewTaskText] = useState("");
   const newTaskInputRef = useRef<HTMLInputElement | null>(null);
+  const [showAddToCollection, setShowAddToCollection] = useState(false);
+  const allCollections = useCollections();
 
   useEffect(() => {
     if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
