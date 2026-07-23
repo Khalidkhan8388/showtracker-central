@@ -581,15 +581,15 @@ const NoteCard = memo(function NoteCard({
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
   const base = isText
-    ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+    ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
     : isHero
-      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+      ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
       : useTint
-        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+        ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
           (selected ? "ring-2 ring-foreground" : "")
-        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
+        : "relative block overflow-hidden rounded-[15px] border border-border/60 p-3 transition-colors " +
           (selected
             ? "border-foreground bg-muted shadow-sm"
             : "bg-card hover:bg-muted/50");
