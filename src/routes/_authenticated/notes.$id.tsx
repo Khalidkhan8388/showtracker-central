@@ -6,6 +6,7 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
+import { MediaDetail } from "@/components/MediaDetail";
 import { BlockEditor } from "@/components/BlockEditor";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
