@@ -5,7 +5,9 @@ import { useCollection, removeNotesFromCollection, addNotesToCollection, renameC
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
-import { poster as tmdbPoster } from "@/lib/media";
+import { poster as tmdbPoster, WATCH_LABEL } from "@/lib/media";
+import type { WatchStatus } from "@/lib/local-db";
+
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
@@ -36,14 +38,42 @@ function CollectionDetail() {
   }
 
   const memberIds = useMemo(() => new Set(collection?.note_ids ?? []), [collection]);
-  const members = useMemo(
+  const allMembers = useMemo(
     () => (notes ?? []).filter((n) => memberIds.has(n.id) && !n.deleted_at),
     [notes, memberIds],
   );
+  const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const mediaMembers = useMemo(
+    () => allMembers.filter((n) => !!(n as any).media),
+    [allMembers],
+  );
+  const hasMedia = mediaMembers.length > 0;
+  const statusCounts = useMemo(() => {
+    const c: Record<WatchStatus | "all", number> = {
+      all: mediaMembers.length,
+      watchlist: 0,
+      watching: 0,
+      watched: 0,
+      dropped: 0,
+    };
+    for (const n of mediaMembers) {
+      const s = ((n as any).media?.watch_status ?? null) as WatchStatus | null;
+      if (s) c[s]++;
+    }
+    return c;
+  }, [mediaMembers]);
+  const members = useMemo(() => {
+    if (!hasMedia || statusFilter === "all") return allMembers;
+    return allMembers.filter((n) => {
+      const m = (n as any).media;
+      return m && m.watch_status === statusFilter;
+    });
+  }, [allMembers, hasMedia, statusFilter]);
   const candidates = useMemo(
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
   );
+
 
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   useEffect(() => {
@@ -272,10 +302,39 @@ function CollectionDetail() {
                 </button>
               </div>
             </div>
+            {hasMedia && (
+              <div className="-mx-4 mb-3 overflow-x-auto px-4">
+                <div className="inline-flex min-w-full gap-1.5">
+                  {(["all", "watchlist", "watching", "watched", "dropped"] as const).map((s) => {
+                    const active = statusFilter === s;
+                    const label = s === "all" ? "All" : WATCH_LABEL[s];
+                    const count = statusCounts[s];
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        onClick={() => setStatusFilter(s)}
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                          active
+                            ? "bg-primary text-primary-foreground"
+                            : "bg-card text-muted-foreground ring-1 ring-border/60 active:opacity-70"
+                        }`}
+                      >
+                        {label}
+                        <span className={`ml-1.5 text-[11px] ${active ? "text-primary-foreground/80" : "text-muted-foreground/70"}`}>
+                          {count}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
-                This collection is empty.
+                {hasMedia && statusFilter !== "all" ? "Nothing here for this status." : "This collection is empty."}
               </p>
+
             ) : view === "list" ? (
               <ul className="space-y-2">
                 {members.map((n) => (
