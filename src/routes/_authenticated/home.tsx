@@ -373,34 +373,8 @@ function Home() {
               </Link>
             )}
 
-            {(true) && (
-              <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
-                {derived.visible.length > 0 && (
-                  <ul className="mb-2">
-                    {derived.visible.map((t) => {
-                      const key: TaskKey = `${t.noteId}::${t.id}`;
-                      const isSel = selectedTasks.has(key);
-                      return (
-                        <li key={key}>
-                          <TaskRow
-                            selectMode={taskSelectMode}
-                            selected={isSel}
-                            done={t.done}
-                            pinned={Boolean(t.pinned)}
-                            text={t.text}
-                            noteHeading={t.noteHeading}
-                            noteId={t.noteId}
-                            hideNoteHeading
-                            compact
-                            onToggleDone={() => onToggle(t.noteId, t.id)}
-                            onLongPress={() => toggleTaskSel(key)}
-                            onSelectTap={() => toggleTaskSel(key)}
-                          />
-                        </li>
-                      );
-                    })}
-                  </ul>
-                )}
+            {derived.visible.length === 0 && (
+              <>
                 {addingTask ? (
                   <form
                     onSubmit={(e) => {
@@ -439,6 +413,47 @@ function Home() {
                     <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
                   </button>
                 )}
+              </>
+            )}
+
+            {derived.visible.length > 0 && (
+              <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="text-[13px] text-muted-foreground">
+                    {derived.doneCount} of {derived.allTasks.length} completed
+                  </span>
+                  <Link
+                    to="/tasks"
+                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
+                    aria-label="Go to tasks"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Link>
+                </div>
+                <ul>
+                  {derived.visible.map((t) => {
+                    const key: TaskKey = `${t.noteId}::${t.id}`;
+                    const isSel = selectedTasks.has(key);
+                    return (
+                      <li key={key}>
+                        <TaskRow
+                          selectMode={taskSelectMode}
+                          selected={isSel}
+                          done={t.done}
+                          pinned={Boolean(t.pinned)}
+                          text={t.text}
+                          noteHeading={t.noteHeading}
+                          noteId={t.noteId}
+                          hideNoteHeading
+                          compact
+                          onToggleDone={() => onToggle(t.noteId, t.id)}
+                          onLongPress={() => toggleTaskSel(key)}
+                          onSelectTap={() => toggleTaskSel(key)}
+                        />
+                      </li>
+                    );
+                  })}
+                </ul>
               </div>
             )}
 
