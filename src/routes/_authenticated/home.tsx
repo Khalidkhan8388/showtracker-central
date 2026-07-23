@@ -62,6 +62,12 @@ function Home() {
     if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
   }, [addingTask]);
 
+  // Auto-file existing movie/TV notes into their collections (one-time per mount).
+  useEffect(() => {
+    void backfillMediaCollections();
+  }, []);
+
+
   async function submitNewTask() {
     const text = newTaskText.trim();
     if (!text) {
