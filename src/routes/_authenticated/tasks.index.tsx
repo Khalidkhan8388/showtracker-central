@@ -145,7 +145,7 @@ function TasksPage() {
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
       {/* iOS large-title header */}
-      <header className="sticky top-0 z-10 bg-background">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
         <div className="flex items-center justify-between px-2 pt-3 pb-1">
           <Link
             to="/home"
@@ -250,7 +250,7 @@ function TasksPage() {
           <button
             onClick={() => setSelected(new Set())}
             aria-label="Cancel selection"
-            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5"
+            className="pointer-events-auto inline-flex h-11 items-center rounded-full bg-card px-5 text-[15px] font-medium text-foreground shadow-lg ring-1 ring-black/5 backdrop-blur-xl"
           >
             Cancel
           </button>

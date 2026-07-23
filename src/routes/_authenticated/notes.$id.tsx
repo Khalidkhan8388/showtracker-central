@@ -527,7 +527,7 @@ function NoteDetail() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
       {/* iOS nav bar */}
-      <header className="sticky top-0 z-10 bg-background">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
         <div className="flex items-center justify-between px-2 pt-3 pb-2">
           <Link
             to="/home"
@@ -722,7 +722,7 @@ function NoteDetail() {
       {/* Full-screen edit overlay */}
       {editing && (
         <div className="fixed inset-0 z-50 flex flex-col bg-background">
-          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background px-3 pt-[env(safe-area-inset-top)]">
+          <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
             <div className="flex h-12 w-full items-center justify-between">
               <button
                 onClick={cancelEdit}
@@ -813,7 +813,7 @@ function NoteDetail() {
                   onChange={onPickImages}
                 />
                 {addingLink && (
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-background p-1 pl-3 shadow-xl">
+                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
                     <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <input
                       autoFocus
@@ -844,7 +844,7 @@ function NoteDetail() {
                     </button>
                   </div>
                 )}
-                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background p-1.5 shadow-xl">
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
                   <button
                     type="button"
                     onClick={() => editFileRef.current?.click()}
@@ -917,19 +917,19 @@ function NoteDetail() {
           <div
             role="toolbar"
             aria-label="Note actions"
-            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white p-1.5 shadow-2xl ring-1 ring-black/10 dark:bg-neutral-900 dark:ring-white/10"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10"
           >
             <button
               onClick={startEdit}
               aria-label="Edit"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black active:scale-90 dark:text-white/80 dark:hover:bg-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 active:scale-90 dark:text-white/80 dark:hover:bg-white/10"
             >
               <Pencil aria-hidden="true" className="h-5 w-5" />
             </button>
             <button
               onClick={onShare}
               aria-label="Share"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black active:scale-90 dark:text-white/80 dark:hover:bg-white"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 active:scale-90 dark:text-white/80 dark:hover:bg-white/10"
             >
               <Share2 aria-hidden="true" className="h-5 w-5" />
             </button>
@@ -947,11 +947,11 @@ function NoteDetail() {
               }}
               aria-label={note.pinned ? "Unpin" : "Pin"}
               aria-pressed={note.pinned}
-              className={`inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black active:scale-90 dark:hover:bg-white ${note.pinned ? "text-primary" : "text-neutral-700 dark:text-white/80"}`}
+              className={`inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5 active:scale-90 dark:hover:bg-white/10 ${note.pinned ? "text-primary" : "text-neutral-700 dark:text-white/80"}`}
             >
               <Pin aria-hidden="true" className={`h-5 w-5 ${note.pinned ? "fill-current" : ""}`} />
             </button>
-            <div aria-hidden="true" className="mx-1 h-6 w-px bg-black dark:bg-white" />
+            <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
             <button
               onClick={onDelete}
               aria-label="Delete"

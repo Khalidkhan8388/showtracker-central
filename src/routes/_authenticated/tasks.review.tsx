@@ -97,7 +97,7 @@ function ReviewPage() {
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background pb-24">
       {/* iOS large-title header */}
-      <header className="sticky top-0 z-10 bg-background">
+      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
         <div className="flex items-center justify-between px-2 pt-3 pb-1">
           <Link
             to="/home"

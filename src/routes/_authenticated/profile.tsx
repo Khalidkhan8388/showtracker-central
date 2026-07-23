@@ -56,7 +56,7 @@ function ProfilePage() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background px-2 py-2">
+      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
         <Link
           to="/home"
           className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
@@ -210,7 +210,7 @@ function ProfilePage() {
 
       {/* Delete confirmation */}
       {confirmOpen && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black p-4" onClick={() => !deleting && setConfirmOpen(false)}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4" onClick={() => !deleting && setConfirmOpen(false)}>
           <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[17px] font-semibold">Delete your account?</h3>
             <p className="mt-2 text-[14px] text-muted-foreground">

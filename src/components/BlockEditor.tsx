@@ -346,10 +346,10 @@ function ResizableImage({
           className="absolute right-0 top-0 flex h-full w-4 -mr-2 cursor-ew-resize touch-none items-center justify-center"
           style={{ touchAction: "none" }}
         >
-          <div className="h-12 w-1.5 rounded-full bg-black shadow-lg ring-1 ring-white/30" />
+          <div className="h-12 w-1.5 rounded-full bg-black/70 shadow-lg ring-1 ring-white/30" />
         </div>
         {confirmDelete && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black">
+          <div className="absolute inset-0 flex items-center justify-center rounded-xl bg-black/50">
             <div className="flex items-center gap-2 rounded-full bg-white p-1 shadow-xl">
               <button
                 type="button"
