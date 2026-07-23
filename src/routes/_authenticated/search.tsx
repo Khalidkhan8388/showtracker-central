@@ -410,7 +410,8 @@ function SearchPage() {
       {/* Scroll body — reserves space for bottom search bar */}
       <div
         ref={scrollRef}
-        className="flex-1 overflow-y-auto px-4 pb-[132px] pt-1"
+        className="flex-1 overflow-y-auto px-4 pt-1"
+        style={{ paddingBottom: 132 + kbOffset }}
       >
         <div ref={sentinelRef} aria-hidden="true" className="h-2" />
 
