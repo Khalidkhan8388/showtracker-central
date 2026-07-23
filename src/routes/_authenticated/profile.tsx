@@ -177,7 +177,31 @@ function ProfilePage() {
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
-        <div className="overflow-hidden rounded-2xl bg-card">
+        <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+          <button
+            onClick={handleExport}
+            disabled={exporting}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+          >
+            {exporting ? <Loader2 className="h-5 w-5 animate-spin text-foreground/70" /> : <Download className="h-5 w-5 text-foreground/70" />}
+            <span className="flex-1 text-[15px]">{exporting ? "Exporting…" : "Export backup"}</span>
+          </button>
+          <button
+            onClick={() => pickImport("merge")}
+            disabled={importing}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+          >
+            {importing ? <Loader2 className="h-5 w-5 animate-spin text-foreground/70" /> : <Upload className="h-5 w-5 text-foreground/70" />}
+            <span className="flex-1 text-[15px]">{importing ? "Importing…" : "Import (merge)"}</span>
+          </button>
+          <button
+            onClick={() => pickImport("replace")}
+            disabled={importing}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive active:bg-muted/50 disabled:opacity-60"
+          >
+            <Upload className="h-5 w-5" />
+            <span className="flex-1 text-[15px]">Import & replace all</span>
+          </button>
           <Link
             to={"/profile/trash" as any}
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
@@ -187,8 +211,15 @@ function ProfilePage() {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
         </div>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="application/json,.json"
+          className="hidden"
+          onChange={handleImportFile}
+        />
         <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-          Deleted notes stay recoverable for 30 days.
+          Backup includes every note, photo, and voice clip on this device. Deleted notes stay recoverable for 30 days.
         </p>
       </section>
 
