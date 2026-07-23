@@ -96,13 +96,28 @@ async function extractStructured(
   transcript: string | null,
   images: Array<{ mime: string; base64: string }>,
   apiKey: string,
+  prior?: { heading?: string | null; summary?: string | null; tasks?: string[] } | null,
 ): Promise<{ heading: string; summary: string; tasks: string[]; tags: string[] }> {
   const userBlocks: Array<Record<string, unknown>> = [];
+  const priorHasContent =
+    !!prior && (((prior.heading ?? "").trim().length > 0) || ((prior.summary ?? "").trim().length > 0) || ((prior.tasks?.length ?? 0) > 0));
+  if (priorHasContent) {
+    const priorText =
+      `EXISTING NOTE (previous content — DO NOT discard, MERGE it with the new material into one cohesive note):\n` +
+      `- Heading: ${prior?.heading || "(none)"}\n` +
+      `- Summary: ${prior?.summary || "(none)"}\n` +
+      `- Tasks:\n${(prior?.tasks ?? []).map((t) => `  • ${t}`).join("\n") || "  (none)"}\n\n` +
+      `Treat the transcript and images below as ADDITIONAL entries appended to the same note. ` +
+      `Produce ONE unified heading, ONE cohesive summary that weaves the previous content together with the new content (do not list them separately, do not drop earlier details), and a merged, de-duplicated task list preserving still-relevant prior tasks.`;
+    userBlocks.push({ type: "text", text: priorText });
+  }
   const intro = transcript
-    ? `Transcript from the voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
+    ? `${priorHasContent ? "New" : ""} Transcript from ${priorHasContent ? "an additional" : "the"} voice recording:\n\n${transcript}\n\n${images.length > 0 ? "Also analyze the attached image(s) as related context." : ""}`
     : images.length > 0
-      ? "There is no voice transcript. Analyze the attached image(s) and produce the structured note based on them alone."
-      : "No content provided.";
+      ? (priorHasContent
+          ? "Newly attached image(s) — analyze them and merge into the note."
+          : "There is no voice transcript. Analyze the attached image(s) and produce the structured note based on them alone.")
+      : "No new content provided.";
   userBlocks.push({ type: "text", text: intro });
   for (const img of images) {
     userBlocks.push({
