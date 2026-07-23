@@ -1,9 +1,9 @@
 // Local backup: export/import all Dexie data as a single JSON file.
 // Blobs are base64-encoded so the file is self-contained and portable.
 
-import { db, type LocalNote, type LocalBlob, type MetaRow } from "./local-db";
+import { db, type LocalNote, type LocalBlob, type MetaRow, type LocalCollection } from "./local-db";
 
-const BACKUP_VERSION = 1;
+const BACKUP_VERSION = 2;
 
 type SerializedBlob = {
   path: string;
@@ -21,6 +21,7 @@ type BackupFile = {
   photos: SerializedBlob[];
   audios: SerializedBlob[];
   meta: MetaRow[];
+  collections?: LocalCollection[];
 };
 
 function bytesToBase64(bytes: Uint8Array): string {
