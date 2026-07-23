@@ -571,26 +571,49 @@ const NoteCard = memo(function NoteCard({
   })();
   const textTint = mymindTints[tintIdx];
 
-  const base = isText
-    ? "relative block overflow-hidden rounded-3xl p-4 transition-all " +
-      (selected ? "ring-2 ring-foreground" : "")
-    : "relative block overflow-hidden rounded-2xl border-2 p-3 transition-colors " +
-      (selected
-        ? "border-foreground bg-muted shadow-sm"
-        : "border-border bg-card hover:bg-muted/50");
-  const sizing =
-    variant === "wide"
-      ? isText ? "p-5" : "p-4"
-      : fullWidth
-        ? "flex aspect-square w-full flex-col gap-3"
-        : isText
-          ? "flex aspect-square w-40 shrink-0 flex-col gap-3"
-          : "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  const isHero = variant === "hero";
+  const isMasonry = variant === "masonry";
+  const isWideLike = variant === "wide" || isHero;
+  const isSquareLike = variant === "square" || isMasonry;
 
+  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
+  const useTint = isMasonry && !isText && !hasImage;
+  const tintBg = useTint ? mymindTints[tintIdx] : undefined;
+
+  const base = isText
+    ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+      (selected ? "ring-2 ring-foreground" : "")
+    : isHero
+      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+        (selected ? "ring-2 ring-foreground" : "")
+      : useTint
+        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+          (selected ? "ring-2 ring-foreground" : "")
+        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
+          (selected
+            ? "border-foreground bg-muted shadow-sm"
+            : "bg-card hover:bg-muted/50");
+
+  let sizing: string;
+  if (isHero) {
+    sizing = "";
+  } else if (variant === "wide") {
+    sizing = isText ? "p-5" : "p-4";
+  } else if (isMasonry) {
+    sizing = hasImage && !isLink
+      ? "flex aspect-[4/5] w-full flex-col gap-2"
+      : "flex w-full flex-col gap-3 min-h-[7rem]";
+  } else if (fullWidth) {
+    sizing = "flex aspect-square w-full flex-col gap-3";
+  } else {
+    sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
+  }
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: "#ffffff" }
-    : undefined;
+    : tintBg
+      ? { backgroundColor: tintBg }
+      : undefined;
 
 
   return (
