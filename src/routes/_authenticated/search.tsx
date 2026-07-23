@@ -593,7 +593,9 @@ function SearchPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
+
 
       {/* Bottom-anchored search bar (above keyboard) — dark pill to match app UI */}
       <div
