@@ -1,9 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow } from "date-fns";
+import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
