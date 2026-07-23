@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload } from "lucide-react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload, Layers } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import { ACCENTS, SIZE_SCALES, useTheme } from "@/lib/theme";
@@ -203,6 +203,14 @@ function ProfilePage() {
             <span className="flex-1 text-[15px]">Import & replace all</span>
           </button>
           <Link
+            to="/collections"
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
+          >
+            <Layers className="h-5 w-5 text-foreground/70" />
+            <span className="flex-1 text-[15px]">Collections</span>
+            <ChevronRight className="h-4 w-4 text-muted-foreground" />
+          </Link>
+          <Link
             to={"/profile/trash" as any}
             className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
           >
@@ -210,6 +218,7 @@ function ProfilePage() {
             <span className="flex-1 text-[15px]">Recently Deleted</span>
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
           </Link>
+
         </div>
         <input
           ref={fileInputRef}

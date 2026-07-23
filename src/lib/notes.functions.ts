@@ -254,8 +254,10 @@ async function purgeSingle(id: string) {
   if (!note) return;
   for (const p of note.image_paths) await evictPhoto(p);
   if (note.audio_path) await evictAudio(note.audio_path);
+  await purgeNoteFromAllCollections(id);
   await db.notes.delete(id);
 }
+
 
 export async function purgeNotes({ data }: { data: { noteIds: string[] } }) {
   for (const id of data.noteIds) {
@@ -284,8 +286,11 @@ export async function deleteAccount() {
   await db.photos.clear();
   await db.audios.clear();
   await db.meta.clear();
+  await db.collections.clear();
+  await db.collectionEntries.clear();
   return { ok: true as const };
 }
+
 
 // -- AI-driven creators ----
 
