@@ -177,6 +177,7 @@ function Home() {
     setSelectedNotes(new Set());
     try {
       await delNotesFn({ data: { noteIds: ids } });
+      await clearPendingDelete(ids);
     } catch {
       void resync();
     }
