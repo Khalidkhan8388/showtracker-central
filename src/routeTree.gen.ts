@@ -20,6 +20,7 @@ import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authentic
 import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
+import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -78,14 +79,21 @@ const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
   path: '/notes/$id',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedCollectionsIdRoute =
+  AuthenticatedCollectionsIdRouteImport.update({
+    id: '/$id',
+    path: '/$id',
+    getParentRoute: () => AuthenticatedCollectionsRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/collections': typeof AuthenticatedCollectionsRoute
+  '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
@@ -93,11 +101,12 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/collections': typeof AuthenticatedCollectionsRoute
+  '/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
@@ -107,11 +116,12 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/_authenticated/collections': typeof AuthenticatedCollectionsRoute
+  '/_authenticated/collections': typeof AuthenticatedCollectionsRouteWithChildren
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
+  '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
   '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
     | '/tasks/review'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
     | '/tasks/review'
@@ -151,6 +163,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/share'
+    | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
     | '/_authenticated/profile_/trash'
     | '/_authenticated/tasks/review'
@@ -241,11 +254,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedNotesIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/collections/$id': {
+      id: '/_authenticated/collections/$id'
+      path: '/$id'
+      fullPath: '/collections/$id'
+      preLoaderRoute: typeof AuthenticatedCollectionsIdRouteImport
+      parentRoute: typeof AuthenticatedCollectionsRoute
+    }
   }
 }
 
+interface AuthenticatedCollectionsRouteChildren {
+  AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
+}
+
+const AuthenticatedCollectionsRouteChildren: AuthenticatedCollectionsRouteChildren =
+  {
+    AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
+  }
+
+const AuthenticatedCollectionsRouteWithChildren =
+  AuthenticatedCollectionsRoute._addFileChildren(
+    AuthenticatedCollectionsRouteChildren,
+  )
+
 interface AuthenticatedRouteChildren {
-  AuthenticatedCollectionsRoute: typeof AuthenticatedCollectionsRoute
+  AuthenticatedCollectionsRoute: typeof AuthenticatedCollectionsRouteWithChildren
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
@@ -257,7 +291,7 @@ interface AuthenticatedRouteChildren {
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
-  AuthenticatedCollectionsRoute: AuthenticatedCollectionsRoute,
+  AuthenticatedCollectionsRoute: AuthenticatedCollectionsRouteWithChildren,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,

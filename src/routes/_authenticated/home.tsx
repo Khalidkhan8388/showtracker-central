@@ -577,9 +577,8 @@ function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: strin
 }
 
 function CollectionsRow() {
-  // Feature shell — no collections yet. Renders the row header + a
-  // horizontally scrollable strip with a "New collection" placeholder tile.
-  const collections: Array<{ id: string; title: string; count: number; cover?: string }> = [];
+  const collections = useCollections();
+  const list = collections ?? [];
 
   return (
     <div className="-mx-4">
@@ -596,33 +595,30 @@ function CollectionsRow() {
         </Link>
       </div>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
-        {collections.length === 0 ? (
+        <Link
+          to="/collections"
+          className="flex aspect-square w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
+        >
+          <Plus className="h-5 w-5" />
+          <span className="text-[13px] font-medium">New collection</span>
+        </Link>
+        {list.map((c) => (
           <Link
-            to="/collections"
-            className="flex aspect-square w-40 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-[20px] border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
+            key={c.id}
+            to="/collections/$id"
+            params={{ id: c.id }}
+            className="relative flex aspect-square w-40 shrink-0 snap-start overflow-hidden rounded-[20px] bg-card ring-1 ring-border/60 active:opacity-80"
           >
-            <Plus className="h-5 w-5" />
-            <span className="text-[13px] font-medium">New collection</span>
+            <div className="relative z-10 flex h-full w-full flex-col justify-between p-3">
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                {c.note_ids.length} {c.note_ids.length === 1 ? "memory" : "memories"}
+              </span>
+              <span className="text-[15px] font-semibold leading-tight text-foreground line-clamp-3">
+                {c.title}
+              </span>
+            </div>
           </Link>
-        ) : (
-          collections.map((c) => (
-            <Link
-              key={c.id}
-              to="/collections"
-              className="relative flex aspect-square w-40 shrink-0 snap-start overflow-hidden rounded-[20px] bg-card ring-1 ring-border/60 active:opacity-80"
-            >
-              {c.cover && (
-                <img src={c.cover} alt="" className="absolute inset-0 h-full w-full object-cover" />
-              )}
-              <div className="relative z-10 flex h-full w-full flex-col justify-between p-3">
-                <span className="text-[11px] font-semibold text-muted-foreground">{c.count}</span>
-                <span className="text-[15px] font-semibold leading-tight text-foreground">
-                  {c.title}
-                </span>
-              </div>
-            </Link>
-          ))
-        )}
+        ))}
       </div>
     </div>
   );
