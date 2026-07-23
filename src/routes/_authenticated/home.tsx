@@ -452,7 +452,21 @@ function Home() {
   );
 }
 
+function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: string; className?: string }) {
+  return (
+    <span className={`inline-flex items-center gap-1.5 ${className}`}>
+      <span>{label}</span>
+      <span className="inline-flex gap-0.5">
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
+      </span>
+    </span>
+  );
+}
+
 function SectionHeader({ children }: { children: React.ReactNode }) {
+
   return (
     <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
       {children}
