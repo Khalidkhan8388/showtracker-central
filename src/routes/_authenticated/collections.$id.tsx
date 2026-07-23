@@ -5,6 +5,7 @@ import { useCollection, removeNotesFromCollection, addNotesToCollection, renameC
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { poster as tmdbPoster } from "@/lib/media";
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
