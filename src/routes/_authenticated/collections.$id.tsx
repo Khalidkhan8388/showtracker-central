@@ -75,12 +75,31 @@ function CollectionDetail() {
     return c;
   }, [mediaMembers]);
   const members = useMemo(() => {
-    if (!hasMedia || statusFilter === "all") return allMembers;
-    return allMembers.filter((n) => {
-      const m = (n as any).media;
-      return m && m.watch_status === statusFilter;
-    });
-  }, [allMembers, hasMedia, statusFilter]);
+    const base = !hasMedia || statusFilter === "all"
+      ? allMembers
+      : allMembers.filter((n) => {
+          const m = (n as any).media;
+          return m && m.watch_status === statusFilter;
+        });
+    const arr = [...base];
+    if (sort === "name") {
+      arr.sort((a, b) => {
+        const at = ((a as any).media?.title ?? a.heading ?? "").toString().toLowerCase();
+        const bt = ((b as any).media?.title ?? b.heading ?? "").toString().toLowerCase();
+        return at.localeCompare(bt);
+      });
+    } else if (sort === "released") {
+      const dateOf = (n: any) => {
+        const m = n.media;
+        const d = m?.release_date || m?.first_air_date || null;
+        return d ? new Date(d).getTime() : 0;
+      };
+      arr.sort((a, b) => dateOf(b) - dateOf(a));
+    } else {
+      arr.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    }
+    return arr;
+  }, [allMembers, hasMedia, statusFilter, sort]);
   const candidates = useMemo(
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
