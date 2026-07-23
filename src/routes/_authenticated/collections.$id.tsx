@@ -526,6 +526,10 @@ function EpisodeTracker({ members }: { members: Array<{ id: string; heading: str
     () =>
       members
         .filter((n) => n.media?.type === "tv")
+        .filter((n) => {
+          const s = n.media?.watch_status;
+          return s !== "dropped" && s !== "watchlist";
+        })
         .map((n) => ({ id: n.id, heading: n.heading, media: n.media as LocalMedia })),
     [members],
   );
