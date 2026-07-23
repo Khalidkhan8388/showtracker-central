@@ -120,6 +120,12 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       if (!transcript) throw new Error("Empty transcription");
     }
 
+export const analyzeMediaFn = createServerFn({ method: "POST" })
+  .inputValidator((data: unknown) => AnalyzeInput.parse(data))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
     const images = data.images ?? [];
     const prior = data.prior ?? null;
     const priorHasContent =
@@ -127,6 +133,16 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       (((prior.heading ?? "").trim().length > 0) ||
         ((prior.summary ?? "").trim().length > 0) ||
         ((prior.tasks?.length ?? 0) > 0));
+
+    // Kick off transcription in PARALLEL with structuring (both hit the AI
+    // gateway independently). Structuring uses the transcript once ready.
+    const transcribePromise: Promise<string | null> = data.audio
+      ? transcribeBytes(data.audio.base64, data.audio.mime, apiKey)
+      : Promise.resolve(null);
+
+    // Await transcription before building the structuring prompt (it needs the text).
+    const transcript = await transcribePromise;
+    if (data.audio && !transcript) throw new Error("Empty transcription");
 
     const userBlocks: Array<Record<string, unknown>> = [];
     if (priorHasContent) {
@@ -150,7 +166,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
 
-    const res = await fetch(`${GATEWAY}/chat/completions`, {
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
       body: JSON.stringify({
@@ -161,7 +177,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
         ],
         response_format: { type: "json_object" },
       }),
-    });
+    }, 120_000);
     if (!res.ok) {
       const body = await res.text().catch(() => "");
       throw new Error(`AI failed (${res.status}): ${body.slice(0, 200)}`);
