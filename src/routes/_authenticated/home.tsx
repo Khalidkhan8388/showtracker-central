@@ -743,22 +743,21 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
         <Link
           to="/collections"
-          style={{ borderRadius: 15 }}
-          className="flex aspect-[2/3] w-28 shrink-0 snap-start flex-col items-center justify-center gap-2 border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
+          className="flex aspect-square w-32 shrink-0 snap-start flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
         >
           <Plus className="h-5 w-5" />
           <span className="text-[11px] font-medium">New</span>
         </Link>
         {list.map((c) => {
           const ids = c.note_ids ?? [];
-          // Prefer a media poster from any member note
-          let posterUrl: string | null = null;
+          // Collect up to 4 poster/thumb previews for a mosaic
+          const previews: string[] = [];
           for (const nid of ids) {
             const n = noteById.get(nid);
             const media = (n as any)?.media as import("@/lib/local-db").LocalMedia | undefined;
             if (media?.poster_path) {
-              posterUrl = tmdbPoster(media.poster_path, "w342");
-              break;
+              previews.push(tmdbPoster(media.poster_path, "w185")!);
+              if (previews.length >= 4) break;
             }
           }
           return (
@@ -766,31 +765,38 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
               key={c.id}
               to="/collections/$id"
               params={{ id: c.id }}
-              style={{ borderRadius: 15 }}
-              className="relative flex aspect-[2/3] w-28 shrink-0 snap-start overflow-hidden bg-card ring-1 ring-border/60 active:opacity-80"
+              className="group flex w-32 shrink-0 snap-start flex-col gap-2 active:opacity-80"
             >
-              {posterUrl ? (
-                <img
-                  src={posterUrl}
-                  alt={c.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
-              )}
-              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/85 via-black/40 to-transparent p-2 pt-6">
-                <span className="mb-0.5 inline-block rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">
+              <div className="relative aspect-square overflow-hidden rounded-2xl bg-card ring-1 ring-border/60">
+                {previews.length === 0 ? (
+                  <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-primary/25 via-primary/10 to-transparent">
+                    <Folder className="h-8 w-8 text-muted-foreground/60" />
+                  </div>
+                ) : previews.length === 1 ? (
+                  <img src={previews[0]} alt="" loading="lazy" className="absolute inset-0 h-full w-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 grid grid-cols-2 grid-rows-2 gap-0.5 bg-border/60">
+                    {[0, 1, 2, 3].map((i) => (
+                      <div key={i} className="relative overflow-hidden bg-card">
+                        {previews[i] ? (
+                          <img src={previews[i]} alt="" loading="lazy" className="h-full w-full object-cover" />
+                        ) : null}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <span className="absolute right-1.5 top-1.5 inline-flex items-center rounded-full bg-black/55 px-1.5 py-0.5 text-[10px] font-semibold text-white/95 backdrop-blur-sm">
                   {ids.length}
                 </span>
-                <p className="line-clamp-2 text-[12px] font-semibold leading-tight text-white">
-                  {c.title}
-                </p>
               </div>
+              <p className="line-clamp-1 px-0.5 text-[12px] font-semibold text-foreground">
+                {c.title}
+              </p>
             </Link>
           );
         })}
       </div>
+
     </div>
   );
 }
