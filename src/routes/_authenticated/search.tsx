@@ -1,11 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { searchEverything } from "@/lib/notes.functions";
 import {
   Search,
-  ChevronLeft,
+  ArrowLeft,
   Sparkles,
   Loader2,
   Circle,
@@ -64,11 +64,36 @@ function kindOf(n: Note): "voice" | "image" | "link" | "text" {
 }
 
 function KindIcon({ kind, className }: { kind: ReturnType<typeof kindOf>; className?: string }) {
-  const cls = className ?? "h-4 w-4";
+  const cls = className ?? "h-3 w-3";
   if (kind === "voice") return <Mic className={cls} />;
   if (kind === "image") return <ImageIcon className={cls} />;
   if (kind === "link") return <LinkIcon className={cls} />;
   return <FileText className={cls} />;
+}
+
+// Soft deterministic pastel for text/voice capture cards
+const CAPTURE_TINTS = [
+  "#F4EFE6", // sand
+  "#EDE7DC", // linen
+  "#E8E4DA", // stone
+  "#F1EAD9", // cream
+  "#E9EDE4", // sage
+  "#EDE6E6", // blush
+  "#E4E7ED", // mist
+];
+function tintFor(id: string) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return CAPTURE_TINTS[h % CAPTURE_TINTS.length];
+}
+
+function hostOf(url: string | null | undefined) {
+  if (!url) return "";
+  try {
+    return new URL(url).hostname.replace(/^www\./, "");
+  } catch {
+    return "";
+  }
 }
 
 function highlight(text: string, q: string) {
@@ -76,7 +101,7 @@ function highlight(text: string, q: string) {
   const parts = text.split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`, "ig"));
   return parts.map((p, i) =>
     p.toLowerCase() === q.toLowerCase() ? (
-      <mark key={i} className="rounded-[3px] bg-yellow-300/60 px-0.5 text-foreground">
+      <mark key={i} className="rounded-[2px] bg-yellow-300/70 px-0.5 text-foreground">
         {p}
       </mark>
     ) : (
@@ -85,10 +110,111 @@ function highlight(text: string, q: string) {
   );
 }
 
+function CaptureCard({
+  note,
+  thumb,
+  q,
+  onOpen,
+}: {
+  note: Note;
+  thumb?: string;
+  q: string;
+  onOpen: () => void;
+}) {
+  const kind = kindOf(note);
+  const heading = note.heading || "Untitled";
+  const host = hostOf(note.source_url);
+
+  // Image-forward
+  if (thumb) {
+    return (
+      <button
+        onClick={onOpen}
+        className="group relative block w-full overflow-hidden rounded-[22px] bg-muted text-left active:opacity-90"
+      >
+        <img
+          src={thumb}
+          alt=""
+          loading="lazy"
+          className="block w-full object-cover"
+          style={{ aspectRatio: "3 / 4" }}
+        />
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent p-3">
+          {host && (
+            <div className="mb-1 inline-flex items-center gap-1 rounded-full bg-white/25 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+              <LinkIcon className="h-2.5 w-2.5" />
+              {host}
+            </div>
+          )}
+          <div className="line-clamp-2 text-[13px] font-semibold leading-tight text-white">
+            {highlight(heading, q)}
+          </div>
+        </div>
+      </button>
+    );
+  }
+
+  // Link without thumb
+  if (kind === "link") {
+    return (
+      <button
+        onClick={onOpen}
+        className="block w-full overflow-hidden rounded-[22px] bg-[#1a1a1a] p-4 text-left active:opacity-80"
+      >
+        <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[10px] font-medium text-white/80">
+          <LinkIcon className="h-2.5 w-2.5" />
+          {host || "link"}
+        </div>
+        <div className="line-clamp-3 text-[14px] font-semibold leading-snug text-white">
+          {highlight(heading, q)}
+        </div>
+        {note.summary && (
+          <div className="mt-1.5 line-clamp-3 text-[11px] leading-snug text-white/60">
+            {highlight(note.summary, q)}
+          </div>
+        )}
+      </button>
+    );
+  }
+
+  // Text / voice tint card
+  const bg = tintFor(note.id);
+  return (
+    <button
+      onClick={onOpen}
+      className="block w-full overflow-hidden rounded-[22px] p-4 text-left active:opacity-80"
+      style={{ backgroundColor: bg }}
+    >
+      <div className="mb-2 inline-flex items-center gap-1 rounded-full bg-black/5 px-2 py-0.5 text-[10px] font-medium text-foreground/70">
+        <KindIcon kind={kind} className="h-2.5 w-2.5" />
+        {kind === "voice" ? "voice" : "note"}
+      </div>
+      <div className="line-clamp-2 text-[14px] font-semibold leading-snug text-foreground">
+        {highlight(heading, q)}
+      </div>
+      {note.summary && (
+        <div className="mt-1.5 line-clamp-5 text-[12px] leading-snug text-foreground/65">
+          {highlight(note.summary, q)}
+        </div>
+      )}
+      {(note.tags ?? []).length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1">
+          {(note.tags ?? []).slice(0, 2).map((t) => (
+            <span key={t} className="text-[10px] text-foreground/50">
+              #{t}
+            </span>
+          ))}
+        </div>
+      )}
+    </button>
+  );
+}
+
 function SearchPage() {
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
   const [notes, setNotes] = useState<Note[]>([]);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [query, setQuery] = useState("");
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [aiMode, setAiMode] = useState(false);
@@ -108,6 +234,47 @@ function SearchPage() {
         setNotes(((data ?? []) as Note[]).filter((n) => n.heading !== "__custom__"));
       });
   }, []);
+
+  const signedCacheRef = useRef<Map<string, string>>(new Map());
+  const signInFlightRef = useRef<Set<string>>(new Set());
+  const signThumbsFor = useCallback((rows: Note[]) => {
+    const toSign: Array<{ id: string; path: string }> = [];
+    for (const n of rows) {
+      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
+      if (!p) continue;
+      const cached = signedCacheRef.current.get(p);
+      if (cached) {
+        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
+        continue;
+      }
+      if (signInFlightRef.current.has(p)) continue;
+      signInFlightRef.current.add(p);
+      toSign.push({ id: n.id, path: p });
+    }
+    if (toSign.length === 0) return;
+    Promise.all(
+      toSign.map(async ({ id, path }) => {
+        const { data: s } = await supabase.storage.from("voice-notes").createSignedUrl(path, 3600);
+        return { id, path, url: s?.signedUrl ?? "" };
+      }),
+    ).then((pairs) => {
+      setThumbs((cur) => {
+        const next = { ...cur };
+        for (const { id, path, url } of pairs) {
+          signInFlightRef.current.delete(path);
+          if (url) {
+            signedCacheRef.current.set(path, url);
+            next[id] = url;
+          }
+        }
+        return next;
+      });
+    });
+  }, []);
+
+  useEffect(() => {
+    signThumbsFor(notes);
+  }, [notes, signThumbsFor]);
 
   useEffect(() => {
     setAiIds(null);
@@ -149,7 +316,7 @@ function SearchPage() {
         }
       }
     }
-    return out.slice(0, 30);
+    return out.slice(0, 20);
   }, [notes, query, activeTag, aiMode]);
 
   async function runAiSearch(q?: string) {
@@ -172,277 +339,257 @@ function SearchPage() {
   }
 
   const idle = !query.trim() && !activeTag && !aiMode;
-  const resultCount = filteredNotes.length + matchingTasks.length;
+  const showTasks = matchingTasks.length > 0;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="sticky top-0 z-20 bg-background/85 backdrop-blur-xl">
-        <div className="flex items-center justify-between px-2 pt-3 pb-1">
+    <div className="relative mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
+      {/* Minimal top bar */}
+      <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
+        <div className="flex items-center gap-3 px-4 pb-3 pt-4">
           <button
             onClick={() => navigate({ to: "/home" })}
             aria-label="Back"
-            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+            className="grid h-9 w-9 -ml-1.5 place-items-center rounded-full text-foreground active:bg-muted"
           >
-            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-            <span>Home</span>
+            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
           </button>
-          {query.trim() && (
-            <button
-              onClick={() => runAiSearch()}
-              disabled={aiLoading}
-              className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground disabled:opacity-40 active:opacity-70"
-            >
-              {aiLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Sparkles className="h-3.5 w-3.5" />}
-              Ask AI
-            </button>
-          )}
-        </div>
-
-        <div className="px-5 pt-1 pb-3">
-          <h1 className="font-serif text-[40px] leading-[1.05] tracking-tight text-foreground">
-            Search
-          </h1>
-        </div>
-
-        <div className="px-4 pb-3">
-          <div className="flex items-center gap-2.5 rounded-full bg-muted px-4 py-2.5 shadow-sm ring-1 ring-black/[0.03]">
-            <Search className="h-[18px] w-[18px] shrink-0 text-muted-foreground" strokeWidth={2.5} />
-            <input
-              ref={inputRef}
-              autoFocus
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setAiMode(false);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") runAiSearch();
-                if (e.key === "Escape") {
-                  setQuery("");
-                  setAiMode(false);
-                }
-              }}
-              placeholder="Search notes, tasks, tags…"
-              className="w-full bg-transparent text-[17px] text-foreground placeholder:text-muted-foreground/70 outline-none"
-            />
-            {query && (
-              <button
-                onClick={() => {
-                  setQuery("");
-                  setAiMode(false);
-                  inputRef.current?.focus();
-                }}
-                aria-label="Clear"
-                className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/40 text-background active:opacity-60"
-              >
-                <X className="h-3 w-3" strokeWidth={3} />
-              </button>
-            )}
-          </div>
-          {(query.trim() || aiMode) && (
-            <div className="mt-2 flex items-center justify-between px-1.5 text-[12px] text-muted-foreground">
-              <span>
-                {aiMode
-                  ? aiLoading
-                    ? "Thinking…"
-                    : `${filteredNotes.length} AI match${filteredNotes.length === 1 ? "" : "es"}`
-                  : `${resultCount} result${resultCount === 1 ? "" : "s"}`}
-              </span>
-              {!aiMode && query.trim() && (
-                <span className="opacity-70">↵ for AI search</span>
-              )}
-            </div>
-          )}
+          <h1 className="text-[20px] font-medium tracking-tight text-foreground">Search</h1>
         </div>
       </header>
 
-      <div className="flex flex-1 flex-col gap-6 px-4 pt-2 pb-28">
+      {/* Scroll body — reserves space for bottom search bar */}
+      <div className="flex-1 overflow-y-auto px-4 pb-[132px] pt-1">
+        {/* AI reasoning bubble */}
         {aiMode && aiReasoning && !aiLoading && (
-          <div className="flex gap-2.5 rounded-[24px] bg-primary/10 px-4 py-3.5">
-            <Sparkles className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-            <div className="text-[14px] leading-snug text-foreground/80">{aiReasoning}</div>
+          <div className="mb-4 flex gap-2.5 rounded-2xl bg-primary/10 px-3.5 py-3">
+            <Sparkles className="mt-0.5 h-3.5 w-3.5 shrink-0 text-primary" />
+            <div className="text-[13px] leading-snug text-foreground/80">{aiReasoning}</div>
           </div>
         )}
 
+        {/* Section label */}
+        <div className="mb-3 flex items-center justify-between px-1">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+            {aiMode
+              ? "AI Matches"
+              : activeTag
+                ? `Tag · #${activeTag}`
+                : query.trim()
+                  ? "Results"
+                  : "Captures"}
+          </span>
+          {(query.trim() || aiMode) && (
+            <span className="text-[10px] tabular-nums text-muted-foreground">
+              {filteredNotes.length + matchingTasks.length}
+            </span>
+          )}
+        </div>
+
+        {/* Tags row when idle */}
+        {idle && allTags.length > 0 && (
+          <div className="-mx-4 mb-4 overflow-x-auto scrollbar-hide">
+            <div className="flex gap-1.5 px-4">
+              {allTags.slice(0, 20).map(([t, count]) => (
+                <button
+                  key={t}
+                  onClick={() => setActiveTag(t)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-[12px] text-foreground active:opacity-60"
+                >
+                  #{t}
+                  <span className="text-muted-foreground">{count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {activeTag && (
+          <div className="mb-3">
+            <button
+              onClick={() => setActiveTag(null)}
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[12px] font-medium text-primary-foreground active:opacity-70"
+            >
+              #{activeTag}
+              <X className="h-3 w-3" strokeWidth={3} />
+            </button>
+          </div>
+        )}
+
+        {/* Task matches */}
+        {showTasks && (
+          <div className="mb-4 overflow-hidden rounded-2xl bg-card">
+            {matchingTasks.map((t, i) => (
+              <div key={`${t.noteId}::${t.taskId}`}>
+                <Link
+                  to="/notes/$id"
+                  params={{ id: t.noteId }}
+                  className="flex items-start gap-3 px-3.5 py-2.5 active:bg-muted"
+                >
+                  {t.done ? (
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                  ) : (
+                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  )}
+                  <div className="min-w-0 flex-1">
+                    <div
+                      className={`text-[14px] leading-snug ${
+                        t.done ? "line-through text-muted-foreground" : "text-foreground"
+                      }`}
+                    >
+                      {highlight(t.text, query)}
+                    </div>
+                  </div>
+                </Link>
+                {i < matchingTasks.length - 1 && <div className="ml-10 h-px bg-border" />}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Masonry captures */}
+        {aiLoading ? (
+          <div className="flex items-center justify-center gap-2 rounded-2xl bg-card px-4 py-14 text-[13px] text-muted-foreground">
+            <Loader2 className="h-4 w-4 animate-spin" />
+            Reading your notes…
+          </div>
+        ) : filteredNotes.length === 0 && !showTasks ? (
+          idle ? (
+            <div className="mt-6 rounded-2xl bg-card px-5 py-10 text-center">
+              <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-primary/10">
+                <Sparkles className="h-4 w-4 text-primary" />
+              </div>
+              <div className="text-[14px] font-semibold text-foreground">Search everything</div>
+              <div className="mx-auto mt-1 max-w-[240px] text-[12px] text-muted-foreground">
+                Type below, tap a tag, or press{" "}
+                <span className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">↵</span> to ask AI.
+              </div>
+            </div>
+          ) : (
+            <div className="rounded-2xl bg-card px-4 py-10 text-center text-[13px] text-muted-foreground">
+              <div className="mb-1 font-medium text-foreground">Nothing here</div>
+              {aiMode ? "Try rephrasing the question." : "Try Ask AI or a different tag."}
+            </div>
+          )
+        ) : (
+          <div className="columns-2 gap-3 [column-fill:_balance]">
+            {filteredNotes.map((n) => (
+              <div key={n.id} className="mb-3 break-inside-avoid">
+                <CaptureCard
+                  note={n}
+                  thumb={thumbs[n.id]}
+                  q={query}
+                  onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* Recents when idle */}
         {idle && recents.length > 0 && (
-          <section>
+          <div className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
                 Recent
-              </h2>
+              </span>
               <button
                 onClick={() => {
                   localStorage.removeItem(RECENTS_KEY);
                   setRecents([]);
                 }}
-                className="text-[12px] text-primary active:opacity-60"
+                className="text-[11px] text-primary active:opacity-60"
               >
                 Clear
               </button>
             </div>
-            <ul className="overflow-hidden rounded-[24px] bg-card shadow-sm">
-              {recents.map((r, i) => (
-                <li key={r}>
-                  <button
-                    onClick={() => {
-                      setQuery(r);
-                      inputRef.current?.focus();
-                    }}
-                    className="flex w-full items-center gap-3 px-4 py-2.5 text-left active:bg-muted"
-                  >
-                    <Clock className="h-4 w-4 shrink-0 text-muted-foreground" />
-                    <span className="flex-1 truncate text-[15px] text-foreground">{r}</span>
-                  </button>
-                  {i < recents.length - 1 && <div className="ml-11 h-px bg-border" />}
-                </li>
+            <div className="flex flex-wrap gap-1.5">
+              {recents.map((r) => (
+                <button
+                  key={r}
+                  onClick={() => {
+                    setQuery(r);
+                    inputRef.current?.focus();
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[12px] text-foreground active:opacity-60"
+                >
+                  <Clock className="h-3 w-3 text-muted-foreground" />
+                  {r}
+                </button>
               ))}
-            </ul>
-          </section>
-        )}
-
-        {allTags.length > 0 && (
-          <section>
-            <h2 className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Tags
-            </h2>
-            <div className="-mx-4 overflow-x-auto scrollbar-hide">
-              <div className="flex gap-1.5 px-4">
-                {activeTag && (
-                  <button
-                    onClick={() => setActiveTag(null)}
-                    className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-3 py-1.5 text-[13px] font-medium text-primary-foreground active:opacity-70"
-                  >
-                    #{activeTag}
-                    <X className="h-3 w-3" strokeWidth={3} />
-                  </button>
-                )}
-                {allTags
-                  .filter(([t]) => t !== activeTag)
-                  .map(([t, count]) => (
-                    <button
-                      key={t}
-                      onClick={() => setActiveTag(t)}
-                      className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-[13px] text-foreground active:opacity-60"
-                    >
-                      #{t}
-                      <span className="text-muted-foreground">{count}</span>
-                    </button>
-                  ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {matchingTasks.length > 0 && (
-          <section>
-            <h2 className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              Tasks · {matchingTasks.length}
-            </h2>
-            <ul className="overflow-hidden rounded-[24px] bg-card shadow-sm">
-              {matchingTasks.map((t, i) => (
-                <li key={`${t.noteId}::${t.taskId}`}>
-                  <Link
-                    to="/notes/$id"
-                    params={{ id: t.noteId }}
-                    className="flex items-start gap-3 px-4 py-3 active:bg-muted"
-                  >
-                    {t.done ? (
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    ) : (
-                      <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" />
-                    )}
-                    <div className="min-w-0 flex-1">
-                      <div className={`text-[16px] leading-tight ${t.done ? "line-through text-muted-foreground" : "text-foreground"}`}>
-                        {highlight(t.text, query)}
-                      </div>
-                      {t.noteHeading && (
-                        <div className="mt-0.5 truncate text-[12px] text-muted-foreground">from {t.noteHeading}</div>
-                      )}
-                    </div>
-                  </Link>
-                  {i < matchingTasks.length - 1 && <div className="ml-12 h-px bg-border" />}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {!idle && (
-          <section>
-            <h2 className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-              {aiMode ? "AI Results" : activeTag ? `#${activeTag}` : "Notes"} · {filteredNotes.length}
-            </h2>
-            {aiLoading ? (
-              <div className="flex items-center justify-center gap-2 rounded-[24px] bg-card px-4 py-10 text-[14px] text-muted-foreground shadow-sm">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Reading your notes…
-              </div>
-            ) : filteredNotes.length === 0 ? (
-              <div className="rounded-[24px] bg-card px-4 py-10 text-center text-[14px] text-muted-foreground shadow-sm">
-                <div className="mb-1 font-medium text-foreground">Nothing here</div>
-                {aiMode ? "Try rephrasing the question." : "Try Ask AI or a different tag."}
-              </div>
-            ) : (
-              <ul className="overflow-hidden rounded-[24px] bg-card shadow-sm">
-                {filteredNotes.map((n, i) => {
-                  const kind = kindOf(n);
-                  return (
-                    <li key={n.id}>
-                      <Link
-                        to="/notes/$id"
-                        params={{ id: n.id }}
-                        className="flex gap-3 px-4 py-3 active:bg-muted"
-                      >
-                        <div className="mt-1 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted text-muted-foreground">
-                          <KindIcon kind={kind} className="h-3.5 w-3.5" />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="line-clamp-1 text-[16px] font-semibold text-foreground">
-                            {highlight(n.heading || "Untitled note", query)}
-                          </div>
-                          {n.summary && (
-                            <div className="mt-0.5 line-clamp-2 text-[14px] text-muted-foreground">
-                              {highlight(n.summary, query)}
-                            </div>
-                          )}
-                          {(n.tags ?? []).length > 0 && (
-                            <div className="mt-1.5 flex flex-wrap gap-1">
-                              {(n.tags ?? []).slice(0, 4).map((t) => (
-                                <span
-                                  key={t}
-                                  className={`rounded-full px-2 py-0.5 text-[11px] ${
-                                    t === activeTag
-                                      ? "bg-primary/15 text-primary"
-                                      : "bg-muted text-muted-foreground"
-                                  }`}
-                                >
-                                  #{t}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                      </Link>
-                      {i < filteredNotes.length - 1 && <div className="ml-14 h-px bg-border" />}
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-          </section>
-        )}
-
-        {idle && recents.length === 0 && (
-          <div className="mt-4 rounded-[24px] bg-card px-5 py-8 text-center shadow-sm">
-            <div className="mx-auto mb-3 grid h-12 w-12 place-items-center rounded-full bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <div className="text-[15px] font-semibold text-foreground">Search everything</div>
-            <div className="mx-auto mt-1 max-w-[260px] text-[13px] text-muted-foreground">
-              Type a keyword, tap a tag, or press <span className="rounded bg-muted px-1 py-0.5 font-mono text-[11px]">↵</span> to ask AI in plain language.
             </div>
           </div>
         )}
+      </div>
+
+      {/* Bottom-anchored search bar (above keyboard) */}
+      <div className="fixed inset-x-0 bottom-0 z-40 mx-auto w-full max-w-md">
+        <div className="pointer-events-none absolute inset-x-0 bottom-full h-8 bg-gradient-to-t from-background to-transparent" />
+        <div className="bg-background/95 px-4 pb-[max(env(safe-area-inset-bottom),12px)] pt-3 backdrop-blur-xl">
+          {(query.trim() || aiMode) && (
+            <div className="mb-2 flex items-center justify-between px-1.5 text-[11px] text-muted-foreground">
+              <span>
+                {aiMode
+                  ? aiLoading
+                    ? "Thinking…"
+                    : `${filteredNotes.length} AI match${filteredNotes.length === 1 ? "" : "es"}`
+                  : `${filteredNotes.length + matchingTasks.length} result${
+                      filteredNotes.length + matchingTasks.length === 1 ? "" : "s"
+                    }`}
+              </span>
+              {!aiMode && query.trim() && <span className="opacity-70">↵ Ask AI</span>}
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            <div className="flex flex-1 items-center gap-2.5 rounded-full bg-muted px-4 py-2.5 ring-1 ring-black/[0.04]">
+              <Search className="h-[17px] w-[17px] shrink-0 text-muted-foreground" strokeWidth={2.5} />
+              <input
+                ref={inputRef}
+                autoFocus
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setAiMode(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") runAiSearch();
+                  if (e.key === "Escape") {
+                    setQuery("");
+                    setAiMode(false);
+                  }
+                }}
+                placeholder="Search captures, tasks, tags…"
+                className="w-full bg-transparent text-[16px] text-foreground placeholder:text-muted-foreground/70 outline-none"
+              />
+              {query && (
+                <button
+                  onClick={() => {
+                    setQuery("");
+                    setAiMode(false);
+                    inputRef.current?.focus();
+                  }}
+                  aria-label="Clear"
+                  className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-muted-foreground/40 text-background active:opacity-60"
+                >
+                  <X className="h-3 w-3" strokeWidth={3} />
+                </button>
+              )}
+            </div>
+            {query.trim() && (
+              <button
+                onClick={() => runAiSearch()}
+                disabled={aiLoading}
+                aria-label="Ask AI"
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full bg-primary text-primary-foreground disabled:opacity-40 active:opacity-70"
+              >
+                {aiLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+              </button>
+            )}
+          </div>
+        </div>
       </div>
     </div>
   );
