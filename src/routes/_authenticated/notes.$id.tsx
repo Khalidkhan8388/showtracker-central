@@ -713,7 +713,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {note.tasks && note.tasks.length > 0 && (
+        {!isImage && note.tasks && note.tasks.length > 0 && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
