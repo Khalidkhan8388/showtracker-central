@@ -307,7 +307,10 @@ function CollectionDetail() {
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
-                  {(["all", "watchlist", "watching", "watched", "dropped"] as const).map((s) => {
+                  {((hasTv
+                    ? ["all", "watchlist", "watching", "watched", "dropped"]
+                    : ["all", "watchlist", "watching", "watched"]) as Array<WatchStatus | "all">).map((s) => {
+
                     const active = statusFilter === s;
                     const label = s === "all" ? "All" : WATCH_LABEL[s];
                     const count = statusCounts[s];
