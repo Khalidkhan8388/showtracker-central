@@ -2,9 +2,9 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Local-only app — no auth/user identity.
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles, Plus } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote, addCustomTask } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
@@ -100,6 +100,15 @@ function Home() {
     await patchLocalTask(noteId, taskId, { done: !(cur?.done ?? false) });
     try {
       await toggleFn({ data: { noteId, taskId } });
+    } catch {
+      void resync();
+    }
+  }
+
+  async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
+    await patchLocalTask(noteId, taskId, { pinned: !pinned });
+    try {
+      await pinTask({ data: { noteId, taskId } });
     } catch {
       void resync();
     }
@@ -427,7 +436,7 @@ function Home() {
                     className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
                     aria-label="Go to tasks"
                   >
-                    <Plus className="h-4 w-4" />
+                    <ChevronRight className="h-4 w-4" />
                   </Link>
                 </div>
                 <ul>
@@ -447,6 +456,7 @@ function Home() {
                           hideNoteHeading
                           compact
                           onToggleDone={() => onToggle(t.noteId, t.id)}
+                          onPin={() => onPinTask(t.noteId, t.id, !!t.pinned)}
                           onLongPress={() => toggleTaskSel(key)}
                           onSelectTap={() => toggleTaskSel(key)}
                         />
@@ -895,6 +905,7 @@ const TaskRow = memo(function TaskRow({
   noteHeading,
   noteId,
   onToggleDone,
+  onPin,
   onLongPress,
   onSelectTap,
   hideNoteHeading,
@@ -908,6 +919,7 @@ const TaskRow = memo(function TaskRow({
   noteHeading: string | null;
   noteId: string;
   onToggleDone: () => void;
+  onPin?: () => void;
   onLongPress: () => void;
   onSelectTap: () => void;
   hideNoteHeading?: boolean;
@@ -974,6 +986,20 @@ const TaskRow = memo(function TaskRow({
         )}
 
       </div>
+      {!selectMode && onPin && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onPin();
+          }}
+          aria-label={pinned ? "Unpin task" : "Pin task"}
+          className={`mt-0.5 shrink-0 rounded-full p-1 active:opacity-60 ${
+            pinned ? "text-primary" : "text-muted-foreground"
+          }`}
+        >
+          {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
+        </button>
+      )}
     </div>
   );
 });
