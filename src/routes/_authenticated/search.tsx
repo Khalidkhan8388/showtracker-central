@@ -378,7 +378,7 @@ function SearchPage() {
     const root = scrollRef.current;
     if (!root) return;
     const id = requestAnimationFrame(() => {
-      root.scrollTo({ top: 0, behavior: "smooth" });
+      root.scrollTo({ top: root.scrollHeight, behavior: "smooth" });
     });
     return () => cancelAnimationFrame(id);
   }, [query, filteredNotes.length, matchingTasks.length, kbOffset]);
