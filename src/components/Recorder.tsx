@@ -467,7 +467,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
       )}
 
-      {textOpen && (
+      {textOpen && typeof document !== "undefined" && createPortal(
         <div className="sheet-slide-up pointer-events-auto fixed inset-0 z-50 flex flex-col bg-background">
           {/* iOS-style top bar */}
           <header className="sticky top-0 z-10 flex items-center justify-between gap-2 border-b border-border/60 bg-background/85 px-3 pt-[env(safe-area-inset-top)] backdrop-blur-xl">
