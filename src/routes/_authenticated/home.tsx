@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, Link2, Image as ImageIcon, Search, Sparkles, Settings, AudioLines, Clock } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNotes, deleteTasks, pinNote } from "@/lib/notes.functions";
@@ -277,64 +277,37 @@ function Home() {
 
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      {/* iOS large-title header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background/95 backdrop-blur-xl supports-[backdrop-filter]:bg-background/80">
-        <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
-          <div className="min-w-0">
-            <h1
-              className={`font-bold tracking-tight leading-none transition-all duration-200 ${
-                collapsed ? "text-[20px]" : "text-[32px]"
-              }`}
-            >
-              Braintape
-            </h1>
-            {notes && notes.length > 0 && (
-              <p
-                className={`overflow-hidden text-muted-foreground transition-all duration-200 ${
-                  collapsed ? "mt-0 max-h-0 opacity-0" : "mt-1 max-h-5 text-[13px] opacity-100"
-                }`}
-              >
-                {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
-              </p>
-            )}
-          </div>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-white">
+      {/* Space-style minimal header */}
+      <header className="sticky top-0 z-20 bg-white/95 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-2 px-5 pt-4 pb-3">
+          <h1 className="font-serif text-[32px] leading-none tracking-tight text-foreground">
+            Braintape
+          </h1>
           <button
             onClick={signOut}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[13px] text-primary active:opacity-60"
-            aria-label="Sign out"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-foreground/70 active:opacity-60"
+            aria-label="Settings"
           >
-            <LogOut className="h-4 w-4" />
-            <span>Sign out</span>
+            <Settings className="h-5 w-5" strokeWidth={1.75} />
           </button>
         </div>
-
-
       </header>
 
-      <section className="flex-1 px-4 pb-32 pt-2">
+      <section className="flex-1 px-5 pb-32 pt-1">
         {notes === null ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : notes.length === 0 ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-          </div>
         ) : !derived || !derived.hasAnyContent ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
+          <div className="rounded-[28px] bg-[#EFECE4] px-6 py-14 text-center">
+            <p className="font-serif text-[22px] leading-snug text-foreground">
+              Your second brain is quiet.
+            </p>
+            <p className="mt-2 text-[13px] text-foreground/60">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             {derived.latest && (
               <NoteCard
                 note={derived.latest}
@@ -351,41 +324,57 @@ function Home() {
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
-                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
+                className="flex items-center justify-between rounded-full bg-foreground px-5 py-3 active:opacity-80"
               >
                 <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
-                  <span className="text-[15px] font-semibold text-primary-foreground">
+                  <Sparkles className="h-4 w-4 text-background" />
+                  <span className="text-[14px] font-medium text-background">
                     {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
                   </span>
                 </div>
-                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
+                <ChevronRight className="h-4 w-4 text-background/70" />
               </Link>
             )}
 
+            {derived.strip.length > 0 && (
+              <div className="grid grid-cols-2 gap-3">
+                {derived.strip.slice(0, 4).map((n) => (
+                  <NoteCard
+                    key={n.id}
+                    note={n}
+                    variant="masonry"
+                    thumbUrl={thumbs[n.id]}
+                    selected={selectedNotes.has(n.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                    onLongPress={() => toggleNoteSel(n.id)}
+                    onToggleSel={() => toggleNoteSel(n.id)}
+                  />
+                ))}
+              </div>
+            )}
+
             {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
-              <div className="rounded-[28px] bg-[#F1F0EF] p-5">
-                <div className="mb-3 flex items-baseline justify-between">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-stone-500">
-                    Tasks
-                  </span>
-                  <Link
-                    to="/tasks"
-                    className="inline-flex items-center gap-0.5 text-[13px] text-primary active:opacity-60"
-                  >
-                    <span className="tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
-                    <ChevronRight className="h-4 w-4" strokeWidth={2.5} />
-                  </Link>
-                </div>
+              <div className="space-y-2">
+                <Link
+                  to="/tasks"
+                  className="flex items-center justify-between px-1 py-1 active:opacity-60"
+                >
+                  <span className="text-[17px] font-semibold text-foreground">Upcoming</span>
+                  <div className="flex items-center gap-1 text-foreground/40">
+                    <span className="text-[13px] tabular-nums">{derived.doneCount}/{derived.allTasks.length}</span>
+                    <ChevronRight className="h-4 w-4" strokeWidth={2} />
+                  </div>
+                </Link>
                 {derived.visible.length === 0 ? (
                   <Link
                     to="/tasks"
-                    className="block py-2 text-center text-[13px] text-primary active:opacity-70"
+                    className="block rounded-2xl bg-[#1c1c1e] py-3 text-center text-[14px] text-white/70 active:opacity-70"
                   >
                     + Add a task
                   </Link>
                 ) : (
-                  <ul className="space-y-1">
+                  <ul className="space-y-1.5">
                     {derived.visible.map((t) => {
                       const key: TaskKey = `${t.noteId}::${t.id}`;
                       const isSel = selectedTasks.has(key);
@@ -411,11 +400,13 @@ function Home() {
               </div>
             )}
 
-            {(derived.strip.length > 0 || derived.grid.length > 0) && (
-              <div className="columns-2 gap-3 [column-fill:_balance]">
-                {[...derived.strip, ...derived.grid].map((n) => (
-                  <div key={n.id} className="mb-3 break-inside-avoid">
+            {derived.grid.length > 0 && (
+              <div className="space-y-3">
+                <h2 className="px-1 text-[17px] font-semibold text-foreground">Memory</h2>
+                <div className="grid grid-cols-2 gap-3">
+                  {derived.grid.map((n) => (
                     <NoteCard
+                      key={n.id}
                       note={n}
                       variant="masonry"
                       thumbUrl={thumbs[n.id]}
@@ -425,8 +416,8 @@ function Home() {
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
                     />
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             )}
           </div>
@@ -576,23 +567,27 @@ const NoteCard = memo(function NoteCard({
   const isWideLike = variant === "wide" || isHero;
   const isSquareLike = variant === "square" || isMasonry;
 
-  // Non-text, non-image masonry tiles get a soft deterministic tint for editorial variety
-  const useTint = isMasonry && !isText && !hasImage;
+  // Voice-only masonry tiles get a dark treatment; other non-text/non-image tiles get a soft tint.
+  const isDarkVoice = isMasonry && isVoice && !hasImage && !isLink;
+  const useTint = isMasonry && !isText && !hasImage && !isDarkVoice;
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
   const base = isText
     ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
     : isHero
-      ? "relative block overflow-hidden rounded-[32px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+      ? "relative block overflow-hidden rounded-[28px] p-6 transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
-      : useTint
-        ? "relative block overflow-hidden rounded-[28px] p-4 transition-all " +
+      : isDarkVoice
+        ? "relative block overflow-hidden rounded-[24px] p-4 transition-all text-white " +
           (selected ? "ring-2 ring-foreground" : "")
-        : "relative block overflow-hidden rounded-[28px] border border-border/60 p-3 transition-colors " +
-          (selected
-            ? "border-foreground bg-muted shadow-sm"
-            : "bg-card hover:bg-muted/50");
+        : useTint
+          ? "relative block overflow-hidden rounded-[24px] p-4 transition-all " +
+            (selected ? "ring-2 ring-foreground" : "")
+          : "relative block overflow-hidden rounded-[24px] border border-border/60 p-3 transition-colors " +
+            (selected
+              ? "border-foreground bg-muted shadow-sm"
+              : "bg-card hover:bg-muted/50");
 
   let sizing: string;
   if (isHero) {
@@ -602,7 +597,7 @@ const NoteCard = memo(function NoteCard({
   } else if (isMasonry) {
     sizing = hasImage && !isLink
       ? "flex aspect-[4/5] w-full flex-col gap-2"
-      : "flex w-full flex-col gap-3 min-h-[7rem]";
+      : "flex aspect-square w-full flex-col gap-3";
   } else if (fullWidth) {
     sizing = "flex aspect-square w-full flex-col gap-3";
   } else {
@@ -611,9 +606,13 @@ const NoteCard = memo(function NoteCard({
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: "#ffffff" }
-    : tintBg
-      ? { backgroundColor: tintBg }
-      : undefined;
+    : isHero
+      ? { backgroundColor: "#EFECE4" }
+      : isDarkVoice
+        ? { backgroundColor: "#1c1c1e" }
+        : tintBg
+          ? { backgroundColor: tintBg }
+          : undefined;
 
 
   return (
@@ -677,16 +676,13 @@ const NoteCard = memo(function NoteCard({
           )}
           <div className="min-w-0 flex-1">
             {isHero ? (
-              <div className="mb-2 flex items-center gap-2">
-                <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
-                  Latest
-                </span>
-                {isLink && linkHost && (
-                  <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-background">
+              isLink && linkHost && (
+                <div className="mb-2">
+                  <span className="inline-block rounded-full bg-foreground/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-foreground/70">
                     {linkHost}
                   </span>
-                )}
-              </div>
+                </div>
+              )
             ) : (
               isLink && linkHost && (
                 <div className="mb-1.5">
@@ -753,6 +749,14 @@ const NoteCard = memo(function NoteCard({
         </>
       ) : (
         <>
+          {isDarkVoice && (
+            <div className="relative z-10 flex items-center gap-2 text-white/90">
+              <AudioLines className="h-5 w-5" strokeWidth={1.75} />
+              {note.duration_seconds != null && (
+                <span className="text-[13px] font-medium tabular-nums">{formatDur(note.duration_seconds)}</span>
+              )}
+            </div>
+          )}
           {isLink && linkHost && (
             <div className="relative z-10">
               <span className="inline-block rounded bg-foreground px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-background max-w-full truncate">
@@ -762,8 +766,8 @@ const NoteCard = memo(function NoteCard({
           )}
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
             <h3
-              className={`text-xs font-semibold leading-tight break-words ${
-                hasImage && !isLink ? "text-white drop-shadow" : ""
+              className={`text-[13px] font-medium leading-snug break-words line-clamp-3 ${
+                hasImage && !isLink ? "text-white drop-shadow" : isDarkVoice ? "text-white" : ""
               }`}
             >
               {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
@@ -771,22 +775,20 @@ const NoteCard = memo(function NoteCard({
           </div>
 
           <div
-            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
+            className={`relative z-10 mt-auto flex items-center gap-2 text-[10px] ${
+              hasImage && !isLink ? "text-white/85" : isDarkVoice ? "text-white/50" : "text-muted-foreground"
             }`}
           >
+            <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
               </span>
             )}
-            <div className="flex items-center gap-2">
-              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-              {note.duration_seconds != null && (
-                <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
-              )}
-            </div>
+            {!isDarkVoice && note.duration_seconds != null && (
+              <span className="tabular-nums">{formatDur(note.duration_seconds)}</span>
+            )}
           </div>
         </>
       )}
@@ -828,8 +830,8 @@ const TaskRow = memo(function TaskRow({
         }
         if (selectMode) onSelectTap();
       }}
-      className={`flex items-start gap-3 px-4 py-3 select-none transition-colors ${
-        selected ? "bg-muted" : "active:bg-muted"
+      className={`flex items-center gap-3 rounded-2xl px-4 py-3 select-none transition-colors ${
+        selected ? "bg-foreground/80 text-background" : "bg-[#1c1c1e] text-white active:bg-[#2a2a2c]"
       }`}
     >
       <button
@@ -842,40 +844,32 @@ const TaskRow = memo(function TaskRow({
           onToggleDone();
         }}
         aria-label={done ? "Mark as not done" : "Mark as done"}
-        className="mt-0.5 shrink-0"
+        className="shrink-0"
       >
         {done ? (
-          <CheckCircle2 className="h-5 w-5 text-primary" />
+          <CheckCircle2 className="h-5 w-5 text-white/60" />
         ) : (
-          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+          <Circle className="h-5 w-5 text-white/50" strokeWidth={1.5} />
         )}
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-[17px] leading-tight ${
-            done ? "text-muted-foreground line-through" : "text-foreground"
+          className={`text-[14px] leading-snug truncate ${
+            done ? "text-white/40 line-through" : "text-white"
           }`}
         >
-          {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
+          {pinned && <Pin className="mr-1 inline h-3 w-3 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
         {noteHeading && (
-          selectMode ? (
-            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-              {noteHeading}
-            </span>
-          ) : (
-            <Link
-              to="/notes/$id"
-              params={{ id: noteId }}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
-            >
-              {noteHeading}
-            </Link>
-          )
+          <span className="mt-0.5 block truncate text-[11px] text-white/40">
+            {noteHeading}
+          </span>
         )}
       </div>
+      <span className="shrink-0 text-[11px] tabular-nums text-white/40">
+        <Clock className="mr-1 inline h-3 w-3 -translate-y-0.5" strokeWidth={2} />
+      </span>
     </div>
   );
 });
