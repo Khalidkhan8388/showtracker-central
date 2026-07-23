@@ -71,28 +71,24 @@ function NoteDetail() {
   const updateFn = useServerFn(updateTextNote);
   const appendImagesFn = useServerFn(appendImagesToNote);
 
-  // Signed-URL cache keyed by storage path, so task/pin updates don't
-  // trigger re-signing every image on every realtime hit.
-  const signedCacheRef = useRef<Map<string, string>>(new Map());
-
-  // Refresh signed URLs whenever the note's image_paths change.
+  // Local-first photo cache: pulls from IndexedDB when we've seen the
+  // image before, otherwise downloads once and stores it.
   const refreshImages = useCallback(async (paths: string[]) => {
     if (paths.length === 0) {
       setImageUrls([]);
       return;
     }
-    const missing = paths.filter((p) => !signedCacheRef.current.has(p));
-    if (missing.length > 0) {
-      const signed = await Promise.all(
-        missing.map((p) => supabase.storage.from("voice-notes").createSignedUrl(p, 3600)),
-      );
-      missing.forEach((p, i) => {
-        const url = signed[i]?.data?.signedUrl;
-        if (url) signedCacheRef.current.set(p, url);
-      });
-    }
-    setImageUrls(paths.map((p) => signedCacheRef.current.get(p) ?? "").filter(Boolean));
+    const { getPhotoUrl, getCachedPhotoUrl, warmPhotoCache } = await import(
+      "@/lib/photo-cache"
+    );
+    // Paint anything already in memory immediately.
+    const immediate = paths.map((p) => getCachedPhotoUrl(p) ?? "");
+    if (immediate.some(Boolean)) setImageUrls(immediate.filter(Boolean));
+    await warmPhotoCache(paths);
+    const urls = await Promise.all(paths.map((p) => getPhotoUrl(p)));
+    setImageUrls(urls.filter(Boolean));
   }, []);
+
 
   // Kept as a thin alias — call sites use `load()` to force a re-sign after uploads.
   const load = useCallback(async () => {

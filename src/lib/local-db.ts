@@ -29,19 +29,34 @@ export type LocalNote = {
 
 export type MetaRow = { key: string; value: string };
 
+export type LocalPhoto = {
+  path: string;      // storage path (primary key)
+  blob: Blob;        // raw bytes
+  size: number;      // bytes
+  contentType: string;
+  cachedAt: number;  // epoch ms — for LRU eviction
+};
+
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
+  photos!: Table<LocalPhoto, string>;
 
   constructor() {
     super("braintape");
     this.version(1).stores({
-      // Index on fields we filter/sort by. `id` is the primary key.
       notes: "id, user_id, created_at, updated_at, pinned, heading",
       meta: "key",
     });
+    // v2: add local photo blob cache so images load instantly and offline.
+    this.version(2).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading",
+      meta: "key",
+      photos: "path, cachedAt, size",
+    });
   }
 }
+
 
 export const db = new BraintapeDB();
 
