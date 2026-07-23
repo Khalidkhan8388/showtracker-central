@@ -12,6 +12,8 @@ import { useEffect, type ReactNode } from "react";
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
+import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/theme";
+
 
 function NotFoundComponent() {
   return (
@@ -103,7 +105,9 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }} />
       </head>
+
       <body>
         {children}
         <Scripts />
@@ -116,8 +120,11 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
-      <Toaster />
+      <ThemeProvider>
+        <Outlet />
+        <Toaster />
+      </ThemeProvider>
     </QueryClientProvider>
   );
 }
+

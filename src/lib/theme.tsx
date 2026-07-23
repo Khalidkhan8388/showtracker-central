@@ -1,0 +1,116 @@
+import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+
+export type Accent = {
+  id: string;
+  name: string;
+  primary: string;
+  foreground: string;
+};
+
+export const ACCENTS: Accent[] = [
+  { id: "yellow", name: "Sunshine", primary: "#ffc700", foreground: "#000000" },
+  { id: "blue",   name: "Ocean",    primary: "#0a84ff", foreground: "#ffffff" },
+  { id: "purple", name: "Iris",     primary: "#af52de", foreground: "#ffffff" },
+  { id: "green",  name: "Matcha",   primary: "#30d158", foreground: "#000000" },
+  { id: "pink",   name: "Blossom",  primary: "#ff2d92", foreground: "#ffffff" },
+  { id: "orange", name: "Ember",    primary: "#ff9500", foreground: "#000000" },
+  { id: "red",    name: "Cherry",   primary: "#ff3b30", foreground: "#ffffff" },
+  { id: "mono",   name: "Graphite", primary: "#111111", foreground: "#ffffff" },
+];
+
+type ThemeMode = "light" | "dark" | "system";
+
+type ThemeCtx = {
+  mode: ThemeMode;
+  setMode: (m: ThemeMode) => void;
+  accent: Accent;
+  setAccentId: (id: string) => void;
+  isDark: boolean;
+};
+
+const Ctx = createContext<ThemeCtx | null>(null);
+
+const MODE_KEY = "braintape.theme.mode";
+const ACCENT_KEY = "braintape.theme.accent";
+
+function applyAccent(a: Accent) {
+  const r = document.documentElement;
+  r.style.setProperty("--primary", a.primary);
+  r.style.setProperty("--primary-foreground", a.foreground);
+  r.style.setProperty("--ring", a.primary);
+  r.style.setProperty("--sidebar-primary", a.primary);
+  r.style.setProperty("--sidebar-ring", a.primary);
+}
+
+function applyMode(mode: ThemeMode) {
+  const r = document.documentElement;
+  const prefersDark = typeof window !== "undefined" && window.matchMedia("(prefers-color-scheme: dark)").matches;
+  const dark = mode === "dark" || (mode === "system" && prefersDark);
+  r.classList.toggle("dark", dark);
+  return dark;
+}
+
+export function ThemeProvider({ children }: { children: ReactNode }) {
+  const [mode, setModeState] = useState<ThemeMode>("system");
+  const [accent, setAccent] = useState<Accent>(ACCENTS[0]);
+  const [isDark, setIsDark] = useState(false);
+
+  useEffect(() => {
+    const storedMode = (localStorage.getItem(MODE_KEY) as ThemeMode | null) ?? "system";
+    const storedAccentId = localStorage.getItem(ACCENT_KEY) ?? "yellow";
+    const found = ACCENTS.find((a) => a.id === storedAccentId) ?? ACCENTS[0];
+    setModeState(storedMode);
+    setAccent(found);
+    applyAccent(found);
+    setIsDark(applyMode(storedMode));
+
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => {
+      const current = (localStorage.getItem(MODE_KEY) as ThemeMode | null) ?? "system";
+      if (current === "system") setIsDark(applyMode("system"));
+    };
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
+
+  const setMode = (m: ThemeMode) => {
+    localStorage.setItem(MODE_KEY, m);
+    setModeState(m);
+    setIsDark(applyMode(m));
+  };
+
+  const setAccentId = (id: string) => {
+    const found = ACCENTS.find((a) => a.id === id) ?? ACCENTS[0];
+    localStorage.setItem(ACCENT_KEY, found.id);
+    setAccent(found);
+    applyAccent(found);
+  };
+
+  return (
+    <Ctx.Provider value={{ mode, setMode, accent, setAccentId, isDark }}>{children}</Ctx.Provider>
+  );
+}
+
+export function useTheme() {
+  const v = useContext(Ctx);
+  if (!v) throw new Error("useTheme must be used within ThemeProvider");
+  return v;
+}
+
+// Inline script string to run before hydration and avoid FOUC on dark mode.
+export const THEME_BOOT_SCRIPT = `
+(function(){try{
+  var m = localStorage.getItem('${MODE_KEY}') || 'system';
+  var a = localStorage.getItem('${ACCENT_KEY}') || 'yellow';
+  var accents = ${JSON.stringify(ACCENTS)};
+  var acc = accents.find(function(x){return x.id===a;}) || accents[0];
+  var r = document.documentElement;
+  r.style.setProperty('--primary', acc.primary);
+  r.style.setProperty('--primary-foreground', acc.foreground);
+  r.style.setProperty('--ring', acc.primary);
+  r.style.setProperty('--sidebar-primary', acc.primary);
+  r.style.setProperty('--sidebar-ring', acc.primary);
+  var dark = m==='dark' || (m==='system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  if(dark) r.classList.add('dark');
+}catch(e){}})();
+`;

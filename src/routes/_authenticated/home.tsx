@@ -156,9 +156,17 @@ function Home() {
     };
   }, [load, signThumbsFor]);
 
-  async function signOut() {
-    await supabase.auth.signOut();
+  const [userInitial, setUserInitial] = useState<string>("?");
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      const em = data.user?.email ?? "";
+      setUserInitial((em[0] || "?").toUpperCase());
+    });
+  }, []);
+  function ProfileInitial() {
+    return <span>{userInitial}</span>;
   }
+
 
   function toggleNoteSel(id: string) {
     setSelectedNotes((prev) => {
@@ -299,14 +307,14 @@ function Home() {
               </p>
             )}
           </div>
-          <button
-            onClick={signOut}
-            className="inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-1 text-[13px] text-primary active:opacity-60"
-            aria-label="Sign out"
+          <Link
+            to="/profile"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold active:opacity-70"
+            aria-label="Profile"
           >
-            <LogOut className="h-4 w-4" />
-            <span>Sign out</span>
-          </button>
+            <ProfileInitial />
+          </Link>
+
         </div>
 
 
