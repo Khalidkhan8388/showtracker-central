@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
-import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIcon, Loader2 } from "lucide-react";
+import { ChevronLeft, LogOut, Trash2, Sun, Moon, Monitor, Check, User as UserIcon, Loader2, ChevronRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { deleteAccount } from "@/lib/account.functions";
