@@ -1,12 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, format } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
-import { poster as tmdbPoster, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone } from "@/lib/media";
-import type { WatchStatus } from "@/lib/local-db";
+import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
+import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 
 
 
@@ -44,6 +44,7 @@ function CollectionDetail() {
     [notes, memberIds],
   );
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const [tvView, setTvView] = useState<"posters" | "episodes">("posters");
   const mediaMembers = useMemo(
     () => allMembers.filter((n) => !!(n as any).media),
     [allMembers],
@@ -305,6 +306,35 @@ function CollectionDetail() {
                 </button>
               </div>
             </div>
+            {hasTv && (
+              <div className="mb-3 flex justify-center">
+                <div className="inline-flex rounded-full bg-card p-1 ring-1 ring-border/60">
+                  <button
+                    type="button"
+                    onClick={() => setTvView("posters")}
+                    className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      tvView === "posters" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    Posters
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setTvView("episodes")}
+                    className={`inline-flex items-center gap-1 rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
+                      tvView === "episodes" ? "bg-primary text-primary-foreground" : "text-muted-foreground"
+                    }`}
+                  >
+                    <CalendarClock className="h-3.5 w-3.5" />
+                    Episodes
+                  </button>
+                </div>
+              </div>
+            )}
+            {hasTv && tvView === "episodes" ? (
+              <EpisodeTracker members={mediaMembers} />
+            ) : (
+            <>
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
@@ -473,9 +503,190 @@ function CollectionDetail() {
                 })}
               </ul>
             )}
+            </>
+            )}
           </>
         )}
       </section>
     </div>
+  );
+}
+
+type TvMember = { id: string; heading: string | null; media: LocalMedia };
+type EpisodeRow = {
+  note: TvMember;
+  ep: LocalMediaEpisode;
+  airMs: number | null;
+  watched: boolean;
+};
+
+function EpisodeTracker({ members }: { members: Array<{ id: string; heading: string | null; media?: LocalMedia | null }> }) {
+  const now = Date.now();
+  const tvShows: TvMember[] = useMemo(
+    () =>
+      members
+        .filter((n) => n.media?.type === "tv")
+        .map((n) => ({ id: n.id, heading: n.heading, media: n.media as LocalMedia })),
+    [members],
+  );
+
+  const allEps: EpisodeRow[] = useMemo(() => {
+    const rows: EpisodeRow[] = [];
+    for (const note of tvShows) {
+      const watched = new Set(note.media.watched_episodes);
+      for (const s of note.media.seasons ?? []) {
+        for (const ep of s.episodes) {
+          const airMs = ep.air_date ? new Date(ep.air_date).getTime() : null;
+          rows.push({
+            note,
+            ep,
+            airMs: Number.isFinite(airMs as number) ? (airMs as number) : null,
+            watched: watched.has(epKey(ep.season_number, ep.episode_number)),
+          });
+        }
+      }
+    }
+    return rows;
+  }, [tvShows]);
+
+  const upcoming = useMemo(
+    () =>
+      allEps
+        .filter((r) => r.airMs !== null && r.airMs > now && !r.watched)
+        .sort((a, b) => (a.airMs! - b.airMs!))
+        .slice(0, 40),
+    [allEps, now],
+  );
+
+  const nextUp = useMemo(() => {
+    const perShow = new Map<string, EpisodeRow>();
+    for (const r of allEps) {
+      if (r.watched) continue;
+      if (r.airMs !== null && r.airMs > now) continue;
+      const cur = perShow.get(r.note.id);
+      if (
+        !cur ||
+        r.ep.season_number < cur.ep.season_number ||
+        (r.ep.season_number === cur.ep.season_number && r.ep.episode_number < cur.ep.episode_number)
+      ) {
+        perShow.set(r.note.id, r);
+      }
+    }
+    return Array.from(perShow.values()).sort((a, b) =>
+      (a.note.media.title ?? "").localeCompare(b.note.media.title ?? ""),
+    );
+  }, [allEps, now]);
+
+  const recent = useMemo(() => {
+    const cutoff = now - 1000 * 60 * 60 * 24 * 30;
+    return allEps
+      .filter((r) => r.airMs !== null && r.airMs <= now && r.airMs >= cutoff)
+      .sort((a, b) => b.airMs! - a.airMs!)
+      .slice(0, 40);
+  }, [allEps, now]);
+
+  if (tvShows.length === 0) {
+    return (
+      <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
+        No TV shows here yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="space-y-5">
+      <EpSection title="Next up" rows={nextUp} emptyText="You're all caught up." />
+      <EpSection title="Upcoming" rows={upcoming} emptyText="Nothing scheduled." showDate />
+      <EpSection title="Recently aired" rows={recent} emptyText="Nothing aired recently." showDate />
+    </div>
+  );
+}
+
+function EpSection({
+  title,
+  rows,
+  emptyText,
+  showDate,
+}: {
+  title: string;
+  rows: EpisodeRow[];
+  emptyText: string;
+  showDate?: boolean;
+}) {
+  return (
+    <div>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h3 className="text-[13px] font-semibold text-foreground">{title}</h3>
+        <span className="text-[11px] text-muted-foreground">{rows.length}</span>
+      </div>
+      {rows.length === 0 ? (
+        <p className="rounded-2xl bg-card px-4 py-5 text-center text-[12px] text-muted-foreground ring-1 ring-border/60">
+          {emptyText}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((r) => (
+            <EpRow key={`${r.note.id}-${r.ep.season_number}-${r.ep.episode_number}`} row={r} showDate={showDate} />
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
+function EpRow({ row, showDate }: { row: EpisodeRow; showDate?: boolean }) {
+  const still = tmdbStill(row.ep.still_path, "w185");
+  const poster = tmdbPoster(row.note.media.poster_path, "w185");
+  const thumb = still ?? poster;
+  const airLabel = row.airMs !== null ? format(new Date(row.airMs), "MMM d, yyyy") : "TBA";
+  const relLabel =
+    row.airMs !== null ? formatDistanceToNow(new Date(row.airMs), { addSuffix: true }) : "TBA";
+
+  return (
+    <li className="flex items-stretch gap-2 rounded-2xl bg-card p-2 shadow-sm ring-1 ring-border/60">
+      <Link
+        to="/notes/$id"
+        params={{ id: row.note.id }}
+        className="flex flex-1 items-stretch gap-3 overflow-hidden active:opacity-80"
+      >
+        {thumb ? (
+          <img
+            src={thumb}
+            alt={row.ep.name}
+            loading="lazy"
+            className="h-16 w-24 shrink-0 rounded-lg object-cover"
+          />
+        ) : (
+          <div className="flex h-16 w-24 shrink-0 items-center justify-center rounded-lg bg-muted text-[10px] text-muted-foreground">
+            No image
+          </div>
+        )}
+        <div className="min-w-0 flex-1 py-0.5">
+          <p className="truncate text-[13px] font-semibold text-foreground">
+            {row.note.media.title}
+          </p>
+          <p className="truncate text-[12px] text-muted-foreground">
+            S{row.ep.season_number}·E{row.ep.episode_number} {row.ep.name ? `— ${row.ep.name}` : ""}
+          </p>
+          <p className="mt-0.5 text-[11px] text-muted-foreground">
+            {showDate ? `${airLabel} · ${relLabel}` : relLabel}
+          </p>
+        </div>
+      </Link>
+      <button
+        type="button"
+        onClick={() =>
+          void toggleEpisodeWatched(row.note.id, row.ep.season_number, row.ep.episode_number, !row.watched)
+        }
+        aria-label={row.watched ? "Mark unwatched" : "Mark watched"}
+        className={`my-auto inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full transition-colors ${
+          row.watched
+            ? "bg-emerald-500 text-white"
+            : "bg-muted text-muted-foreground ring-1 ring-border/60"
+        }`}
+      >
+        <Check className="h-4 w-4" strokeWidth={3} />
+      </button>
+    </li>
   );
 }
