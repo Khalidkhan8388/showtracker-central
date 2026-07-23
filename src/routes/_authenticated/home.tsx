@@ -339,7 +339,7 @@ function Home() {
       doneCount: doneT.length,
       hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
     };
-  }, [notes]);
+  }, [notes, hideMedia]);
 
 
   return (
