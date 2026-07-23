@@ -265,6 +265,18 @@ function SearchPage() {
       vv.removeEventListener("scroll", update);
     };
   }, []);
+
+  // Measure the floating search pill so results always sit above it,
+  // even when the results-count row appears/disappears.
+  useEffect(() => {
+    const el = pillRef.current;
+    if (!el) return;
+    const update = () => setPillHeight(el.offsetHeight);
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const searchFn = searchEverything;
 
   useEffect(() => {
