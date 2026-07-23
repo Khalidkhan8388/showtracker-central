@@ -18,6 +18,7 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
+import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 
 const AuthRoute = AuthRouteImport.update({
@@ -65,6 +66,12 @@ const AuthenticatedTasksReviewRoute =
     path: '/tasks/review',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedProfileTrashRoute =
+  AuthenticatedProfileTrashRouteImport.update({
+    id: '/trash',
+    path: '/trash',
+    getParentRoute: () => AuthenticatedProfileRoute,
+  } as any)
 const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
   id: '/notes/$id',
   path: '/notes/$id',
@@ -75,10 +82,11 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/home': typeof AuthenticatedHomeRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -86,10 +94,11 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/home': typeof AuthenticatedHomeRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
 }
@@ -99,10 +108,11 @@ export interface FileRoutesById {
   '/_authenticated': typeof AuthenticatedRouteWithChildren
   '/auth': typeof AuthRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
-  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
+  '/_authenticated/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -116,6 +126,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/notes/$id'
+    | '/profile/trash'
     | '/tasks/review'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
@@ -127,6 +138,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/notes/$id'
+    | '/profile/trash'
     | '/tasks/review'
     | '/tasks'
   id:
@@ -139,6 +151,7 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/share'
     | '/_authenticated/notes/$id'
+    | '/_authenticated/profile/trash'
     | '/_authenticated/tasks/review'
     | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
@@ -214,6 +227,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/profile/trash': {
+      id: '/_authenticated/profile/trash'
+      path: '/trash'
+      fullPath: '/profile/trash'
+      preLoaderRoute: typeof AuthenticatedProfileTrashRouteImport
+      parentRoute: typeof AuthenticatedProfileRoute
+    }
     '/_authenticated/notes/$id': {
       id: '/_authenticated/notes/$id'
       path: '/notes/$id'
@@ -224,9 +244,20 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedProfileRouteChildren {
+  AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
+}
+
+const AuthenticatedProfileRouteChildren: AuthenticatedProfileRouteChildren = {
+  AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
+}
+
+const AuthenticatedProfileRouteWithChildren =
+  AuthenticatedProfileRoute._addFileChildren(AuthenticatedProfileRouteChildren)
+
 interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRouteWithChildren
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
@@ -236,7 +267,7 @@ interface AuthenticatedRouteChildren {
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
-  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRouteWithChildren,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
