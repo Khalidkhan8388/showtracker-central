@@ -349,7 +349,7 @@ function Home() {
               </Link>
             )}
 
-            {(derived.visible.length > 0 || derived.allTasks.length > 0) && (
+            {(
               <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
                 <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
