@@ -8,7 +8,7 @@ import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
 import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functions";
 import type { LocalNote } from "@/lib/local-db";
 
-export const Route = createFileRoute("/_authenticated/profile/trash")({
+export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
     meta: [
       { title: "Recently Deleted — Braintape" },
