@@ -875,14 +875,14 @@ const TaskRow = memo(function TaskRow({
       </button>
       <div className="min-w-0 flex-1">
         <p
-          className={`text-[17px] leading-tight ${
+          className={`${compact ? "text-[14px]" : "text-[17px]"} leading-snug line-clamp-2 ${
             done ? "text-muted-foreground line-through" : "text-foreground"
           }`}
         >
           {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
           {text}
         </p>
-        {noteHeading && (
+        {!hideNoteHeading && noteHeading && (
           selectMode ? (
             <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
               {noteHeading}
@@ -898,6 +898,7 @@ const TaskRow = memo(function TaskRow({
             </Link>
           )
         )}
+
       </div>
     </div>
   );
