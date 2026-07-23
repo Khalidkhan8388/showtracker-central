@@ -496,6 +496,8 @@ function Home() {
             )}
 
 
+            <CollectionsRow />
+
             {(derived.strip.length > 0 || derived.grid.length > 0) && (
               <div className="columns-2 gap-3 [column-fill:_balance]">
                 {[...derived.strip, ...derived.grid].map((n) => (
