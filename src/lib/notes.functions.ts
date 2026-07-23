@@ -440,6 +440,45 @@ export async function generateLinkLabel({ data }: { data: { url: string } }) {
   return generateLinkLabelFn({ data });
 }
 
+/** Add a movie/TV show to the app by TMDB id, from the in-app search. */
+export async function addTmdbMedia({
+  data,
+}: {
+  data: { type: "movie" | "tv"; tmdb_id: number };
+}) {
+  // Check if already saved to avoid duplicates.
+  const existing = await db.notes
+    .filter((n) => !n.deleted_at && n.media?.type === data.type && n.media?.tmdb_id === data.tmdb_id)
+    .first();
+  if (existing) return { ok: true as const, noteId: existing.id, duplicate: true as const };
+
+  const { lookupTmdbByIdFn } = await import("./tmdb.functions");
+  const media = await lookupTmdbByIdFn({ data: { type: data.type, tmdb_id: data.tmdb_id } });
+  if (!media) throw new Error("Could not fetch details from TMDB");
+
+  const note = newNote({
+    source_url: media.original_url,
+    status: "ready",
+    heading: media.title,
+    summary: media.tagline || media.overview.slice(0, 240) || null,
+    tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+    media: {
+      ...media,
+      watch_status: "watchlist",
+      watched_at: null,
+      watched_episodes: [],
+    },
+  });
+  await db.notes.put(note);
+  try {
+    const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } =
+      await import("./collections");
+    const c = await ensureCollectionByTitle(media.type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
+    await addNotesToCollection(c.id, [note.id]);
+  } catch {}
+  return { ok: true as const, noteId: note.id, duplicate: false as const };
+}
+
 export async function searchEverything({
   data,
 }: {

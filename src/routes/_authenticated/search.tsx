@@ -1,7 +1,9 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { searchEverything } from "@/lib/notes.functions";
+import { addTmdbMedia, searchEverything } from "@/lib/notes.functions";
+import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
+import { poster as posterUrl } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
@@ -18,6 +20,11 @@ import {
   Image as ImageIcon,
   Link as LinkIcon,
   FileText,
+  Plus,
+  Check,
+  Film,
+  Tv,
+  Star,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
@@ -232,9 +239,23 @@ function SearchPage() {
   const [collapsed, setCollapsed] = useState(false);
   const [kbOffset, setKbOffset] = useState(0);
   const [pillHeight, setPillHeight] = useState(140);
+  const [tmdbHits, setTmdbHits] = useState<TmdbSearchHit[]>([]);
+  const [tmdbLoading, setTmdbLoading] = useState(false);
+  const [tmdbAdding, setTmdbAdding] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLDivElement>(null);
+
+  // Track already-saved TMDB items so results show "Added" instead of a plus.
+  const savedMediaKeys = useMemo(() => {
+    const s = new Set<string>();
+    for (const n of (localNotes ?? []) as any[]) {
+      if (n?.media?.tmdb_id && n?.media?.type && !n.deleted_at) {
+        s.add(`${n.media.type}:${n.media.tmdb_id}`);
+      }
+    }
+    return s;
+  }, [localNotes]);
   useEffect(() => {
     const el = sentinelRef.current;
     const root = scrollRef.current;
@@ -342,6 +363,52 @@ function SearchPage() {
     setAiIds(null);
     setAiReasoning(null);
   }, [query]);
+
+  // Debounced TMDB search — always run when the user has typed something.
+  useEffect(() => {
+    const q = query.trim();
+    if (q.length < 2) {
+      setTmdbHits([]);
+      setTmdbLoading(false);
+      return;
+    }
+    setTmdbLoading(true);
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const hits = await searchTmdbFn({ data: { query: q } });
+        if (!cancelled) setTmdbHits(hits);
+      } catch {
+        if (!cancelled) setTmdbHits([]);
+      } finally {
+        if (!cancelled) setTmdbLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
+  }, [query]);
+
+  const addMedia = useCallback(
+    async (hit: TmdbSearchHit) => {
+      const key = `${hit.type}:${hit.tmdb_id}`;
+      if (tmdbAdding.has(key) || savedMediaKeys.has(key)) return;
+      setTmdbAdding((s) => new Set(s).add(key));
+      try {
+        await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
+      } catch {
+        // ignore; user can retry
+      } finally {
+        setTmdbAdding((s) => {
+          const n = new Set(s);
+          n.delete(key);
+          return n;
+        });
+      }
+    },
+    [tmdbAdding, savedMediaKeys],
+  );
 
 
 
@@ -452,6 +519,106 @@ function SearchPage() {
             <div className="text-[13px] leading-snug text-foreground/80">{aiReasoning}</div>
           </div>
         )}
+
+        {/* TMDB search results — always shown when the user is typing */}
+        {query.trim().length >= 2 && !aiMode && (tmdbLoading || tmdbHits.length > 0) && (
+          <section className="mb-5">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                Movies &amp; TV
+              </span>
+              <span className="text-[10px] tabular-nums text-muted-foreground">
+                {tmdbLoading ? "…" : tmdbHits.length}
+              </span>
+            </div>
+            <div className="-mx-4 overflow-x-auto scrollbar-hide">
+              <div className="flex gap-2.5 px-4 pb-1">
+                {tmdbLoading && tmdbHits.length === 0
+                  ? Array.from({ length: 5 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-[120px] shrink-0 animate-pulse overflow-hidden rounded-[15px] bg-muted"
+                        style={{ aspectRatio: "2 / 3" }}
+                      />
+                    ))
+                  : tmdbHits.map((hit) => {
+                      const key = `${hit.type}:${hit.tmdb_id}`;
+                      const saved = savedMediaKeys.has(key);
+                      const adding = tmdbAdding.has(key);
+                      const poster = posterUrl(hit.poster_path, "w342");
+                      return (
+                        <div key={key} className="w-[120px] shrink-0">
+                          <div
+                            className="relative overflow-hidden rounded-[15px] bg-muted"
+                            style={{ aspectRatio: "2 / 3" }}
+                          >
+                            {poster ? (
+                              <img
+                                src={poster}
+                                alt=""
+                                loading="lazy"
+                                className="absolute inset-0 h-full w-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                                }}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+                                {hit.type === "tv" ? (
+                                  <Tv className="h-6 w-6" />
+                                ) : (
+                                  <Film className="h-6 w-6" />
+                                )}
+                              </div>
+                            )}
+                            <span className="absolute left-1.5 top-1.5 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+                              {hit.type === "tv" ? (
+                                <Tv className="h-2.5 w-2.5" />
+                              ) : (
+                                <Film className="h-2.5 w-2.5" />
+                              )}
+                              {hit.type === "tv" ? "TV" : "Movie"}
+                            </span>
+                            {hit.vote_average != null && hit.vote_average > 0 && (
+                              <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
+                                <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                                {hit.vote_average.toFixed(1)}
+                              </span>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => addMedia(hit)}
+                              disabled={saved || adding}
+                              aria-label={saved ? "Already in library" : `Add ${hit.title}`}
+                              className={`absolute bottom-1.5 right-1.5 grid h-8 w-8 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
+                                saved
+                                  ? "bg-emerald-500 text-white"
+                                  : "bg-white/95 text-neutral-900 active:scale-95"
+                              }`}
+                            >
+                              {adding ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : saved ? (
+                                <Check className="h-4 w-4" strokeWidth={3} />
+                              ) : (
+                                <Plus className="h-4 w-4" strokeWidth={3} />
+                              )}
+                            </button>
+                          </div>
+                          <div className="mt-1.5 line-clamp-1 text-[12px] font-medium leading-tight text-foreground">
+                            {hit.title}
+                          </div>
+                          <div className="line-clamp-1 text-[10px] text-muted-foreground">
+                            {hit.year ?? "—"}
+                          </div>
+                        </div>
+                      );
+                    })}
+              </div>
+            </div>
+          </section>
+        )}
+
 
         {/* Section label */}
         <div className="mb-3 flex items-center justify-between px-1">

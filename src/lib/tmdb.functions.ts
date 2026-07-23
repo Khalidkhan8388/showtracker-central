@@ -241,3 +241,73 @@ export const lookupTmdbFn = createServerFn({ method: "POST" })
       return null;
     }
   });
+
+// -- Direct search / lookup used by the in-app search page -------------------
+
+export type TmdbSearchHit = {
+  type: "movie" | "tv";
+  tmdb_id: number;
+  title: string;
+  overview: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  year: string | null;
+  vote_average: number | null;
+};
+
+const SearchInput = z.object({ query: z.string().trim().min(1).max(120) });
+
+export const searchTmdbFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => SearchInput.parse(d))
+  .handler(async ({ data }): Promise<TmdbSearchHit[]> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    try {
+      const r = await tmdbGet(`/search/multi`, key, {
+        query: data.query,
+        include_adult: "false",
+        page: "1",
+      });
+      const results: any[] = Array.isArray(r.results) ? r.results : [];
+      return results
+        .filter((x) => x.media_type === "movie" || x.media_type === "tv")
+        .slice(0, 20)
+        .map((x): TmdbSearchHit => {
+          const type = x.media_type as "movie" | "tv";
+          const date = (type === "movie" ? x.release_date : x.first_air_date) || null;
+          return {
+            type,
+            tmdb_id: Number(x.id),
+            title:
+              type === "movie"
+                ? (x.title ?? x.original_title ?? "Untitled")
+                : (x.name ?? x.original_name ?? "Untitled"),
+            overview: x.overview ?? "",
+            poster_path: x.poster_path ?? null,
+            backdrop_path: x.backdrop_path ?? null,
+            year: date ? String(date).slice(0, 4) : null,
+            vote_average: typeof x.vote_average === "number" ? x.vote_average : null,
+          };
+        });
+    } catch {
+      return [];
+    }
+  });
+
+const LookupIdInput = z.object({
+  type: z.enum(["movie", "tv"]),
+  tmdb_id: z.number().int().positive(),
+});
+
+export const lookupTmdbByIdFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => LookupIdInput.parse(d))
+  .handler(async ({ data }): Promise<TmdbLookup | null> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    const url = `https://www.themoviedb.org/${data.type}/${data.tmdb_id}`;
+    try {
+      return await fetchDetails(key, data.type, data.tmdb_id, url);
+    } catch {
+      return null;
+    }
+  });
