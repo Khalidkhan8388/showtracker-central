@@ -446,7 +446,8 @@ function NoteDetail() {
   const processing = note.status !== "ready" && note.status !== "failed";
   const isVoice = note.duration_seconds != null;
   const isLink = !!note.source_url;
-  const isText = !isVoice && !isLink;
+  const isImage = !isVoice && !isLink && Array.isArray(note.image_paths) && note.image_paths.length > 0;
+  const isText = !isVoice && !isLink && !isImage;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
