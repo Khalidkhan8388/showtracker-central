@@ -708,7 +708,7 @@ const NoteCard = memo(function NoteCard({
                     : "truncate text-sm font-semibold"
                 }
               >
-                {note.heading ?? (note.status === "failed" ? "Failed to process" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed to process" : <AnalyzingBadge />)}
               </h3>
             </div>
             {note.summary && (
@@ -733,7 +733,7 @@ const NoteCard = memo(function NoteCard({
         <>
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
             <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
-              {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
             </h3>
           </div>
           {hasImage && (
@@ -767,7 +767,7 @@ const NoteCard = memo(function NoteCard({
           {!(hasImage && !isLink) && (
             <div className="relative z-10 flex items-start gap-1.5 pr-5">
               <h3 className="text-xs font-semibold leading-tight break-words">
-                {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             </div>
           )}
@@ -779,7 +779,7 @@ const NoteCard = memo(function NoteCard({
           >
             {hasImage && !isLink && (
               <h3 className="text-[13px] font-semibold leading-tight break-words text-white drop-shadow line-clamp-3 pr-5">
-                {note.heading ?? (note.status === "failed" ? "Failed" : "Processing…")}
+                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
               </h3>
             )}
             {note.tasks && note.tasks.length > 0 && (
