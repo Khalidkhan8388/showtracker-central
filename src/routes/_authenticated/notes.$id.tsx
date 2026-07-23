@@ -3,7 +3,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useServerFn } from "@tanstack/react-start";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, Check, ImagePlus } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
