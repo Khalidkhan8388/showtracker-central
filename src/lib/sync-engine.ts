@@ -8,6 +8,22 @@ let currentUserId: string | null = null;
 let channel: ReturnType<typeof supabase.channel> | null = null;
 let pulling: Promise<void> | null = null;
 
+// Tombstones: ids the user just deleted locally. Any realtime or pull
+// write for these ids is ignored for TOMBSTONE_TTL_MS so a late-arriving
+// UPDATE (e.g. a background "processing → ready" event) or a racing
+// pullSince can't resurrect a deleted note.
+const tombstones = new Map<string, number>();
+const TOMBSTONE_TTL_MS = 60_000;
+function isTombstoned(id: string): boolean {
+  const ts = tombstones.get(id);
+  if (!ts) return false;
+  if (Date.now() - ts > TOMBSTONE_TTL_MS) {
+    tombstones.delete(id);
+    return false;
+  }
+  return true;
+}
+
 const LAST_SYNC = (uid: string) => `last_sync:${uid}`;
 
 /**
@@ -60,8 +76,10 @@ async function pullSince(uid: string): Promise<void> {
       const { data, error } = await q;
       if (error || !data) return;
       if (data.length > 0) {
-        const rows = data.map((r) => normalizeRow(r as Record<string, unknown>));
-        await db.notes.bulkPut(rows);
+        const rows = data
+          .map((r) => normalizeRow(r as Record<string, unknown>))
+          .filter((r) => !isTombstoned(r.id));
+        if (rows.length > 0) await db.notes.bulkPut(rows);
         const newest = rows.reduce((a, r) => (r.updated_at > a ? r.updated_at : a), since ?? "");
         if (newest) await db.meta.put({ key: LAST_SYNC(uid), value: newest });
       }
@@ -81,10 +99,14 @@ function attachRealtime(uid: string) {
       async (payload) => {
         if (payload.eventType === "DELETE") {
           const oldRow = payload.old as { id?: string };
-          if (oldRow?.id) await db.notes.delete(oldRow.id);
+          if (oldRow?.id) {
+            tombstones.set(oldRow.id, Date.now());
+            await db.notes.delete(oldRow.id);
+          }
           return;
         }
         const row = normalizeRow(payload.new as Record<string, unknown>);
+        if (isTombstoned(row.id)) return;
         await db.notes.put(row);
         const cur = await db.meta.get(LAST_SYNC(uid));
         if (!cur || row.updated_at > cur.value) {
@@ -111,6 +133,8 @@ export async function patchLocalNote(id: string, patch: Partial<LocalNote>): Pro
 }
 
 export async function deleteLocalNotes(ids: string[]): Promise<void> {
+  const now = Date.now();
+  for (const id of ids) tombstones.set(id, now);
   await db.notes.bulkDelete(ids);
 }
 
