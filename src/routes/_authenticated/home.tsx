@@ -456,6 +456,7 @@ function Home() {
                           hideNoteHeading
                           compact
                           onToggleDone={() => onToggle(t.noteId, t.id)}
+                          onPin={() => onPinTask(t.noteId, t.id, !!t.pinned)}
                           onLongPress={() => toggleTaskSel(key)}
                           onSelectTap={() => toggleTaskSel(key)}
                         />
