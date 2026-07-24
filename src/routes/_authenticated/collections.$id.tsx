@@ -1068,6 +1068,10 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
         </p>
       </div>
 
+      {/* Watched shelf */}
+      <WatchedShelf members={members} />
+
+
       {stats.hasMovies && (
         <>
           <Header icon={<Film className="h-3.5 w-3.5 text-muted-foreground" />} title="Movies" />
