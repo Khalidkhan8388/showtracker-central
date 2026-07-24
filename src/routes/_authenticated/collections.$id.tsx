@@ -39,6 +39,9 @@ function CollectionDetail() {
   const notes = useLocalNotes();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [removing, setRemoving] = useState(false);
+  const [removeSel, setRemoveSel] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
   const [view, setView] = useState<"list" | "grid">(() => {
