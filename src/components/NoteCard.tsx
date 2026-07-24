@@ -206,22 +206,21 @@ export const NoteCard = memo(function NoteCard({
       style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${isProcessing ? "analyzing-shimmer" : ""}`}
     >
-      {isSquareLike && !isText && hasImage && !isLink && (
-        <>
+      {isImageCard && (
+        <div className="relative -mx-5 -mt-5 mb-1 overflow-hidden">
           <img
             src={effectiveThumb}
             alt=""
             loading="lazy"
             decoding="async"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            className="pointer-events-none block h-40 w-full object-cover"
           />
-          <div className="pointer-events-none absolute inset-0 scrim-t" />
           {imageCount > 1 && (
             <div className="absolute left-2 top-2 z-10 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               +{imageCount - 1}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {selectMode && (
