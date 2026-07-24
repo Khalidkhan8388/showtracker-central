@@ -235,34 +235,29 @@ export const FeedNoteCard = memo(function FeedNoteCard({
 
       {isVoiceTile ? (
         <>
-          <div className="relative z-10 flex items-center gap-2">
-            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground/10">
-              <Mic className="h-3 w-3 text-foreground" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Mic className="h-3 w-3" />
+              <span className="text-[10px] font-semibold uppercase tracking-[0.14em]">Voice</span>
             </div>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Voice</span>
             {note.duration_seconds != null && (
-              <span className="ml-auto tabular-nums text-[11px] font-medium text-foreground/80">
+              <span className="tabular-nums text-[10px] text-muted-foreground">
                 {formatDur(note.duration_seconds)}
               </span>
             )}
           </div>
-          <h3 className="relative z-10 font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground pr-5">
+          <h3 className="relative z-10 mt-3 font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground pr-5">
             {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
           </h3>
-          <div className="relative z-10 mt-auto flex flex-col gap-1.5">
+          <div className="relative z-10 mt-auto flex flex-col gap-3">
             <VoiceWaveform seed={note.id} />
-            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
-              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
-            </div>
+            <span className="text-[10px] text-muted-foreground">
+              {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+            </span>
           </div>
         </>
       ) : isLinkTile ? (
+
         <>
           <div className="relative w-full bg-white dark:bg-white/95">
             <img
