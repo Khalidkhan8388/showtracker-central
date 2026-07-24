@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/theme";
+import { CompletionCelebration } from "../components/CompletionCelebration";
 
 
 function NotFoundComponent() {
@@ -123,6 +124,7 @@ function RootComponent() {
       <ThemeProvider>
         <Outlet />
         <Toaster />
+        <CompletionCelebration />
       </ThemeProvider>
     </QueryClientProvider>
   );
