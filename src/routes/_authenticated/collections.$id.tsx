@@ -216,12 +216,7 @@ function CollectionDetail() {
           )}
           <button
             type="button"
-            onClick={async () => {
-              if (confirm(`Delete "${collection.title}"? Memories inside won't be deleted.`)) {
-                await deleteCollection(id);
-                navigate({ to: "/collections" });
-              }
-            }}
+            onClick={() => setConfirmDelete(true)}
             aria-label="Delete collection"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
           >
