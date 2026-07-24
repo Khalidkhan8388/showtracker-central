@@ -1341,15 +1341,18 @@ function BulkPillBtn({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-40 ${
-        danger ? "bg-red-500 text-white" : "bg-background text-foreground"
+      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:pointer-events-none disabled:opacity-40 ${
+        danger
+          ? "text-destructive hover:bg-destructive/10"
+          : "text-foreground hover:bg-muted"
       }`}
     >
-      {icon}
+      <span className={danger ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
       {label}
     </button>
   );
 }
+
 
 function MediaListRow({
   note,
