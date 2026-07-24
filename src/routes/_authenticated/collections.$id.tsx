@@ -972,7 +972,12 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
           {fmtMinutes(stats.totals.mins)}
         </p>
         <p className="mt-2 text-[12px] opacity-80">
-          Across {stats.movies.watched} movie{stats.movies.watched === 1 ? "" : "s"} · {stats.shows.epsWatched} episode{stats.shows.epsWatched === 1 ? "" : "s"}
+          {(() => {
+            const parts: string[] = [];
+            if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
+            if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
+            return parts.length ? `Across ${parts.join(" · ")}` : "Nothing watched yet";
+          })()}
         </p>
       </div>
 
@@ -990,6 +995,13 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
               value={`${stats.movies.watchlist}`}
               sub={stats.movies.pendingMins > 0 ? `~${fmtMinutes(stats.movies.pendingMins)} to go` : "Nothing queued"}
             />
+            {stats.movies.upcoming > 0 && (
+              <StatTile
+                label="Upcoming"
+                value={`${stats.movies.upcoming}`}
+                sub={stats.movies.upcomingMins > 0 ? `~${fmtMinutes(stats.movies.upcomingMins)} unreleased` : "Not yet released"}
+              />
+            )}
             {stats.movies.dropped > 0 && (
               <StatTile label="Dropped" value={`${stats.movies.dropped}`} sub="Not counted below" />
             )}
