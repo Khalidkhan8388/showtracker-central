@@ -326,7 +326,7 @@ function ResizableImage({
           decoding="async"
           className="h-auto w-full select-none rounded-xl"
           draggable={blockIndex !== undefined}
-          onDragStart={(e) => {
+          onDragStart={(e: React.DragEvent<HTMLImageElement>) => {
             if (blockIndex !== undefined) {
               e.dataTransfer.setData("text/block-index", String(blockIndex));
               e.dataTransfer.effectAllowed = "move";
