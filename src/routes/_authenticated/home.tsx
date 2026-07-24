@@ -979,7 +979,10 @@ const NoteCard = memo(function NoteCard({
   } else if (isMasonry) {
     sizing = hasImage && !isLink && !isText
       ? "flex aspect-[4/5] w-full flex-col gap-2"
-      : "flex w-full flex-col gap-3 min-h-[7rem]";
+      : isText
+        ? "flex w-full flex-col gap-2"
+        : "flex w-full flex-col gap-3 min-h-[7rem]";
+
   } else if (fullWidth) {
     sizing = "flex aspect-square w-full flex-col gap-3";
   } else {
