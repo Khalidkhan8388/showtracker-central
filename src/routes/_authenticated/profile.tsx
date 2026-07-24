@@ -34,6 +34,29 @@ function ProfilePage() {
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
+  const [autoOpenShare, setAutoOpenShare] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("share-auto-open") === "1";
+  });
+  function toggleAutoOpenShare(next: boolean) {
+    setAutoOpenShare(next);
+    localStorage.setItem("share-auto-open", next ? "1" : "0");
+    // Persist to IndexedDB so the service worker can read it during a share POST.
+    try {
+      const openReq = indexedDB.open("braintape-share", 2);
+      openReq.onupgradeneeded = () => {
+        const db = openReq.result;
+        if (!db.objectStoreNames.contains("inbox")) db.createObjectStore("inbox", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings");
+      };
+      openReq.onsuccess = () => {
+        const db = openReq.result;
+        if (!db.objectStoreNames.contains("settings")) { db.close(); return; }
+        const tx = db.transaction("settings", "readwrite");
+        tx.objectStore("settings").put(next ? "open" : "silent", "share-mode");
+      };
+    } catch {}
+  }
 
 
   async function confirmDelete() {
@@ -184,6 +207,35 @@ function ProfilePage() {
           </span>
         </button>
 
+      </section>
+
+      {/* Sharing */}
+      <section className="px-4 pt-8">
+        <SectionTitle>Sharing</SectionTitle>
+        <button
+          type="button"
+          onClick={() => toggleAutoOpenShare(!autoOpenShare)}
+          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px]">Auto-open after sharing</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">
+              {autoOpenShare
+                ? "Sharing a screenshot or file opens Braintape to review it."
+                : "Sharing saves silently in the background."}
+            </div>
+          </div>
+          <span
+            role="switch"
+            aria-checked={autoOpenShare}
+            className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${autoOpenShare ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              style={{ transform: autoOpenShare ? "translateX(20px)" : "translateX(0)" }}
+            />
+          </span>
+        </button>
       </section>
 
 
