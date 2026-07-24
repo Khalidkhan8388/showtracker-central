@@ -294,7 +294,13 @@ function CollectionDetail() {
             <div className="mb-3 flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => setPicking(true)}
+                onClick={() => {
+                  if (hasMedia) {
+                    navigate({ to: "/search", search: { tab: "media" } });
+                  } else {
+                    setPicking(true);
+                  }
+                }}
                 className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground active:opacity-70"
               >
                 <Plus className="h-4 w-4" />
