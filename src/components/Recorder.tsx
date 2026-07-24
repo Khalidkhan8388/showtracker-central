@@ -211,11 +211,16 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     setTextOpen(false);
     setBusy(true);
     try {
+      // Extract any `local://images/...` paths embedded in the body so the
+      // note's `image_paths` gets populated — powers home/collection thumbnails.
+      const imagePaths = Array.from(
+        body.matchAll(/!\[[^\]]*\]\((local:\/\/images\/[^)\s]+)\)/g),
+      ).map((m) => m[1]);
       await saveTextFn({
         data: {
           heading,
           body,
-          imagePaths: [],
+          imagePaths,
           sourceUrl: null,
         },
       });
