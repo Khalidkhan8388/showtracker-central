@@ -73,7 +73,9 @@ export function Markdown({ children, className = "" }: { children: string; class
             }
             return <a {...props} target="_blank" rel="noreferrer">{children}</a>;
           },
+          img: (props) => <LocalImg {...(props as any)} />,
         }}
+
 
       >
         {children}
