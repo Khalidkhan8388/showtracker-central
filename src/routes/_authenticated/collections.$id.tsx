@@ -551,7 +551,7 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
@@ -559,23 +559,102 @@ function CollectionDetail() {
             >
               Cancel
             </button>
-            <span className="text-[12px] tabular-nums opacity-70">{removeSel.size} selected</span>
-            <button
-              type="button"
-              disabled={removeSel.size === 0}
-              onClick={async () => {
-                if (removeSel.size === 0) return;
-                await removeNotesFromCollection(id, Array.from(removeSel));
-                setRemoving(false);
-                setRemoveSel(new Set());
-              }}
-              className="rounded-full bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground disabled:opacity-40"
-            >
-              Remove
-            </button>
+            <span className="px-1 text-[12px] tabular-nums opacity-70">{removeSel.size}</span>
+            {hasMedia ? (
+              <>
+                <BulkPillBtn
+                  icon={<Eye className="h-3.5 w-3.5" />}
+                  label="Watched"
+                  disabled={removeSel.size === 0}
+                  onClick={async () => {
+                    for (const nid of removeSel) await setWatchStatus(nid, "watched");
+                    setRemoving(false); setRemoveSel(new Set());
+                  }}
+                />
+                <BulkPillBtn
+                  icon={<PlayCircle className="h-3.5 w-3.5" />}
+                  label="Watching"
+                  disabled={removeSel.size === 0}
+                  onClick={async () => {
+                    for (const nid of removeSel) await setWatchStatus(nid, "watching");
+                    setRemoving(false); setRemoveSel(new Set());
+                  }}
+                />
+                <BulkPillBtn
+                  icon={<XCircle className="h-3.5 w-3.5" />}
+                  label="Dropped"
+                  disabled={removeSel.size === 0}
+                  onClick={async () => {
+                    for (const nid of removeSel) await setWatchStatus(nid, "dropped");
+                    setRemoving(false); setRemoveSel(new Set());
+                  }}
+                />
+                <BulkPillBtn
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  label="Delete"
+                  danger
+                  disabled={removeSel.size === 0}
+                  onClick={() => setConfirmBulkDelete(true)}
+                />
+              </>
+            ) : (
+              <>
+                <BulkPillBtn
+                  icon={<Pin className="h-3.5 w-3.5" />}
+                  label={allSelectedPinned ? "Unpin" : "Pin"}
+                  disabled={removeSel.size === 0}
+                  onClick={async () => {
+                    const pin = !allSelectedPinned;
+                    for (const nid of removeSel) await pinNote({ data: { noteId: nid, pinned: pin } });
+                    setRemoving(false); setRemoveSel(new Set());
+                  }}
+                />
+                <BulkPillBtn
+                  icon={<X className="h-3.5 w-3.5" />}
+                  label="Remove"
+                  disabled={removeSel.size === 0}
+                  onClick={async () => {
+                    await removeNotesFromCollection(id, Array.from(removeSel));
+                    setRemoving(false); setRemoveSel(new Set());
+                  }}
+                />
+                <BulkPillBtn
+                  icon={<Trash2 className="h-3.5 w-3.5" />}
+                  label="Delete"
+                  danger
+                  disabled={removeSel.size === 0}
+                  onClick={() => setConfirmBulkDelete(true)}
+                />
+              </>
+            )}
           </div>
         </div>
       )}
+
+      <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {removeSel.size} {removeSel.size === 1 ? "memory" : "memories"}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              They'll be moved to trash and removed from every collection.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await deleteNotes({ data: { noteIds: Array.from(removeSel) } });
+                setConfirmBulkDelete(false);
+                setRemoving(false);
+                setRemoveSel(new Set());
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
 
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
