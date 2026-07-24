@@ -1,29 +1,5 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { useEffect, useState } from "react";
-import { getCachedPhotoUrl, getPhotoUrl } from "@/lib/photo-cache";
-
-function LocalImg(props: React.ImgHTMLAttributes<HTMLImageElement>) {
-  const src = (props.src as string) || "";
-  const isLocal = src.startsWith("local://");
-  const isStaleBlob = src.startsWith("blob:");
-  const [resolved, setResolved] = useState<string>(() =>
-    isLocal ? getCachedPhotoUrl(src) ?? "" : isStaleBlob ? "" : src,
-  );
-  useEffect(() => {
-    if (isStaleBlob) { setResolved(""); return; }
-    if (!isLocal) { setResolved(src); return; }
-    const cached = getCachedPhotoUrl(src);
-    if (cached) { setResolved(cached); return; }
-    let cancelled = false;
-    getPhotoUrl(src).then((u) => { if (!cancelled) setResolved(u); }).catch(() => {});
-    return () => { cancelled = true; };
-  }, [src, isLocal, isStaleBlob]);
-  if (!resolved) return null;
-  return <img {...props} src={resolved} />;
-}
-
-
 
 export function Markdown({ children, className = "" }: { children: string; className?: string }) {
   return (
@@ -76,9 +52,7 @@ export function Markdown({ children, className = "" }: { children: string; class
             }
             return <a {...props} target="_blank" rel="noreferrer">{children}</a>;
           },
-          img: (props) => <LocalImg {...(props as any)} />,
         }}
-
 
       >
         {children}
