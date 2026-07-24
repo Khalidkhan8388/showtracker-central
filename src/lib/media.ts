@@ -33,20 +33,6 @@ export const WATCH_COLORS: Record<WatchStatus, string> = {
   dropped: "bg-neutral-500 text-white",
 };
 
-function fireCompletion(m: LocalMedia) {
-  if (typeof window === "undefined") return;
-  window.dispatchEvent(
-    new CustomEvent("braintape:media-completed", {
-      detail: {
-        tmdb_id: m.tmdb_id,
-        type: m.type,
-        title: m.title,
-        poster_path: m.poster_path,
-      },
-    }),
-  );
-}
-
 async function patchMedia(noteId: string, patch: Partial<LocalMedia>) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
@@ -57,14 +43,11 @@ async function patchMedia(noteId: string, patch: Partial<LocalMedia>) {
 export async function setWatchStatus(noteId: string, status: WatchStatus | null) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
-  const wasWatched = n.media.watch_status === "watched";
   await patchMedia(noteId, {
     watch_status: status,
     watched_at: status === "watched" ? new Date().toISOString() : n.media.watched_at,
   });
-  if (status === "watched" && !wasWatched) fireCompletion(n.media);
 }
-
 
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
   const n = await db.notes.get(noteId);
@@ -75,7 +58,6 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
   if (shouldBe) set.add(key);
   else set.delete(key);
   const arr = Array.from(set);
-  const prevCount = n.media.watched_episodes.length;
   // Auto-promote status
   let status: WatchStatus | null = n.media.watch_status;
   const total = totalEpisodes(n.media);
@@ -87,7 +69,6 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
     watch_status: status,
     watched_at: arr.length >= total && total > 0 ? new Date().toISOString() : n.media.watched_at,
   });
-  if (total > 0 && arr.length >= total && prevCount < total) fireCompletion(n.media);
 }
 
 export async function toggleSeasonWatched(noteId: string, season: number, watched: boolean) {
@@ -103,7 +84,6 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
   }
   const arr = Array.from(set);
   const total = totalEpisodes(n.media);
-  const prevCount = n.media.watched_episodes.length;
   let status: WatchStatus | null = n.media.watch_status;
   if (arr.length > 0 && total > 0) {
     status = arr.length >= total ? "watched" : (status && status !== "watchlist" ? status : "watching");
@@ -112,9 +92,7 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
     watched_episodes: arr,
     watch_status: status,
   });
-  if (total > 0 && arr.length >= total && prevCount < total) fireCompletion(n.media);
 }
-
 
 /** Cheap client-side check: is this URL plausibly a movie/TV link? */
 export function looksLikeMediaUrl(url: string): boolean {

@@ -413,37 +413,3 @@ input[type="search"]::-webkit-search-decoration {
   background: var(--scrim-fg);
 }
 
-
-/* Completion celebration — poster/logos rain, tap to explode */
-@keyframes cc-fall {
-  0% {
-    transform: translateY(-20vh) rotate(calc(var(--cc-rot) * 0.3)) scale(var(--cc-scale));
-    opacity: 0;
-  }
-  10% { opacity: 1; }
-  85% {
-    transform: translateY(78vh) rotate(var(--cc-rot)) scale(var(--cc-scale));
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(78vh) rotate(var(--cc-rot)) scale(var(--cc-scale));
-    opacity: 1;
-  }
-}
-.cc-fall {
-  animation-name: cc-fall;
-  animation-timing-function: cubic-bezier(0.28, 0.65, 0.48, 1);
-  animation-fill-mode: forwards;
-  will-change: transform, opacity;
-}
-@keyframes cc-explode {
-  0% { transform: translateY(78vh) rotate(var(--cc-rot)) scale(var(--cc-scale)); opacity: 1; filter: blur(0); }
-  40% { transform: translateY(72vh) rotate(calc(var(--cc-rot) + 30deg)) scale(calc(var(--cc-scale) * 1.35)); opacity: 1; }
-  100% { transform: translateY(60vh) rotate(calc(var(--cc-rot) + 120deg)) scale(calc(var(--cc-scale) * 0.2)); opacity: 0; filter: blur(6px); }
-}
-.cc-explode {
-  animation: cc-explode 550ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
-}
-@media (prefers-reduced-motion: reduce) {
-  .cc-fall, .cc-explode { animation: none !important; opacity: 0 !important; }
-}
