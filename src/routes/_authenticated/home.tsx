@@ -423,7 +423,6 @@ function Home() {
                 {derived.latest && (
                   <NoteCard
                     note={derived.latest}
-                    variant="hero"
                     thumbUrl={thumbs[derived.latest.id]}
                     selected={selectedNotes.has(derived.latest.id)}
                     selectMode={noteSelectMode}
@@ -434,21 +433,18 @@ function Home() {
                 )}
               </>
             ) : (
-              <>
-                {derived.latest && (
-                  <NoteCard
-                    note={derived.latest}
-                    variant="hero"
-                    thumbUrl={thumbs[derived.latest.id]}
-                    selected={selectedNotes.has(derived.latest.id)}
-                    selectMode={noteSelectMode}
-                    onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                    onLongPress={() => toggleNoteSel(derived.latest.id)}
-                    onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                  />
-                )}
-                <ReminderHero />
-              </>
+              derived.latest && (
+                <NoteCard
+                  note={derived.latest}
+                  variant="hero"
+                  thumbUrl={thumbs[derived.latest.id]}
+                  selected={selectedNotes.has(derived.latest.id)}
+                  selectMode={noteSelectMode}
+                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                  onLongPress={() => toggleNoteSel(derived.latest.id)}
+                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                />
+              )
             )}
 
             {derived.suggested.length > 0 && (
