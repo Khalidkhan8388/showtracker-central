@@ -59,6 +59,22 @@ self.addEventListener('activate', (event) => {
   })());
 });
 
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const target = event.notification.data?.url || '/home';
+  event.waitUntil((async () => {
+    const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const c of wins) {
+      if (new URL(c.url).origin === self.location.origin) {
+        try { await c.focus(); return; } catch {}
+      }
+    }
+    try { await self.clients.openWindow(target); } catch {}
+  })());
+});
+
+
+
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
