@@ -308,7 +308,7 @@ export const NoteCard = memo(function NoteCard({
             <>
 
               <div className="relative z-10 flex items-start gap-1.5 pr-5">
-                <h3 className="text-[20px] font-bold leading-[1.15] tracking-tight break-words line-clamp-2 text-foreground">
+                <h3 className="font-serif text-[22px] font-normal leading-[1.15] tracking-tight break-words line-clamp-2 text-foreground">
                   {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
                 </h3>
               </div>
