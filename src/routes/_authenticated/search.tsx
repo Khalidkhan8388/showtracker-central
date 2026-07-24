@@ -661,10 +661,10 @@ function SearchPage() {
           <div className="columns-2 gap-3 [column-fill:_balance]">
             {filteredNotes.map((n) => (
               <div key={n.id} className="mb-3 break-inside-avoid">
-                <CaptureCard
-                  note={n}
-                  thumb={thumbs[n.id]}
-                  q={query}
+                <FeedNoteCard
+                  note={n as any}
+                  variant="masonry"
+                  thumbUrl={thumbs[n.id]}
                   onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
                 />
               </div>
