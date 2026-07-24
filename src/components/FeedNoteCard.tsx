@@ -314,7 +314,15 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             </p>
           )}
           <div className="relative z-10 mt-auto flex flex-col gap-1.5">
-            <VoiceWaveform seed={note.id} />
+            <div className="flex items-center gap-2">
+              {note.audio_path ? (
+                <InlinePlayButton audioPath={note.audio_path} />
+              ) : null}
+              <div className="min-w-0 flex-1">
+                <VoiceWaveform seed={note.id} />
+              </div>
+            </div>
+
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.tasks && note.tasks.length > 0 && (
