@@ -9,7 +9,12 @@ export function Markdown({ children, className = "" }: { children: string; class
     >
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
-        urlTransform={(url) => (url && url.startsWith("local://") ? url : (url ?? ""))}
+        urlTransform={(url) => {
+          if (!url) return "";
+          if (url.startsWith("local://")) return url;
+          if (/^(https?:|mailto:|tel:|data:|#|\/)/i.test(url)) return url;
+          return "";
+        }}
         components={{
           img: ({ node, ...props }) => <LocalImage {...(props as React.ImgHTMLAttributes<HTMLImageElement>)} />,
           a: ({ node, children, ...props }) => {
