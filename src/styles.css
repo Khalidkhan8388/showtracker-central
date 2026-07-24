@@ -116,6 +116,11 @@
   --scrim-mid: rgba(0, 0, 0, 0.4);
   --scrim-fg: #ffffff;
 
+  /* Reminder accent — yellow, works on both light/dark */
+  --reminder: #facc15;         /* yellow-400 */
+  --reminder-strong: #eab308;  /* yellow-500 */
+  --reminder-foreground: #1a1300;
+
 
 }
 

@@ -127,6 +127,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
+    // Start the reminder scheduler regardless of preview/production so
+    // reminders fire even before the SW is registered.
+    void import("@/lib/reminders").then((m) => m.startReminderScheduler());
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     if (typeof window === "undefined") return;
     // Never register the SW inside Lovable preview / iframe / dev — it keeps

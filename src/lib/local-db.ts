@@ -8,6 +8,7 @@ export type LocalTask = {
   done: boolean;
   pinned?: boolean;
   pending?: boolean;
+  reminder_at?: string | null;
 };
 
 export type WatchStatus = "watchlist" | "watching" | "watched" | "dropped";
@@ -74,6 +75,8 @@ export type LocalNote = {
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
+  reminder_at?: string | null;
+  hidden_episode_reminders?: string[];
 };
 
 export type MetaRow = { key: string; value: string };
@@ -135,6 +138,14 @@ class BraintapeDB extends Dexie {
     // v6: add optional `media` payload on notes (movies / TV shows via TMDB).
     // No new index — schema string only changes if we add one, so keep identical.
     this.version(6).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
+    // v7: add reminder_at + hidden_episode_reminders. Same schema string; index unchanged.
+    this.version(7).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
       meta: "key",
       photos: "path, cachedAt, size",

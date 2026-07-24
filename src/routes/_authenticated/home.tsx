@@ -14,6 +14,7 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
+import { ReminderHero } from "@/components/ReminderHero";
 
 
 
@@ -411,6 +412,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
+            <ReminderHero />
             {derived.latest && (
               <NoteCard
                 note={derived.latest}
