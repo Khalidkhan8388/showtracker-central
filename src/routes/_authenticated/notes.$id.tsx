@@ -361,13 +361,13 @@ function NoteDetail() {
     if (files.length === 0) return;
     setUploadingImg(true);
     try {
-      const urls: string[] = [];
+      const paths: string[] = [];
       for (const f of files) {
-        const path = await storeLocalPhoto(f, f.type);
-        const url = await getPhotoUrl(path);
-        if (url) urls.push(url);
+        // Store the raw path — LocalImage resolves it at render time so the
+        // reference survives reloads (blob: URLs don't).
+        paths.push(await storeLocalPhoto(f, f.type));
       }
-      appendToBody(urls.map((u) => `![](${u})`).join("\n"));
+      appendToBody(paths.map((p) => `![](${p})`).join("\n"));
     } catch (err: any) {
       toast.error(err?.message ?? "Could not attach image");
     } finally {
