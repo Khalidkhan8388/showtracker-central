@@ -300,35 +300,27 @@ export const NoteCard = memo(function NoteCard({
         </div>
       ) : isText ? (
         <>
-          {hasImage && (
-            <div className="relative z-10 -mx-1 overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
-              <img
-                src={effectiveThumb}
-                alt=""
-                loading="lazy"
-                decoding="async"
-                className="h-40 w-full object-cover"
-              />
-              {imageCount > 1 && (
-                <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                  +{imageCount - 1}
-                </div>
-              )}
-            </div>
-          )}
           <div className="relative z-10 flex items-start gap-1.5 pr-5">
-            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
+            <h3 className="font-serif text-[17px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
               {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
             </h3>
           </div>
           {previewBody && (
-            <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "6rem" : "16rem" }}>
-              <Markdown className="!text-[12px] !leading-snug [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1 [&_img]:!rounded-lg [&_img]:!max-h-24 [&_img]:!w-auto [&_pre]:hidden [&_hr]:hidden">
-                {previewBody}
+            <div
+              className="relative z-10 flex-1 overflow-hidden text-foreground/75 [mask-image:linear-gradient(to_bottom,black_65%,transparent)]"
+            >
+              <Markdown className="!text-[13px] !leading-[1.55] [&>*:first-child]:!mt-0 [&_h1]:!text-[15px] [&_h1]:!font-semibold [&_h1]:!mt-2 [&_h1]:!mb-1 [&_h2]:!text-[14px] [&_h2]:!font-semibold [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h3]:!text-[13px] [&_h3]:!font-semibold [&_h3]:!mt-1.5 [&_h3]:!mb-0.5 [&_p]:!my-1.5 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_li]:!my-0.5 [&_img]:!my-2 [&_img]:!rounded-lg [&_img]:!w-full [&_img]:!max-h-48 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden [&_blockquote]:!my-1.5 [&_blockquote]:!pl-3 [&_blockquote]:!border-l-2 [&_blockquote]:!border-foreground/20">
+                {previewBody ?? ""}
               </Markdown>
             </div>
           )}
+          {!previewBody && note.summary && (
+            <p className="relative z-10 text-[13px] leading-snug text-muted-foreground line-clamp-3">
+              {note.summary}
+            </p>
+          )}
         </>
+
       ) : (
         <>
           {isLink && linkHost && (
