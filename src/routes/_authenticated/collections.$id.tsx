@@ -88,12 +88,23 @@ function CollectionDetail() {
     return c;
   }, [mediaMembers]);
   const members = useMemo(() => {
-    if (!hasMedia || statusFilter === "all") return allMembers;
-    return allMembers.filter((n) => {
-      const m = (n as any).media;
-      return m && m.watch_status === statusFilter;
-    });
+    const base = !hasMedia || statusFilter === "all"
+      ? allMembers
+      : allMembers.filter((n) => {
+          const m = (n as any).media;
+          return m && m.watch_status === statusFilter;
+        });
+    // pinned first, stable
+    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)));
   }, [allMembers, hasMedia, statusFilter]);
+  const allSelectedPinned = useMemo(() => {
+    if (removeSel.size === 0) return false;
+    for (const id of removeSel) {
+      const n = allMembers.find((x) => x.id === id);
+      if (!n?.pinned) return false;
+    }
+    return true;
+  }, [removeSel, allMembers]);
   const candidates = useMemo(
     () => (notes ?? []).filter((n) => !memberIds.has(n.id) && !n.deleted_at && n.heading !== "__custom__"),
     [notes, memberIds],
