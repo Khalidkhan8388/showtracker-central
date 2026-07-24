@@ -1,13 +1,11 @@
-import { memo, useEffect, useRef, useState } from "react";
+import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Play, Pause } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
-import { getAudioUrl } from "@/lib/audio-cache";
 import type { LocalMedia } from "@/lib/local-db";
-
 
 export type FeedNote = {
   id: string;
@@ -21,10 +19,8 @@ export type FeedNote = {
   image_paths: string[] | null;
   source_url: string | null;
   transcript: string | null;
-  audio_path?: string | null;
   media?: LocalMedia | null;
 };
-
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
 
@@ -56,61 +52,6 @@ function VoiceWaveform({ seed, bars = 36 }: { seed: string; bars?: number }) {
     </div>
   );
 }
-
-function InlinePlayButton({ audioPath }: { audioPath: string }) {
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [playing, setPlaying] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  useEffect(() => {
-    return () => {
-      const a = audioRef.current;
-      if (a) { a.pause(); audioRef.current = null; }
-    };
-  }, []);
-
-  const toggle = async (e: React.MouseEvent | React.PointerEvent) => {
-    e.stopPropagation();
-    e.preventDefault();
-    let a = audioRef.current;
-    if (a && !a.paused) {
-      a.pause();
-      setPlaying(false);
-      return;
-    }
-    if (!a) {
-      setLoading(true);
-      try {
-        const url = await getAudioUrl(audioPath);
-        if (!url) { setLoading(false); return; }
-        a = new Audio(url);
-        a.onended = () => setPlaying(false);
-        a.onpause = () => setPlaying(false);
-        a.onplay = () => setPlaying(true);
-        audioRef.current = a;
-      } finally {
-        setLoading(false);
-      }
-    }
-    try { await a.play(); } catch {}
-  };
-
-  return (
-    <button
-      type="button"
-      aria-label={playing ? "Pause voice note" : "Play voice note"}
-      onClick={toggle}
-      onPointerDown={(e) => e.stopPropagation()}
-      onPointerUp={(e) => e.stopPropagation()}
-      onTouchStart={(e) => e.stopPropagation()}
-      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-sm transition-transform active:scale-95"
-    >
-      {playing ? <Pause className="h-4 w-4" strokeWidth={2.5} /> : <Play className="h-4 w-4 translate-x-[1px]" strokeWidth={2.5} fill="currentColor" />}
-      {loading && <span className="sr-only">Loading</span>}
-    </button>
-  );
-}
-
 
 export const FeedNoteCard = memo(function FeedNoteCard({
   note,
@@ -314,15 +255,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             </p>
           )}
           <div className="relative z-10 mt-auto flex flex-col gap-1.5">
-            <div className="flex items-center gap-2">
-              {note.audio_path ? (
-                <InlinePlayButton audioPath={note.audio_path} />
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <VoiceWaveform seed={note.id} />
-              </div>
-            </div>
-
+            <VoiceWaveform seed={note.id} />
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.tasks && note.tasks.length > 0 && (
