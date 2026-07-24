@@ -1255,10 +1255,11 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
             <img
               src={logoUrl}
               alt={title}
-              className="max-h-[34px] max-w-[160px] object-contain"
+              className="max-h-[26px] max-w-[132px] object-contain"
               style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.85)) brightness(1.1) contrast(1.05)" }}
               loading="lazy"
             />
+
           </div>
         ) : (
           <span
