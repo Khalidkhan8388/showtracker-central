@@ -828,3 +828,204 @@ function EpRow({ row, showDate }: { row: EpisodeRow; showDate?: boolean }) {
     </li>
   );
 }
+
+function fmtMinutes(mins: number): string {
+  if (!mins || mins < 1) return "0m";
+  const d = Math.floor(mins / (60 * 24));
+  const h = Math.floor((mins % (60 * 24)) / 60);
+  const m = Math.floor(mins % 60);
+  const parts: string[] = [];
+  if (d) parts.push(`${d}d`);
+  if (h) parts.push(`${h}h`);
+  if (m && !d) parts.push(`${m}m`);
+  return parts.join(" ") || `${m}m`;
+}
+
+type StatCard = { label: string; value: string; sub?: string | null };
+
+function MediaStats({ members }: { members: Array<{ id: string; heading: string | null; media?: LocalMedia | null }> }) {
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const movies = members.map((n) => n.media).filter((m): m is LocalMedia => !!m && m.type === "movie");
+    const shows = members.map((n) => n.media).filter((m): m is LocalMedia => !!m && m.type === "tv");
+
+    // Movie tallies
+    let moviesWatched = 0;
+    let moviesWatchlist = 0;
+    let moviesDropped = 0;
+    let moviesWatchedMins = 0;
+    let moviesPendingMins = 0;
+    for (const m of movies) {
+      const rt = Math.max(0, m.runtime ?? 0);
+      if (m.watch_status === "watched") {
+        moviesWatched++;
+        moviesWatchedMins += rt;
+      } else if (m.watch_status === "dropped") {
+        moviesDropped++;
+      } else {
+        // watchlist / watching / null → count as pending to watch
+        moviesWatchlist++;
+        moviesPendingMins += rt;
+      }
+    }
+
+    // TV tallies
+    let showsWatchlist = 0;
+    let showsWatching = 0;
+    let showsCompleted = 0;
+    let showsDropped = 0;
+    let epsWatched = 0;
+    let epsWatchedMins = 0;
+    let epsPending = 0; // aired, not watched
+    let epsPendingMins = 0;
+    let epsUpcoming = 0; // unaired
+    let epsUpcomingMins = 0;
+    for (const m of shows) {
+      switch (m.watch_status) {
+        case "watchlist": showsWatchlist++; break;
+        case "watching": showsWatching++; break;
+        case "watched": showsCompleted++; break;
+        case "dropped": showsDropped++; break;
+      }
+      const watched = new Set(m.watched_episodes);
+      const fallbackRt = Math.max(0, m.runtime ?? 0);
+      for (const s of m.seasons ?? []) {
+        for (const ep of s.episodes) {
+          const rt = Math.max(0, ep.runtime ?? fallbackRt);
+          const airedMs = ep.air_date ? new Date(ep.air_date).getTime() : null;
+          const aired = airedMs !== null && Number.isFinite(airedMs) && airedMs <= now;
+          if (watched.has(epKey(ep.season_number, ep.episode_number))) {
+            epsWatched++;
+            epsWatchedMins += rt;
+          } else if (aired) {
+            epsPending++;
+            epsPendingMins += rt;
+          } else if (airedMs !== null) {
+            epsUpcoming++;
+            epsUpcomingMins += rt;
+          }
+        }
+      }
+    }
+
+    const totalMinsWatched = moviesWatchedMins + epsWatchedMins;
+
+    return {
+      hasMovies: movies.length > 0,
+      hasShows: shows.length > 0,
+      totals: { count: members.length, mins: totalMinsWatched },
+      movies: {
+        total: movies.length,
+        watched: moviesWatched,
+        watchlist: moviesWatchlist,
+        dropped: moviesDropped,
+        watchedMins: moviesWatchedMins,
+        pendingMins: moviesPendingMins,
+      },
+      shows: {
+        total: shows.length,
+        watchlist: showsWatchlist,
+        watching: showsWatching,
+        completed: showsCompleted,
+        dropped: showsDropped,
+        epsWatched, epsWatchedMins,
+        epsPending, epsPendingMins,
+        epsUpcoming, epsUpcomingMins,
+      },
+    };
+  }, [members]);
+
+  const StatTile = ({ label, value, sub }: StatCard) => (
+    <div className="rounded-2xl bg-card p-3 ring-1 ring-border/60">
+      <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</p>
+      <p className="mt-1 text-[22px] font-bold leading-none tracking-tight text-foreground tabular-nums">{value}</p>
+      {sub && <p className="mt-1 text-[11px] text-muted-foreground">{sub}</p>}
+    </div>
+  );
+
+  const Header = ({ icon, title }: { icon: React.ReactNode; title: string }) => (
+    <div className="mb-2 mt-6 flex items-center gap-2 px-1">
+      {icon}
+      <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">{title}</h2>
+    </div>
+  );
+
+  return (
+    <div className="pb-24">
+      {/* Overall hero */}
+      <div className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">Time watched</p>
+        <p className="mt-1 text-[34px] font-bold leading-none tracking-tight tabular-nums">
+          {fmtMinutes(stats.totals.mins)}
+        </p>
+        <p className="mt-2 text-[12px] opacity-80">
+          Across {stats.movies.watched} movie{stats.movies.watched === 1 ? "" : "s"} · {stats.shows.epsWatched} episode{stats.shows.epsWatched === 1 ? "" : "s"}
+        </p>
+      </div>
+
+      {stats.hasMovies && (
+        <>
+          <Header icon={<Film className="h-3.5 w-3.5 text-muted-foreground" />} title="Movies" />
+          <div className="grid grid-cols-2 gap-2">
+            <StatTile
+              label="Watched"
+              value={`${stats.movies.watched}`}
+              sub={`of ${stats.movies.total} · ${fmtMinutes(stats.movies.watchedMins)}`}
+            />
+            <StatTile
+              label="Pending"
+              value={`${stats.movies.watchlist}`}
+              sub={stats.movies.pendingMins > 0 ? `~${fmtMinutes(stats.movies.pendingMins)} to go` : "Nothing queued"}
+            />
+            {stats.movies.dropped > 0 && (
+              <StatTile label="Dropped" value={`${stats.movies.dropped}`} sub="Not counted below" />
+            )}
+          </div>
+        </>
+      )}
+
+      {stats.hasShows && (
+        <>
+          <Header icon={<Tv className="h-3.5 w-3.5 text-muted-foreground" />} title="TV Shows" />
+          <div className="grid grid-cols-2 gap-2">
+            <StatTile
+              label="Episodes watched"
+              value={`${stats.shows.epsWatched}`}
+              sub={fmtMinutes(stats.shows.epsWatchedMins)}
+            />
+            <StatTile
+              label="Pending (aired)"
+              value={`${stats.shows.epsPending}`}
+              sub={stats.shows.epsPendingMins > 0 ? `~${fmtMinutes(stats.shows.epsPendingMins)} to catch up` : "All caught up"}
+            />
+            <StatTile
+              label="Upcoming"
+              value={`${stats.shows.epsUpcoming}`}
+              sub={stats.shows.epsUpcoming > 0 ? `~${fmtMinutes(stats.shows.epsUpcomingMins)} unaired` : "Nothing scheduled"}
+            />
+            <StatTile
+              label="Shows"
+              value={`${stats.shows.total}`}
+              sub={`${stats.shows.watching} watching · ${stats.shows.completed} done`}
+            />
+          </div>
+
+          {/* Shows status breakdown */}
+          <div className="mt-3 rounded-2xl bg-card p-3 ring-1 ring-border/60">
+            <p className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Show status</p>
+            <ul className="grid grid-cols-2 gap-y-1 text-[12px]">
+              <li className="flex items-center justify-between pr-3"><span className="text-muted-foreground">Watchlist</span><span className="font-semibold tabular-nums">{stats.shows.watchlist}</span></li>
+              <li className="flex items-center justify-between pr-3"><span className="text-muted-foreground">Watching</span><span className="font-semibold tabular-nums">{stats.shows.watching}</span></li>
+              <li className="flex items-center justify-between pr-3"><span className="text-muted-foreground">Completed</span><span className="font-semibold tabular-nums">{stats.shows.completed}</span></li>
+              <li className="flex items-center justify-between pr-3"><span className="text-muted-foreground">Dropped</span><span className="font-semibold tabular-nums">{stats.shows.dropped}</span></li>
+            </ul>
+          </div>
+        </>
+      )}
+
+      <p className="mt-6 flex items-center justify-center gap-1.5 text-[11px] text-muted-foreground">
+        <Clock className="h-3 w-3" /> Runtimes from TMDB · dropped items counted in totals
+      </p>
+    </div>
+  );
+}
