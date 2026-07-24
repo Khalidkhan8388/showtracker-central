@@ -309,8 +309,11 @@ function Home() {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
     const [latest, ...rest] = displayNotes;
-    const pinnedRest = rest.filter((n) => n.pinned);
-    const unpinnedRest = rest.filter((n) => !n.pinned);
+    // In "reminders" hero mode the latest note is not pulled out as a hero,
+    // it just flows into the strip like any other card.
+    const stripSource = heroMode === "reminders" ? displayNotes : rest;
+    const pinnedRest = stripSource.filter((n) => n.pinned);
+    const unpinnedRest = stripSource.filter((n) => !n.pinned);
     const stripIds = new Set<string>();
     const strip: Note[] = [];
     for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
@@ -346,7 +349,8 @@ function Home() {
       doneCount: doneT.length,
       hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
     };
-  }, [notes, hideMedia]);
+  }, [notes, hideMedia, heroMode]);
+
 
 
   return (
