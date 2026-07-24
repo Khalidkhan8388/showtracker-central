@@ -8,6 +8,7 @@ import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { MediaCard } from "@/components/MediaCard";
 import type { LocalMedia } from "@/lib/local-db";
+import { FeedNoteCard } from "@/components/FeedNoteCard";
 
 import {
   Search,
