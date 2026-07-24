@@ -551,21 +551,15 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div
-            className="pointer-events-auto flex max-w-[calc(100vw-2rem)] items-center gap-1 rounded-full border border-border/60 bg-card/85 p-1 pl-1 pr-1 shadow-[0_10px_40px_-10px_rgba(0,0,0,0.25)] backdrop-blur-xl backdrop-saturate-150 sheet-slide-up"
-          >
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
-              aria-label="Cancel selection"
-              className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground transition hover:bg-muted active:scale-95"
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
             >
-              <X className="h-4 w-4" />
+              Cancel
             </button>
-            <span className="min-w-[1.5rem] px-1 text-center text-[12px] font-semibold tabular-nums text-foreground">
-              {removeSel.size}
-            </span>
-            <span className="mx-0.5 h-5 w-px bg-border" aria-hidden />
+            <span className="px-1 text-[12px] tabular-nums opacity-70">{removeSel.size}</span>
             {hasMedia ? (
               <>
                 <BulkPillBtn
@@ -636,8 +630,6 @@ function CollectionDetail() {
           </div>
         </div>
       )}
-
-
 
       <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
         <AlertDialogContent>
@@ -1341,18 +1333,15 @@ function BulkPillBtn({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium transition active:scale-95 disabled:pointer-events-none disabled:opacity-40 ${
-        danger
-          ? "text-destructive hover:bg-destructive/10"
-          : "text-foreground hover:bg-muted"
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-40 ${
+        danger ? "bg-red-500 text-white" : "bg-background text-foreground"
       }`}
     >
-      <span className={danger ? "text-destructive" : "text-muted-foreground"}>{icon}</span>
+      {icon}
       {label}
     </button>
   );
 }
-
 
 function MediaListRow({
   note,
