@@ -451,10 +451,7 @@ function NoteDetail() {
   const taskTotal = note.tasks?.length ?? 0;
 
   const tags = noteTags(note as unknown as NoteLike);
-  const related = useMemo(
-    () => relatedNotes(note as unknown as NoteLike, (allLocal ?? []) as unknown as NoteLike[], 6),
-    [note, allLocal],
-  );
+  const related = relatedNotes(note as unknown as NoteLike, (allLocal ?? []) as unknown as NoteLike[], 6);
 
   async function onShare() {
     const url = typeof window !== "undefined" ? window.location.href : "";
