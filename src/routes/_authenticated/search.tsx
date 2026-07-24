@@ -461,7 +461,7 @@ function SearchPage() {
 
   const matchingTasks = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q || aiMode) return [];
+    if (!q || aiMode || tab !== "memories") return [];
     const out: Array<{ noteId: string; taskId: string; text: string; done: boolean; noteHeading: string | null }> = [];
     for (const n of notes) {
       if (activeTag && !(n.tags ?? []).includes(activeTag)) continue;
@@ -472,7 +472,7 @@ function SearchPage() {
       }
     }
     return out.slice(0, 20);
-  }, [notes, query, activeTag, aiMode]);
+  }, [notes, query, activeTag, aiMode, tab]);
 
   // Keep the top of the results visible above the keyboard while typing.
   useEffect(() => {
