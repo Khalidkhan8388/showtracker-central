@@ -393,6 +393,8 @@ function CollectionDetail() {
                   ))}
                 </div>
               )
+            ) : hasMedia && tvView === "stats" ? (
+              <MediaStats members={mediaMembers} />
             ) : hasTv && tvView === "episodes" ? (
               <EpisodeTracker members={mediaMembers} />
             ) : (
