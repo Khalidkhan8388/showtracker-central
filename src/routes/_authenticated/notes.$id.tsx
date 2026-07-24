@@ -31,6 +31,7 @@ type Note = {
   pinned: boolean;
   image_paths: string[] | null;
   source_url: string | null;
+  reminder_at?: string | null;
 };
 
 type LinkTarget = { id: string; heading: string };
