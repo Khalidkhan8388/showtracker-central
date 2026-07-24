@@ -1157,6 +1157,21 @@ type ShelfMember = { id: string; heading: string | null; media?: LocalMedia | nu
 
 function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
   const [open, setOpen] = useState<ShelfMember | null>(null);
+  const [style3D, setStyle3D] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("shelf-style") === "3d";
+  });
+  useEffect(() => {
+    function sync() {
+      setStyle3D(localStorage.getItem("shelf-style") === "3d");
+    }
+    window.addEventListener("braintape:pref-changed", sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener("braintape:pref-changed", sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   const watched = useMemo(() => {
     return members.filter((m) => {
@@ -1176,6 +1191,8 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
   if (watched.length === 0) return null;
 
+  const Tile = style3D ? Spine3DTile : SpineTile;
+
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-end justify-between px-1">
@@ -1187,9 +1204,9 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
       {/* Shelf row */}
       <div className="relative">
-        <div className="scrollbar-none flex items-end gap-[3px] overflow-x-auto px-1 pb-2 pt-1">
+        <div className={`scrollbar-none flex items-end overflow-x-auto px-2 pb-2 ${style3D ? "gap-0 pt-4" : "gap-[3px] pt-1"}`}>
           {watched.map((m) => (
-            <SpineTile key={m.id} member={m} onOpen={() => setOpen(m)} />
+            <Tile key={m.id} member={m} onOpen={() => setOpen(m)} />
           ))}
         </div>
         {/* subtle shelf line */}
