@@ -6,6 +6,8 @@ import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
 import { poster as posterUrl } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { MediaCard } from "@/components/MediaCard";
+import type { LocalMedia } from "@/lib/local-db";
 
 import {
   Search,
@@ -129,6 +131,20 @@ function CaptureCard({
   q: string;
   onOpen: () => void;
 }) {
+  const media = (note as any).media as LocalMedia | null | undefined;
+  if (media) {
+    return (
+      <button
+        onClick={onOpen}
+        className="block w-full text-left transition-transform duration-200 ease-out active:scale-[0.97]"
+      >
+        <div className="aspect-[2/3] w-full">
+          <MediaCard media={media} variant="grid" pinned={(note as any).pinned} />
+        </div>
+      </button>
+    );
+  }
+
   const kind = kindOf(note);
   const heading = note.heading || "Untitled";
   const host = hostOf(note.source_url);
