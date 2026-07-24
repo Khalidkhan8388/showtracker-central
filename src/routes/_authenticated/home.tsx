@@ -1007,7 +1007,7 @@ const NoteCard = memo(function NoteCard({
     >
 
       {/* Image-forward tile: image fills the card as background (only when not a link) */}
-      {isSquareLike && hasImage && !isLink && (
+      {isSquareLike && hasImage && !isLink && !isText && (
         <>
           <img
             src={thumbUrl}
