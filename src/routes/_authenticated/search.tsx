@@ -608,11 +608,11 @@ function SearchPage() {
                               onClick={() => addMedia(hit)}
                               disabled={saved || adding}
                               aria-label={saved ? "Already in library" : `Add ${hit.title}`}
-                              className={`absolute right-1.5 top-1.5 z-10 grid h-7 w-7 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
+                              className={`absolute bottom-1.5 right-1.5 z-10 grid h-7 w-7 place-items-center rounded-full shadow-lg backdrop-blur-md transition ${
                                 saved
                                   ? "bg-emerald-500 text-white"
                                   : "bg-white/95 text-neutral-900 active:scale-95"
-                              } ${hit.vote_average != null && hit.vote_average > 0 ? "top-8" : ""}`}
+                              }`}
                             >
                               {adding ? (
                                 <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -622,6 +622,7 @@ function SearchPage() {
                                 <Plus className="h-3.5 w-3.5" strokeWidth={3} />
                               )}
                             </button>
+
                             <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-8">
                               <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
                                 {hit.type === "tv" ? (
