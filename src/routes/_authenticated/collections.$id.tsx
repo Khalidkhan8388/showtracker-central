@@ -490,204 +490,57 @@ function CollectionDetail() {
 
             ) : view === "list" ? (
               <ul className="space-y-2">
-                {members.map((n) => {
-                  const media = (n as any).media as import("@/lib/local-db").LocalMedia | undefined;
-                  const posterUrl = media?.poster_path ? tmdbPoster(media.poster_path, "w185") : null;
-                  const isTvMedia = media?.type === "tv";
-                  const tvTotal = isTvMedia ? mediaTotal(media!) : 0;
-                  const tvDone = isTvMedia ? mediaDone(media!) : 0;
-                  const tvPct = tvTotal > 0 ? Math.round((tvDone / tvTotal) * 100) : 0;
-                  const isDropped = media?.watch_status === "dropped";
-                  const year = media?.release_date ? media.release_date.slice(0, 4) : null;
-                  return (
-                    <li key={n.id}>
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to="/notes/$id"
-                          params={{ id: n.id }}
-                          className="flex flex-1 items-stretch gap-3 overflow-hidden rounded-2xl bg-card p-2 shadow-sm ring-1 ring-border/60 active:opacity-80"
-                        >
-                          {media ? (
-                            <>
-                              <div className="relative h-[102px] w-[68px] shrink-0 overflow-hidden bg-muted" style={{ borderRadius: 10 }}>
-                                {posterUrl ? (
-                                  <img
-                                    src={posterUrl}
-                                    alt={media.title}
-                                    loading="lazy"
-                                    className={`h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
-                                  />
-                                ) : (
-                                  <div className="flex h-full w-full items-center justify-center text-[10px] text-muted-foreground">
-                                    {isTvMedia ? "TV" : "Movie"}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="flex min-w-0 flex-1 flex-col justify-between py-1 pr-1">
-                                <div className="min-w-0">
-                                  <div className="flex items-center gap-1.5">
-                                    <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-                                      {isTvMedia ? "TV" : "Movie"}
-                                    </span>
-                                    {year && (
-                                      <span className="text-[10px] text-muted-foreground">• {year}</span>
-                                    )}
-                                    {typeof media.vote_average === "number" && media.vote_average > 0 && (
-                                      <span className="text-[10px] font-semibold text-amber-500">★ {media.vote_average.toFixed(1)}</span>
-                                    )}
-                                  </div>
-                                  <p className="mt-0.5 line-clamp-1 text-[14px] font-semibold text-foreground">
-                                    {media.title}
-                                  </p>
-                                  <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted-foreground">
-                                    {media.tagline || media.overview || "No description."}
-                                  </p>
-                                </div>
-                                <div className="mt-1 flex items-center gap-2">
-                                  {media.watch_status && (
-                                    <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide ${WATCH_COLORS[media.watch_status]}`}>
-                                      {WATCH_LABEL[media.watch_status]}
-                                    </span>
-                                  )}
-                                  {isTvMedia && tvTotal > 0 ? (
-                                    <div className="flex min-w-0 flex-1 items-center gap-1.5">
-                                      <div className="h-1 flex-1 overflow-hidden rounded-full bg-muted">
-                                        <div className="h-full rounded-full bg-primary" style={{ width: `${tvPct}%` }} />
-                                      </div>
-                                      <span className="shrink-0 text-[10px] font-medium text-muted-foreground">{tvDone}/{tvTotal}</span>
-                                    </div>
-                                  ) : media.runtime ? (
-                                    <span className="text-[10px] text-muted-foreground">{media.runtime}m</span>
-                                  ) : null}
-                                </div>
-                              </div>
-                            </>
-                          ) : (
-                            <div className="min-w-0 flex-1 px-2 py-1.5">
-                              <p className="truncate text-[14px] font-semibold text-foreground">
-                                {n.heading ?? "Untitled"}
-                              </p>
-                              <p className="truncate text-[12px] text-muted-foreground">
-                                {n.summary ?? formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                              </p>
-                            </div>
-                          )}
-                        </Link>
-                        <button
-                          type="button"
-                          onClick={() => void removeNotesFromCollection(id, [n.id])}
-                          aria-label="Remove from collection"
-                          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
-                        >
-                          <X className="h-4 w-4" />
-                        </button>
-                      </div>
-                    </li>
-                  );
-                })}
+                {members.map((n) => (
+                  <MediaListRow
+                    key={n.id}
+                    note={n as any}
+                    selected={removeSel.has(n.id)}
+                    selectMode={removing}
+                    onOpen={() => {
+                      if (removing) {
+                        setRemoveSel((prev) => {
+                          const next = new Set(prev);
+                          next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                          return next;
+                        });
+                      } else {
+                        navigate({ to: "/notes/$id", params: { id: n.id } });
+                      }
+                    }}
+                    onLongPress={() => {
+                      setRemoving(true);
+                      setRemoveSel(new Set([n.id]));
+                    }}
+                  />
+                ))}
               </ul>
 
             ) : (
               <ul className="grid grid-cols-3 gap-2.5">
-                {members.map((n) => {
-                  const media = (n as any).media as import("@/lib/local-db").LocalMedia | undefined;
-                  const posterUrl = media?.poster_path ? tmdbPoster(media.poster_path, "w342") : null;
-                  const thumb = thumbs[n.id];
-                  const isMedia = !!posterUrl;
-                  const isTvMedia = media?.type === "tv";
-                  const tvTotal = isTvMedia ? mediaTotal(media!) : 0;
-                  const tvDone = isTvMedia ? mediaDone(media!) : 0;
-                  const tvPct = tvTotal > 0 ? Math.round((tvDone / tvTotal) * 100) : 0;
-                  const isDropped = media?.watch_status === "dropped";
-                  return (
-                    <li key={n.id} className="relative">
-                      <Link
-                        to="/notes/$id"
-                        params={{ id: n.id }}
-                        style={isMedia ? { borderRadius: 15 } : undefined}
-                        className={`relative flex ${isMedia ? "aspect-[2/3]" : "aspect-square rounded-2xl"} flex-col justify-between overflow-hidden bg-card shadow-sm ring-1 ring-border/60 active:opacity-80`}
-                      >
-                        {isMedia ? (
-                          <>
-                            <img
-                              src={posterUrl!}
-                              alt={media?.title ?? n.heading ?? "Poster"}
-                              loading="lazy"
-                              className={`absolute inset-0 h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
-                            />
-                            <div className="absolute inset-x-0 bottom-0 scrim-t p-2.5 pt-8">
-                              {media?.watch_status && (
-                                <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
-                                  {WATCH_LABEL[media.watch_status]}
-                                </span>
-                              )}
-                              <p className="line-clamp-2 text-[12px] font-semibold scrim-fg">
-                                {media?.title ?? n.heading ?? "Untitled"}
-                              </p>
-                              {isTvMedia && tvTotal > 0 && (
-                                <div className="mt-1.5">
-                                  <div className="flex items-center justify-between text-[10px] font-medium scrim-fg-80">
-                                    <span>{tvDone}/{tvTotal} ep</span>
-                                    <span>{tvPct}%</span>
-                                  </div>
-                                  <div className="mt-1 h-1 w-full overflow-hidden rounded-full scrim-track">
-                                    <div className="h-full rounded-full scrim-fill" style={{ width: `${tvPct}%` }} />
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                          </>
-
-                        ) : thumb ? (
-                          <>
-                            <img
-                              src={thumb}
-                              alt={n.heading ?? "Memory"}
-                              loading="lazy"
-                              className="absolute inset-0 h-full w-full object-cover"
-                            />
-                            <div className="absolute inset-0 scrim-t" />
-                            <div className="relative z-10 mt-auto p-3">
-                              <p className="line-clamp-2 text-[13px] font-semibold scrim-fg">
-                                {n.heading ?? "Untitled"}
-                              </p>
-                              <p className="mt-0.5 text-[10px] scrim-fg-70">
-                                {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                              </p>
-                            </div>
-
-                          </>
-                        ) : (
-                          <div className="flex h-full w-full flex-col justify-between p-3">
-                            <p className="text-[11px] text-muted-foreground">
-                              {formatDistanceToNow(new Date(n.created_at), { addSuffix: true })}
-                            </p>
-                            <div>
-                              <p className="line-clamp-2 text-[14px] font-semibold text-foreground">
-                                {n.heading ?? "Untitled"}
-                              </p>
-                              {n.summary && (
-                                <p className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">
-                                  {n.summary}
-                                </p>
-                              )}
-                            </div>
-                          </div>
-                        )}
-                      </Link>
-                      <button
-                        type="button"
-                        onClick={() => void removeNotesFromCollection(id, [n.id])}
-                        aria-label="Remove from collection"
-                        className="absolute right-1.5 top-1.5 inline-flex h-7 w-7 items-center justify-center rounded-full bg-background/80 text-muted-foreground shadow-sm ring-1 ring-border/60 backdrop-blur active:opacity-70"
-                      >
-
-                        <X className="h-3.5 w-3.5" />
-                      </button>
-                    </li>
-                  );
-                })}
+                {members.map((n) => (
+                  <MediaGridTile
+                    key={n.id}
+                    note={n as any}
+                    thumb={thumbs[n.id]}
+                    selected={removeSel.has(n.id)}
+                    selectMode={removing}
+                    onOpen={() => {
+                      if (removing) {
+                        setRemoveSel((prev) => {
+                          const next = new Set(prev);
+                          next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                          return next;
+                        });
+                      } else {
+                        navigate({ to: "/notes/$id", params: { id: n.id } });
+                      }
+                    }}
+                    onLongPress={() => {
+                      setRemoving(true);
+                      setRemoveSel(new Set([n.id]));
+                    }}
+                  />
+                ))}
               </ul>
             )}
             </>
