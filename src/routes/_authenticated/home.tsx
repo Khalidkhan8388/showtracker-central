@@ -1113,16 +1113,6 @@ const NoteCard = memo(function NoteCard({
               {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
             </h3>
           </div>
-          {hasImage && (
-            <div className="relative z-10 -mx-1 overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
-              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="h-24 w-full object-cover" />
-              {imageCount > 1 && (
-                <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                  +{imageCount - 1}
-                </div>
-              )}
-            </div>
-          )}
           {note.transcript && (
             <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "9rem" : "16rem" }}>
               <Markdown className="!text-[12px] !leading-snug [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1 [&_img]:!rounded-lg [&_img]:!max-h-24 [&_img]:!w-auto [&_pre]:hidden [&_hr]:hidden">
