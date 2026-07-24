@@ -1371,12 +1371,7 @@ function MediaListRow({
         type="button"
         onClick={onOpen}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
-        onTouchStart={lp.onTouchStart}
-        onTouchEnd={lp.onTouchEnd}
-        onTouchMove={lp.onTouchMove}
-        onMouseDown={lp.onMouseDown}
-        onMouseUp={lp.onMouseUp}
-        onMouseLeave={lp.onMouseLeave}
+        {...lp.handlers}
         className={`relative flex w-full items-stretch gap-3 overflow-hidden rounded-2xl bg-card p-2 text-left shadow-sm ring-1 ring-border/60 active:opacity-80 ${
           selected ? "ring-2 ring-foreground" : ""
         }`}
@@ -1485,12 +1480,7 @@ function MediaGridTile({
         type="button"
         onClick={onOpen}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
-        onTouchStart={lp.onTouchStart}
-        onTouchEnd={lp.onTouchEnd}
-        onTouchMove={lp.onTouchMove}
-        onMouseDown={lp.onMouseDown}
-        onMouseUp={lp.onMouseUp}
-        onMouseLeave={lp.onMouseLeave}
+        {...lp.handlers}
         style={isMedia ? { borderRadius: 15 } : undefined}
         className={`relative flex w-full ${isMedia ? "aspect-[2/3]" : "aspect-square rounded-2xl"} flex-col justify-between overflow-hidden bg-card shadow-sm ring-1 ring-border/60 active:opacity-80 ${
           selected ? "ring-2 ring-foreground" : ""
