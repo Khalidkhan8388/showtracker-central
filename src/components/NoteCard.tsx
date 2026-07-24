@@ -303,38 +303,23 @@ export const NoteCard = memo(function NoteCard({
           </div>
         </div>
       ) : isText ? (
-        (() => {
-          return (
-            <>
+        <>
+          <div className="relative z-10 pr-5">
+            <h3 className="font-serif text-[22px] font-normal leading-[1.2] tracking-tight break-words line-clamp-2 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+            </h3>
+          </div>
+          {previewBody && (
+            <div className="relative z-10 mt-2 flex-1 overflow-hidden">
+              <div className="[mask-image:linear-gradient(to_bottom,black_60%,transparent)]">
+                <Markdown className="!text-[13.5px] !leading-[1.55] [&>*:first-child]:!mt-0 [&_h1]:!text-[15px] [&_h1]:!font-semibold [&_h1]:!mt-2 [&_h1]:!mb-1 [&_h2]:!text-[14px] [&_h2]:!font-semibold [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h3]:!text-[13px] [&_h3]:!font-semibold [&_h3]:!mt-1.5 [&_h3]:!mb-0.5 [&_p]:!my-1.5 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_li]:!my-0.5 [&_img]:!my-2 [&_img]:!rounded-xl [&_img]:!w-full [&_img]:!max-h-56 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden [&_blockquote]:!my-1.5 [&_blockquote]:!pl-3 [&_blockquote]:!border-l-2 [&_blockquote]:!border-foreground/20">
+                  {previewBody}
+                </Markdown>
+              </div>
+            </div>
+          )}
+        </>
 
-              <div className="relative z-10 flex items-start gap-1.5 pr-5">
-                <h3 className="font-serif text-[22px] font-normal leading-[1.15] tracking-tight break-words line-clamp-2 text-foreground">
-                  {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-                </h3>
-              </div>
-              {previewBody ? (
-                <div className="relative z-10 flex-1 overflow-hidden text-foreground [mask-image:linear-gradient(to_bottom,black_75%,transparent)]">
-                  <Markdown className="!text-[13.5px] !leading-[1.6] [&>*:first-child]:!mt-0 [&_h1]:!text-[15px] [&_h1]:!font-semibold [&_h1]:!mt-2 [&_h1]:!mb-1 [&_h2]:!text-[14px] [&_h2]:!font-semibold [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h3]:!text-[13px] [&_h3]:!font-semibold [&_h3]:!mt-1.5 [&_h3]:!mb-0.5 [&_p]:!my-1.5 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_li]:!my-0.5 [&_img]:!my-2 [&_img]:!rounded-xl [&_img]:!w-full [&_img]:!max-h-56 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden [&_blockquote]:!my-1.5 [&_blockquote]:!pl-3 [&_blockquote]:!border-l-2 [&_blockquote]:!border-foreground/20">
-                    {previewBody}
-                  </Markdown>
-                </div>
-              ) : note.summary ? (
-                <p className="relative z-10 text-[13.5px] leading-snug text-muted-foreground line-clamp-3">
-                  {note.summary}
-                </p>
-              ) : null}
-              <div className="relative z-10 mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
-                <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-                {note.tasks && note.tasks.length > 0 && (
-                  <span className="flex items-center gap-1">
-                    <CheckCircle2 className="h-3 w-3" />
-                    {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                  </span>
-                )}
-              </div>
-            </>
-          );
-        })()
 
 
       ) : (
