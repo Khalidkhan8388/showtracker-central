@@ -1212,32 +1212,29 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
       aria-label={`Open ${title}`}
     >
       {posterUrl ? (
+        // Rotate the full poster 90° so its own title artwork reads vertically
+        // like a real DVD spine — the poster is the text.
         <img
           src={posterUrl}
-          alt=""
-          className="absolute inset-0 h-full w-full object-cover"
-          style={{ objectPosition: "35% center" }}
+          alt={title}
+          className="absolute left-1/2 top-1/2 h-[38px] w-[172px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover"
           loading="lazy"
         />
       ) : (
-        <div className="absolute inset-0 bg-neutral-800" />
+        <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
+          <span
+            className="max-h-[160px] whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/90"
+            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
+          >
+            {title}
+          </span>
+        </div>
       )}
-      {/* darken for legibility */}
-      <div className="absolute inset-0 bg-black/45" />
       {/* left crease highlight */}
-      <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
       {/* right shadow */}
-      <div className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/60 to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/50 to-transparent" />
 
-      {/* vertical title */}
-      <div className="absolute inset-0 flex items-center justify-center">
-        <span
-          className="max-h-[160px] whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/95"
-          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
-        >
-          {title}
-        </span>
-      </div>
     </button>
   );
 }
