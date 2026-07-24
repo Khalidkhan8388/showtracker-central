@@ -339,12 +339,28 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       done: false,
       pending: true,
     }));
+    // Try to grab an og:image and persist it as the note's cover.
+    let imagePaths: string[] = [];
+    if (result.imageUrl) {
+      try {
+        const img = await fetchLinkImageFn({ data: { url: result.imageUrl } });
+        if (img.ok) {
+          const bin = atob(img.base64);
+          const bytes = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+          const blob = new Blob([bytes], { type: img.mime });
+          const path = await storeLocalPhoto(blob, img.mime);
+          imagePaths = [path];
+        }
+      } catch {}
+    }
     await updateNote(note.id, {
       status: "ready",
       heading: result.heading,
       summary: result.summary,
       tasks: tasksPayload,
       tags: result.tags,
+      image_paths: imagePaths,
     });
   } catch (err: any) {
     await updateNote(note.id, { status: "failed", error: err?.message ?? String(err) });
