@@ -1252,9 +1252,9 @@ function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onCl
   return (
     <Dialog open={!!member} onOpenChange={(v) => { if (!v) onClose(); }}>
       <DialogContent
-        className="max-w-[360px] gap-0 overflow-hidden rounded-3xl border-0 bg-neutral-900 p-0 text-white shadow-2xl"
-        showCloseButton={false}
+        className="max-w-[360px] gap-0 overflow-hidden rounded-3xl border-0 bg-neutral-900 p-0 text-white shadow-2xl [&>button]:text-white/70 [&>button]:hover:text-white"
       >
+
         <DialogTitle className="sr-only">{title}</DialogTitle>
         <DialogDescription className="sr-only">Disc case preview</DialogDescription>
 
