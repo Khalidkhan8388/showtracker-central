@@ -2,6 +2,7 @@ import { memo, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Loader2, AlertCircle, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
+import { useResolvedImageSrc } from "@/components/LocalImage";
 import { useTheme } from "@/lib/theme";
 
 export type Note = {
