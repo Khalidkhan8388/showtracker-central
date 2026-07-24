@@ -45,7 +45,7 @@ function CollectionDetail() {
     [notes, memberIds],
   );
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
-  const [tvView, setTvView] = useState<"posters" | "episodes">("posters");
+  const [tvView, setTvView] = useState<"posters" | "episodes" | "stats">("posters");
   const mediaMembers = useMemo(
     () => allMembers.filter((n) => !!(n as any).media),
     [allMembers],
