@@ -318,7 +318,7 @@ function ResizableImage({
       }}
     >
       <div className="relative w-full">
-        <img
+        <LocalImage
           src={block.src}
           alt={block.alt}
           loading="lazy"
