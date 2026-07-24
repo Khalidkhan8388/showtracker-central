@@ -116,16 +116,32 @@ self.addEventListener('fetch', (event) => {
         }
       } catch {}
 
-      // Read user preference: 'open' = navigate to /share for review, 'silent' = tiny confirmation.
+      // Read user preference: 'open' = navigate to /share for review, 'silent' = background notification.
       const mode = ok ? await readShareMode() : 'silent';
       if (mode === 'open') {
         return Response.redirect('/share', 303);
       }
 
-      // If nothing is open yet, boot the app in the background so it can
-      // pick up the inbox — but keep the share-sheet page itself tiny.
-      const bootUrl = hasClient ? '' : '/home?share=1';
+      // Background status via a native notification (no app UI shift).
+      try {
+        if (self.registration && self.registration.showNotification && self.Notification && self.Notification.permission === 'granted') {
+          await self.registration.showNotification(
+            ok ? 'Saved to Braintape' : 'Nothing to save',
+            {
+              body: ok ? 'Tap to open your brain.' : 'The share had no text, link, image or audio.',
+              icon: '/icon-192.png',
+              badge: '/icon-192.png',
+              tag: 'braintape-share',
+              silent: true,
+              data: { url: '/home' },
+            },
+          );
+        }
+      } catch {}
 
+      // Tiny self-closing confirmation page (no iframe boot — the app will
+      // drain the inbox next time it opens, and if it's already open the
+      // postMessage above already triggered a lock-guarded drain).
       const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saved to Braintape</title><style>
         html,body{margin:0;height:100%;background:#fff;color:#000;font:500 15px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased}
         .wrap{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
@@ -133,13 +149,10 @@ self.addEventListener('fetch', (event) => {
         @media (prefers-color-scheme: dark){html,body{background:#000;color:#fff}.dot{background:#fff;color:#000}}
       </style></head><body><div class="wrap"><div class="dot">${ok ? '✓' : '!'}</div><div>${ok ? 'Saved to Braintape' : 'Nothing to save'}</div></div>
       <script>
-        (function(){
-          ${bootUrl ? `try{var f=document.createElement('iframe');f.style.display='none';f.src=${JSON.stringify(bootUrl)};document.body.appendChild(f);}catch(e){}` : ''}
-          setTimeout(function(){
-            try{ window.close(); }catch(e){}
-            try{ if(history.length>1) history.back(); }catch(e){}
-          }, 450);
-        })();
+        setTimeout(function(){
+          try{ window.close(); }catch(e){}
+          try{ if(history.length>1) history.back(); }catch(e){}
+        }, 350);
       </script>
       </body></html>`;
 
