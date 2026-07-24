@@ -48,6 +48,7 @@ function CollectionDetail() {
   const [removing, setRemoving] = useState(false);
   const [removeSel, setRemoveSel] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [confirmBulkDelete, setConfirmBulkDelete] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
   const [view, setView] = useState<"list" | "grid">(() => {
