@@ -21,6 +21,12 @@ function CollectionsPage() {
   const [creating, setCreating] = useState(false);
   const [title, setTitle] = useState("");
 
+  // Auto-file any movie/TV notes into Movies / TV Shows on mount so newly
+  // added media always shows up here even if the initial file step raced.
+  useEffect(() => {
+    void backfillMediaCollections();
+  }, []);
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const t = title.trim();
