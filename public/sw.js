@@ -124,8 +124,12 @@ self.addEventListener('fetch', (event) => {
       } catch {
         const cache = await caches.open(CACHE);
         const hit = await cache.match(req);
-        return hit || Response.error();
+        if (hit) return hit;
+        // Last-resort offline fallback: any cached shell HTML.
+        const shell = (await cache.match('/home')) || (await cache.match('/'));
+        return shell || Response.error();
       }
     })());
   }
 });
+
