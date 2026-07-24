@@ -855,15 +855,22 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
     let moviesDropped = 0;
     let moviesWatchedMins = 0;
     let moviesPendingMins = 0;
+    let moviesUpcoming = 0;
+    let moviesUpcomingMins = 0;
     for (const m of movies) {
       const rt = Math.max(0, m.runtime ?? 0);
+      const releaseMs = m.release_date ? new Date(m.release_date).getTime() : null;
+      const released = releaseMs === null || !Number.isFinite(releaseMs) || releaseMs <= now;
       if (m.watch_status === "watched") {
         moviesWatched++;
         moviesWatchedMins += rt;
       } else if (m.watch_status === "dropped") {
         moviesDropped++;
+      } else if (!released) {
+        moviesUpcoming++;
+        moviesUpcomingMins += rt;
       } else {
-        // watchlist / watching / null → count as pending to watch
+        // watchlist / watching / null on released titles → pending
         moviesWatchlist++;
         moviesPendingMins += rt;
       }
@@ -889,6 +896,7 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
       }
       const watched = new Set(m.watched_episodes);
       const fallbackRt = Math.max(0, m.runtime ?? 0);
+      const isDropped = m.watch_status === "dropped";
       for (const s of m.seasons ?? []) {
         for (const ep of s.episodes) {
           const rt = Math.max(0, ep.runtime ?? fallbackRt);
@@ -897,6 +905,9 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
           if (watched.has(epKey(ep.season_number, ep.episode_number))) {
             epsWatched++;
             epsWatchedMins += rt;
+          } else if (isDropped) {
+            // dropped shows: don't count remaining episodes as pending/upcoming
+            continue;
           } else if (aired) {
             epsPending++;
             epsPendingMins += rt;
@@ -921,6 +932,8 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
         dropped: moviesDropped,
         watchedMins: moviesWatchedMins,
         pendingMins: moviesPendingMins,
+        upcoming: moviesUpcoming,
+        upcomingMins: moviesUpcomingMins,
       },
       shows: {
         total: shows.length,
@@ -959,7 +972,12 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
           {fmtMinutes(stats.totals.mins)}
         </p>
         <p className="mt-2 text-[12px] opacity-80">
-          Across {stats.movies.watched} movie{stats.movies.watched === 1 ? "" : "s"} · {stats.shows.epsWatched} episode{stats.shows.epsWatched === 1 ? "" : "s"}
+          {(() => {
+            const parts: string[] = [];
+            if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
+            if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
+            return parts.length ? `Across ${parts.join(" · ")}` : "Nothing watched yet";
+          })()}
         </p>
       </div>
 
@@ -977,6 +995,13 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
               value={`${stats.movies.watchlist}`}
               sub={stats.movies.pendingMins > 0 ? `~${fmtMinutes(stats.movies.pendingMins)} to go` : "Nothing queued"}
             />
+            {stats.movies.upcoming > 0 && (
+              <StatTile
+                label="Upcoming"
+                value={`${stats.movies.upcoming}`}
+                sub={stats.movies.upcomingMins > 0 ? `~${fmtMinutes(stats.movies.upcomingMins)} unreleased` : "Not yet released"}
+              />
+            )}
             {stats.movies.dropped > 0 && (
               <StatTile label="Dropped" value={`${stats.movies.dropped}`} sub="Not counted below" />
             )}
