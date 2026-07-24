@@ -21,8 +21,10 @@ export type FeedNote = {
   image_paths: string[] | null;
   source_url: string | null;
   transcript: string | null;
+  audio_path?: string | null;
   media?: LocalMedia | null;
 };
+
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
 
