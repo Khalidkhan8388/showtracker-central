@@ -381,16 +381,11 @@ export async function saveTextNote({
     void (async () => {
       try {
         const enriched = await analyzeTextFn({ data: { heading, body } });
-        const tasksPayload: LocalTask[] = enriched.tasks.map((t, i) => ({
-          id: `t${i}`,
-          text: t,
-          done: false,
-          pending: true,
-        }));
+        // Text notes never get AI-extracted tasks — tasks come only from
+        // voice, image, or URL notes.
         await updateNote(note.id, {
           heading: enriched.heading || heading,
           summary: enriched.summary,
-          tasks: tasksPayload,
           tags: enriched.tags,
         });
       } catch {
