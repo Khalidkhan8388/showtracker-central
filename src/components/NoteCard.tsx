@@ -2,6 +2,7 @@ import { memo, useRef } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Loader2, AlertCircle, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
+import { useResolvedImageSrc } from "@/components/LocalImage";
 import { useTheme } from "@/lib/theme";
 
 export type Note = {
@@ -115,7 +116,8 @@ export const NoteCard = memo(function NoteCard({
     ? note.transcript.match(/!\[[^\]]*\]\(([^)\s]+)\)/)
     : null;
   const bodyImageUrl = bodyImageMatch?.[1];
-  const effectiveThumb = thumbUrl || bodyImageUrl;
+  const resolvedBodyImage = useResolvedImageSrc(bodyImageUrl);
+  const effectiveThumb = thumbUrl || resolvedBodyImage || bodyImageUrl;
   const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
   // Strip the leading image (and any adjacent images) from body preview so it
   // isn't duplicated once we render the hero thumbnail.

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, X } from "lucide-react";
+import { LocalImage } from "@/components/LocalImage";
 
 // Match either an image (!...) or a plain markdown link ([label](url)).
 // Group 1 = "!" if image, empty for links; Group 2 = label; Group 3 = url.
@@ -318,14 +319,14 @@ function ResizableImage({
       }}
     >
       <div className="relative w-full">
-        <img
+        <LocalImage
           src={block.src}
           alt={block.alt}
           loading="lazy"
           decoding="async"
           className="h-auto w-full select-none rounded-xl"
           draggable={blockIndex !== undefined}
-          onDragStart={(e) => {
+          onDragStart={(e: React.DragEvent<HTMLImageElement>) => {
             if (blockIndex !== undefined) {
               e.dataTransfer.setData("text/block-index", String(blockIndex));
               e.dataTransfer.effectAllowed = "move";

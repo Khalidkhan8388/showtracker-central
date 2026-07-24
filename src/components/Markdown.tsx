@@ -1,5 +1,6 @@
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { LocalImage } from "@/components/LocalImage";
 
 export function Markdown({ children, className = "" }: { children: string; className?: string }) {
   return (
@@ -9,6 +10,7 @@ export function Markdown({ children, className = "" }: { children: string; class
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         components={{
+          img: ({ node, ...props }) => <LocalImage {...(props as React.ImgHTMLAttributes<HTMLImageElement>)} />,
           a: ({ node, children, ...props }) => {
             const href = (props as any).href as string | undefined;
             const isExternal = !!href && /^https?:\/\//i.test(href);
