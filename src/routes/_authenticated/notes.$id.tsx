@@ -717,7 +717,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {note.transcript && (
+        {note.transcript && renderedBody && (
           <section className="mt-6">
             {isVoice && (
               <div className="mb-2 flex items-center justify-between px-1">
