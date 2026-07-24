@@ -156,7 +156,9 @@ export const NoteCard = memo(function NoteCard({
   const useTint = false;
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
-  const base = isText
+  const isImageCard = !isText && !isLink && hasImage && isSquareLike;
+
+  const base = isText || isImageCard
     ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-5 shadow-sm transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
 
@@ -177,11 +179,8 @@ export const NoteCard = memo(function NoteCard({
   } else if (variant === "wide") {
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
-    sizing = isText
+    sizing = isText || isImageCard
       ? "flex w-full flex-col gap-3 min-h-[9rem] max-h-[30rem]"
-
-      : hasImage && !isLink
-      ? "flex aspect-[4/5] w-full flex-col gap-2"
       : "flex w-full flex-col gap-3 min-h-[7rem]";
 
   } else if (fullWidth) {
@@ -190,7 +189,7 @@ export const NoteCard = memo(function NoteCard({
     sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
   }
 
-  const textNoteStyle: React.CSSProperties | undefined = isText
+  const textNoteStyle: React.CSSProperties | undefined = isText || isImageCard
     ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
     : tintBg
       ? { backgroundColor: tintBg }
@@ -207,22 +206,21 @@ export const NoteCard = memo(function NoteCard({
       style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${isProcessing ? "analyzing-shimmer" : ""}`}
     >
-      {isSquareLike && !isText && hasImage && !isLink && (
-        <>
+      {isImageCard && (
+        <div className="relative -mx-5 -mt-5 mb-1 overflow-hidden">
           <img
             src={effectiveThumb}
             alt=""
             loading="lazy"
             decoding="async"
-            className="pointer-events-none absolute inset-0 h-full w-full object-cover"
+            className="pointer-events-none block h-40 w-full object-cover"
           />
-          <div className="pointer-events-none absolute inset-0 scrim-t" />
           {imageCount > 1 && (
             <div className="absolute left-2 top-2 z-10 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
               +{imageCount - 1}
             </div>
           )}
-        </>
+        </div>
       )}
 
       {selectMode && (
@@ -342,29 +340,18 @@ export const NoteCard = memo(function NoteCard({
               <span className="text-[10px] font-medium uppercase tracking-wide">Voice</span>
             </div>
           )}
-          {!(hasImage && !isLink) && (
-            <div className="relative z-10 flex items-start gap-1.5 pr-5">
-              <h3 className="text-[13px] font-semibold leading-snug break-words line-clamp-3 text-foreground">
-                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-              </h3>
-            </div>
-          )}
-          {!(hasImage && !isLink) && note.summary && (
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3 className="text-[13px] font-semibold leading-snug break-words line-clamp-3 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+            </h3>
+          </div>
+          {note.summary && (
             <p className="relative z-10 text-[11px] leading-snug text-muted-foreground line-clamp-2">
               {note.summary}
             </p>
           )}
 
-          <div
-            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
-            }`}
-          >
-            {hasImage && !isLink && (
-              <h3 className="text-[13px] font-semibold leading-tight break-words text-white drop-shadow line-clamp-3 pr-5">
-                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-              </h3>
-            )}
+          <div className="relative z-10 mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
