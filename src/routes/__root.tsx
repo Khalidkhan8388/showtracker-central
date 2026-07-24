@@ -118,6 +118,11 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  useEffect(() => {
+    if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
+    // Register once — the SW handles Web Share Target intake + asset caching.
+    navigator.serviceWorker.register("/sw.js").catch(() => {});
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
