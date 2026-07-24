@@ -415,7 +415,11 @@ function NoteDetail() {
   const processing = note.status !== "ready" && note.status !== "failed";
   const isVoice = note.duration_seconds != null;
   const isLink = !!note.source_url;
-  const isImage = !isVoice && !isLink && Array.isArray(note.image_paths) && note.image_paths.length > 0;
+  // A note is only classified as an "image note" when it has no text body.
+  // If the user typed a transcript, treat it as a text note and render images
+  // strictly where they were placed inline in the body — no auto gallery.
+  const hasBody = typeof note.transcript === "string" && note.transcript.trim().length > 0;
+  const isImage = !isVoice && !isLink && !hasBody && Array.isArray(note.image_paths) && note.image_paths.length > 0;
   const isText = !isVoice && !isLink && !isImage;
   const linkHost = (() => {
     if (!note.source_url) return null;
