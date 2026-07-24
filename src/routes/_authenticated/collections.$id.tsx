@@ -673,6 +673,56 @@ function CollectionDetail() {
           </>
         )}
       </section>
+
+      {removing && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+            <button
+              type="button"
+              onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
+            >
+              Cancel
+            </button>
+            <span className="text-[12px] tabular-nums opacity-70">{removeSel.size} selected</span>
+            <button
+              type="button"
+              disabled={removeSel.size === 0}
+              onClick={async () => {
+                if (removeSel.size === 0) return;
+                await removeNotesFromCollection(id, Array.from(removeSel));
+                setRemoving(false);
+                setRemoveSel(new Set());
+              }}
+              className="rounded-full bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground disabled:opacity-40"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{collection?.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The collection will be removed. Memories inside won't be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await deleteCollection(id);
+                navigate({ to: "/collections" });
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
