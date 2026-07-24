@@ -1168,7 +1168,7 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
   return (
     <button
       type="button"
-      onClick={(e) => { if (lp.wasLongPress()) { e.preventDefault(); return; } onOpen(); }}
+      onClick={onOpen}
       className="group relative h-[172px] w-[38px] flex-shrink-0 overflow-hidden rounded-[3px] shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.97]"
       aria-label={`Open ${title}`}
     >
