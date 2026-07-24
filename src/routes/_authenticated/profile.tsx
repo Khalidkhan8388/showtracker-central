@@ -34,6 +34,29 @@ function ProfilePage() {
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
+  const [autoOpenShare, setAutoOpenShare] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return localStorage.getItem("share-auto-open") === "1";
+  });
+  function toggleAutoOpenShare(next: boolean) {
+    setAutoOpenShare(next);
+    localStorage.setItem("share-auto-open", next ? "1" : "0");
+    // Persist to IndexedDB so the service worker can read it during a share POST.
+    try {
+      const openReq = indexedDB.open("braintape-share", 2);
+      openReq.onupgradeneeded = () => {
+        const db = openReq.result;
+        if (!db.objectStoreNames.contains("inbox")) db.createObjectStore("inbox", { keyPath: "id", autoIncrement: true });
+        if (!db.objectStoreNames.contains("settings")) db.createObjectStore("settings");
+      };
+      openReq.onsuccess = () => {
+        const db = openReq.result;
+        if (!db.objectStoreNames.contains("settings")) { db.close(); return; }
+        const tx = db.transaction("settings", "readwrite");
+        tx.objectStore("settings").put(next ? "open" : "silent", "share-mode");
+      };
+    } catch {}
+  }
 
 
   async function confirmDelete() {
