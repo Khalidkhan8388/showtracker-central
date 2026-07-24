@@ -3,7 +3,7 @@
 //   in IndexedDB so the /share page can turn them into notes on the main thread.
 // - Runtime caches static assets for fast reloads.
 
-const CACHE = 'braintape-v4';
+const CACHE = 'braintape-v5';
 const DB_NAME = 'braintape-share';
 const STORE = 'inbox';
 const APP_SHELL = ['/', '/home', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.ico'];
