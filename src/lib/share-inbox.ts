@@ -103,18 +103,27 @@ let inflight: Promise<number> | null = null;
 
 export function drainAndSaveShares(): Promise<number> {
   if (inflight) return inflight;
+  const run = async (): Promise<number> => {
+    const items = await drainSharedItems();
+    let total = 0;
+    for (const it of items) {
+      try {
+        total += await processSharedItem(it);
+      } catch {
+        // keep processing remaining items
+      }
+    }
+    return total;
+  };
   inflight = (async () => {
     try {
-      const items = await drainSharedItems();
-      let total = 0;
-      for (const it of items) {
-        try {
-          total += await processSharedItem(it);
-        } catch {
-          // keep processing remaining items
-        }
+      // Cross-context lock so two tabs / a background boot iframe / the
+      // /share route can't race and double-save the same inbox items.
+      const locks = (navigator as unknown as { locks?: { request: (name: string, opts: unknown, cb: () => Promise<number>) => Promise<number> } }).locks;
+      if (locks?.request) {
+        return await locks.request("braintape-share-drain", { mode: "exclusive" }, run);
       }
-      return total;
+      return await run();
     } finally {
       inflight = null;
     }
