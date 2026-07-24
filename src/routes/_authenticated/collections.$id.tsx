@@ -1248,13 +1248,13 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
       {/* Title wordmark — the movie/show's own poster logo, rotated to spine
           orientation. Falls back to a display-serif italic title while the
           logo loads or when TMDB has no logo asset. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[3px]">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[1px]">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt={title}
-            className="max-h-[160px] max-w-[30px] -rotate-90 object-contain"
-            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.75)) brightness(1.05)" }}
+            className="max-h-[168px] max-w-[36px] -rotate-90 object-contain"
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8)) brightness(1.08) contrast(1.05)" }}
             loading="lazy"
           />
         ) : (
@@ -1296,7 +1296,7 @@ function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onCl
             {/* Case: poster + disc */}
             <div className="relative flex bg-neutral-800/40 p-3">
               {/* Cover art (left) */}
-              <div className="relative w-[46%] flex-shrink-0 overflow-hidden rounded-sm shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+              <div className="case-poster-in relative z-10 w-[46%] flex-shrink-0 overflow-hidden rounded-sm shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
                 {posterUrl ? (
                   <img src={posterUrl} alt={title} className="h-full w-full object-cover" />
                 ) : (
@@ -1305,9 +1305,9 @@ function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onCl
               </div>
 
               {/* Black case with disc (right) */}
-              <div className="relative ml-1 flex-1 rounded-sm bg-black shadow-inner">
+              <div className="relative ml-1 flex-1 overflow-hidden rounded-sm bg-black shadow-inner">
                 {/* disc */}
-                <div className="absolute left-1/2 top-1/2 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2">
+                <div className="disc-slide-out absolute left-1/2 top-1/2 h-[78%] w-[78%]">
                   <div className="relative h-full w-full overflow-hidden rounded-full bg-neutral-900 shadow-[0_6px_18px_rgba(0,0,0,0.55)]">
                     {posterUrl && (
                       <img

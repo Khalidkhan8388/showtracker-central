@@ -293,6 +293,24 @@ input[type="search"]::-webkit-search-decoration {
   animation: card-pop 420ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+/* CD case open — poster snaps in, disc slides out from behind it */
+@keyframes case-poster-in {
+  0% { opacity: 0; transform: translateX(-8px) scale(0.94); }
+  100% { opacity: 1; transform: translateX(0) scale(1); }
+}
+@keyframes disc-slide-out {
+  0% { opacity: 0; transform: translate(-58%, -50%) scale(0.72) rotate(-90deg); }
+  55% { opacity: 1; }
+  100% { opacity: 1; transform: translate(-50%, -50%) scale(1) rotate(0deg); }
+}
+.case-poster-in {
+  animation: case-poster-in 320ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.disc-slide-out {
+  animation: disc-slide-out 620ms cubic-bezier(0.22, 1, 0.36, 1) both;
+  animation-delay: 120ms;
+}
+
 /* Stagger children — apply .stagger to a parent, children animate in sequence */
 .stagger > * {
   animation: card-pop 500ms cubic-bezier(0.22, 1, 0.36, 1) both;
