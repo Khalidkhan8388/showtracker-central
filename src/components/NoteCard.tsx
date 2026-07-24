@@ -119,10 +119,14 @@ export const NoteCard = memo(function NoteCard({
   const resolvedBodyImage = useResolvedImageSrc(bodyImageUrl);
   const effectiveThumb = thumbUrl || resolvedBodyImage || bodyImageUrl;
   const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
-  // Text card preview mirrors the detail page: keep markdown intact (including
-  // inline images) so it reads as a short preview, with a fade at the bottom.
+  // Text card preview: strip images/code/hr for a clean minimal preview.
   const previewBody = note.transcript
-    ? note.transcript.replace(/\n{3,}/g, "\n\n").trim()
+    ? note.transcript
+        .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+        .replace(/```[\s\S]*?```/g, "")
+        .replace(/^---+$/gm, "")
+        .replace(/\n{3,}/g, "\n\n")
+        .trim()
     : null;
 
   const linkHost = (() => {
