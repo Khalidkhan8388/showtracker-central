@@ -258,6 +258,7 @@ function SearchPage() {
   const [pillHeight, setPillHeight] = useState(140);
   const [tmdbHits, setTmdbHits] = useState<TmdbSearchHit[]>([]);
   const [tmdbLoading, setTmdbLoading] = useState(false);
+  const [tab, setTab] = useState<"memories" | "media">("memories");
   const [tmdbAdding, setTmdbAdding] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -438,6 +439,11 @@ function SearchPage() {
 
   const filteredNotes = useMemo(() => {
     let list = notes;
+    if (tab === "media") {
+      list = list.filter((n) => !!(n as any).media);
+    } else {
+      list = list.filter((n) => !(n as any).media);
+    }
     if (activeTag) list = list.filter((n) => (n.tags ?? []).includes(activeTag));
     const q = query.trim().toLowerCase();
     if (aiMode && aiIds) {
@@ -451,11 +457,11 @@ function SearchPage() {
       });
     }
     return list.slice(0, 60);
-  }, [notes, activeTag, query, aiMode, aiIds]);
+  }, [notes, activeTag, query, aiMode, aiIds, tab]);
 
   const matchingTasks = useMemo(() => {
     const q = query.trim().toLowerCase();
-    if (!q || aiMode) return [];
+    if (!q || aiMode || tab !== "memories") return [];
     const out: Array<{ noteId: string; taskId: string; text: string; done: boolean; noteHeading: string | null }> = [];
     for (const n of notes) {
       if (activeTag && !(n.tags ?? []).includes(activeTag)) continue;
@@ -466,7 +472,7 @@ function SearchPage() {
       }
     }
     return out.slice(0, 20);
-  }, [notes, query, activeTag, aiMode]);
+  }, [notes, query, activeTag, aiMode, tab]);
 
   // Keep the top of the results visible above the keyboard while typing.
   useEffect(() => {
@@ -537,8 +543,27 @@ function SearchPage() {
           </div>
         )}
 
-        {/* TMDB search results — always shown when the user is typing */}
-        {query.trim().length >= 2 && !aiMode && (tmdbLoading || tmdbHits.length > 0) && (
+        {/* Tab switcher: memories vs movies/TV */}
+        <div className="mb-4 flex justify-center">
+          <div className="inline-flex items-center rounded-full bg-muted p-1">
+            {(["memories", "media"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-4 py-1.5 text-[12px] font-semibold transition ${
+                  tab === t
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {t === "memories" ? "Memories" : "Movies & TV"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TMDB search results — Movies & TV tab only */}
+        {tab === "media" && query.trim().length >= 2 && !aiMode && (tmdbLoading || tmdbHits.length > 0) && (
           <section className="mb-5">
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
