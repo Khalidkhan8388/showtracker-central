@@ -1310,7 +1310,7 @@ function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => vo
   // front cover behind on the right to hint at 3D depth.
   const SPINE_W = 34;
   const HEIGHT = 210;
-  const PEEK_W = 10;
+  const PEEK_W = 6;
   const SLOT_W = SPINE_W + PEEK_W;
 
   return (
@@ -1326,16 +1326,17 @@ function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => vo
         className="pointer-events-none absolute left-[4px] bottom-0 h-[5px] w-[38px] rounded-[50%] bg-black/55 blur-[3px]"
       />
 
-      {/* Cover peek — thin angled sliver of the poster behind the spine */}
+      {/* Cover peek — small angled sliver of the poster behind the spine */}
       <div
         className="absolute top-0 overflow-hidden bg-neutral-800"
         style={{
-          left: SPINE_W - 2,
-          width: PEEK_W + 6,
+          left: SPINE_W - 1,
+          width: PEEK_W + 10,
           height: HEIGHT,
-          transform: "perspective(600px) rotateY(-62deg)",
+          transform: "perspective(800px) rotateY(-22deg)",
           transformOrigin: "left center",
         }}
+
       >
         {posterUrl && (
           <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
