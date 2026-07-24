@@ -106,10 +106,22 @@ export const NoteCard = memo(function NoteCard({
   };
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
-  const hasImage = imageCount > 0 && !!thumbUrl;
   const isVoice = note.duration_seconds != null;
   const isText = !isVoice && note.transcript != null;
   const isLink = !!note.source_url && !isText;
+  // Body-embedded image: first ![](...) in transcript. Lets text notes render
+  // an image hero (like image notes) even when image_paths is empty.
+  const bodyImageMatch = !thumbUrl && note.transcript
+    ? note.transcript.match(/!\[[^\]]*\]\(([^)\s]+)\)/)
+    : null;
+  const bodyImageUrl = bodyImageMatch?.[1];
+  const effectiveThumb = thumbUrl || bodyImageUrl;
+  const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
+  // Strip the leading image (and any adjacent images) from body preview so it
+  // isn't duplicated once we render the hero thumbnail.
+  const previewBody = bodyImageUrl && note.transcript
+    ? note.transcript.replace(/!\[[^\]]*\]\([^)\s]+\)/g, "").trim()
+    : note.transcript;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -186,7 +198,7 @@ export const NoteCard = memo(function NoteCard({
       {isSquareLike && hasImage && !isLink && (
         <>
           <img
-            src={thumbUrl}
+            src={effectiveThumb}
             alt=""
             loading="lazy"
             decoding="async"
@@ -221,7 +233,7 @@ export const NoteCard = memo(function NoteCard({
         <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
-              src={thumbUrl}
+              src={effectiveThumb}
               alt=""
               loading="lazy"
               decoding="async"
@@ -284,14 +296,15 @@ export const NoteCard = memo(function NoteCard({
         </div>
       ) : isText ? (
         <>
-          <div className="relative z-10 flex items-start gap-1.5 pr-5">
-            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
-              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-            </h3>
-          </div>
           {hasImage && (
             <div className="relative z-10 -mx-1 overflow-hidden rounded-xl ring-1 ring-black/[0.06]">
-              <img src={thumbUrl} alt="" loading="lazy" decoding="async" className="h-24 w-full object-cover" />
+              <img
+                src={effectiveThumb}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className="h-40 w-full object-cover"
+              />
               {imageCount > 1 && (
                 <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
                   +{imageCount - 1}
@@ -299,10 +312,15 @@ export const NoteCard = memo(function NoteCard({
               )}
             </div>
           )}
-          {note.transcript && (
-            <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "9rem" : "16rem" }}>
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+            </h3>
+          </div>
+          {previewBody && (
+            <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "6rem" : "16rem" }}>
               <Markdown className="!text-[12px] !leading-snug [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1 [&_img]:!rounded-lg [&_img]:!max-h-24 [&_img]:!w-auto [&_pre]:hidden [&_hr]:hidden">
-                {note.transcript}
+                {previewBody}
               </Markdown>
             </div>
           )}
