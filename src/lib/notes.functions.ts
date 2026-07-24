@@ -8,6 +8,7 @@ import {
   analyzeMediaFn,
   analyzeTextFn,
   analyzeWebLinkFn,
+  fetchLinkImageFn,
   generateLinkLabelFn,
   semanticRankFn,
   transcribeClipFn,
