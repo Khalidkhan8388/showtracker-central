@@ -151,7 +151,7 @@ export const NoteCard = memo(function NoteCard({
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
   const base = isText
-    ? "relative block overflow-hidden rounded-[15px] p-5 transition-all " +
+    ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-5 shadow-sm transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
 
     : isHero
