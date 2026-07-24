@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
-import { useState } from "react";
-import { useCollections, createCollection, deleteCollection } from "@/lib/collections";
+import { useEffect, useState } from "react";
+import { useCollections, createCollection, deleteCollection, backfillMediaCollections } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 
 export const Route = createFileRoute("/_authenticated/collections/")({
