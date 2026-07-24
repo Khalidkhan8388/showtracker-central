@@ -3,7 +3,7 @@ import { useRef, useState } from "react";
 import { ChevronLeft, Trash2, Sun, Moon, Monitor, Check, Loader2, ChevronRight, Download, Upload } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
-import { SIZE_SCALES, useTheme } from "@/lib/theme";
+import { useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/profile")({
@@ -166,28 +166,28 @@ function ProfilePage() {
       {/* Component size */}
       <section className="px-4 pt-6">
         <SectionTitle>Component size</SectionTitle>
-        <div className="rounded-2xl bg-card p-1">
-          <div className="grid grid-cols-2 gap-1">
-            {SIZE_SCALES.map((s) => {
-              const selected = s.id === sizeScale;
-              return (
-                <button
-                  key={s.id}
-                  onClick={() => setSizeScale(s.id)}
-                  className={`flex items-center justify-center gap-2 rounded-xl py-2.5 text-[13px] font-medium transition-colors ${
-                    selected ? "bg-primary text-primary-foreground" : "text-muted-foreground active:bg-muted/50"
-                  }`}
-                >
-                  <span style={{ fontSize: `${13 * s.value}px` }} className="font-semibold">Aa</span>
-                  <span>{s.name}</span>
-                </button>
-              );
-            })}
+        <button
+          type="button"
+          onClick={() => setSizeScale(sizeScale === "small" ? "default" : "small")}
+          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px]">Compact size</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">
+              Scales the entire app down to a smaller size.
+            </div>
           </div>
-        </div>
-        <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-          Scales the entire app to your preferred size.
-        </p>
+          <span
+            role="switch"
+            aria-checked={sizeScale === "small"}
+            className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${sizeScale === "small" ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              style={{ transform: sizeScale === "small" ? "translateX(20px)" : "translateX(0)" }}
+            />
+          </span>
+        </button>
       </section>
 
       {/* Home preferences */}
@@ -195,35 +195,31 @@ function ProfilePage() {
         <SectionTitle>Home page</SectionTitle>
 
         {/* Hero: latest vs reminders */}
-        <div className="rounded-2xl bg-card p-3">
-          <div className="mb-2 px-1 text-[13px] font-medium text-foreground">Hero header</div>
-          <div className="relative flex rounded-full bg-muted p-1">
-            <span
-              aria-hidden
-              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform"
-              style={{ transform: heroMode === "latest" ? "translateX(0)" : "translateX(100%)" }}
-            />
-            <button
-              type="button"
-              onClick={() => updateHeroMode("latest")}
-              className={`relative z-[1] flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${heroMode === "latest" ? "text-foreground" : "text-muted-foreground"}`}
-            >
-              Latest entry
-            </button>
-            <button
-              type="button"
-              onClick={() => updateHeroMode("reminders")}
-              className={`relative z-[1] flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${heroMode === "reminders" ? "text-foreground" : "text-muted-foreground"}`}
-            >
-              Reminders
-            </button>
+        <button
+          type="button"
+          onClick={() => updateHeroMode(heroMode === "reminders" ? "latest" : "reminders")}
+          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px]">Reminders as hero</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">
+              {heroMode === "reminders"
+                ? "Home opens with reminders and follow-ups."
+                : "Home opens with your most recent note."}
+            </div>
           </div>
-          <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-            {heroMode === "latest"
-              ? "Home opens with your most recent note. Reminders show below."
-              : "Home opens with reminders and follow-ups. Latest note shows below."}
-          </p>
-        </div>
+          <span
+            role="switch"
+            aria-checked={heroMode === "reminders"}
+            className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${heroMode === "reminders" ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              style={{ transform: heroMode === "reminders" ? "translateX(20px)" : "translateX(0)" }}
+            />
+          </span>
+        </button>
+
 
         <button
           type="button"
