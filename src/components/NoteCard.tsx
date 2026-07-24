@@ -119,11 +119,10 @@ export const NoteCard = memo(function NoteCard({
   const resolvedBodyImage = useResolvedImageSrc(bodyImageUrl);
   const effectiveThumb = thumbUrl || resolvedBodyImage || bodyImageUrl;
   const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
-  // Strip the leading image (and any adjacent images) from body preview so it
-  // isn't duplicated once we render the hero thumbnail.
-  const previewBody = bodyImageUrl && note.transcript
-    ? note.transcript.replace(/!\[[^\]]*\]\([^)\s]+\)/g, "").trim()
-    : note.transcript;
+  // For text notes we render the body markdown inline (images and all) so the
+  // card preview matches what the user sees when they open the note.
+  const previewBody = note.transcript;
+
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
