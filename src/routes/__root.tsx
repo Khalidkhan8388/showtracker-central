@@ -155,6 +155,14 @@ function RootComponent() {
     }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
 
+    // Ask once for notification permission so the SW can post a background
+    // "Saved to Braintape" status when a share arrives while the app is closed.
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    } catch {}
+
     // Background share intake — when the SW receives a Web Share Target POST
     // it postMessages us; drain the inbox silently instead of navigating the
     // user to /share.
