@@ -116,6 +116,12 @@ self.addEventListener('fetch', (event) => {
         }
       } catch {}
 
+      // Read user preference: 'open' = navigate to /share for review, 'silent' = tiny confirmation.
+      const mode = ok ? await readShareMode() : 'silent';
+      if (mode === 'open') {
+        return Response.redirect('/share', 303);
+      }
+
       // If nothing is open yet, boot the app in the background so it can
       // pick up the inbox — but keep the share-sheet page itself tiny.
       const bootUrl = hasClient ? '' : '/home?share=1';
