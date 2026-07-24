@@ -14,11 +14,16 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
+import { noteTags, topTags, prettyTag } from "@/lib/tags";
+import { Hash } from "lucide-react";
 
 
 
 
 export const Route = createFileRoute("/_authenticated/home")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tag: typeof s.tag === "string" && s.tag.length > 0 ? s.tag : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Home — Braintape" },
@@ -299,9 +304,14 @@ function Home() {
   const selectMode = noteSelectMode || taskSelectMode;
 
   // Memoized derivations — only recompute when notes actually change.
+  const { tag: activeTag } = Route.useSearch();
+  const navigate2 = useNavigate();
+  const availableTags = useMemo(() => topTags((notes ?? []) as any, 20), [notes]);
+
   const derived = useMemo(() => {
     if (!notes) return null;
-    const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
+    let displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
+    if (activeTag) displayNotes = displayNotes.filter((n) => noteTags(n as any).includes(activeTag));
     const [latest, ...rest] = displayNotes;
     const pinnedRest = rest.filter((n) => n.pinned);
     const unpinnedRest = rest.filter((n) => !n.pinned);
@@ -386,8 +396,39 @@ function Home() {
 
       </header>
 
+      {(activeTag || availableTags.length > 0) && (
+        <div className="sticky top-[57px] z-10 border-b border-border/40 bg-background/95 backdrop-blur-md">
+          <div className="scrollbar-none flex gap-1.5 overflow-x-auto px-4 py-2">
+            {activeTag && (
+              <button
+                onClick={() => navigate2({ to: "/home", search: {} })}
+                className="inline-flex shrink-0 items-center gap-1 rounded-full bg-primary px-2.5 py-1 text-[12px] font-medium text-primary-foreground active:opacity-70"
+              >
+                <Hash className="h-3 w-3" />
+                {prettyTag(activeTag)}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+            {availableTags
+              .filter((t) => t.tag !== activeTag)
+              .map(({ tag, count }) => (
+                <button
+                  key={tag}
+                  onClick={() => navigate2({ to: "/home", search: { tag } })}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-foreground active:opacity-60"
+                >
+                  <Hash className="h-3 w-3 text-muted-foreground" />
+                  {prettyTag(tag)}
+                  <span className="text-muted-foreground tabular-nums">{count}</span>
+                </button>
+              ))}
+          </div>
+        </div>
+      )}
+
       <section className="flex-1 px-4 pb-32 pt-2">
         <div ref={sentinelRef} aria-hidden="true" className="h-6 -mt-2" />
+
 
         {notes === null ? (
           <div className="flex justify-center py-16">

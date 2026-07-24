@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, Hash, Sparkles } from "lucide-react";
+import { noteTags, relatedNotes, prettyTag, type NoteLike } from "@/lib/tags";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
@@ -449,6 +450,12 @@ function NoteDetail() {
   const doneCount = note.tasks?.filter((t) => t.done).length ?? 0;
   const taskTotal = note.tasks?.length ?? 0;
 
+  const tags = noteTags(note as unknown as NoteLike);
+  const related = useMemo(
+    () => relatedNotes(note as unknown as NoteLike, (allLocal ?? []) as unknown as NoteLike[], 6),
+    [note, allLocal],
+  );
+
   async function onShare() {
     const url = typeof window !== "undefined" ? window.location.href : "";
     const title = note?.heading ?? "Note";
@@ -744,7 +751,64 @@ function NoteDetail() {
           </section>
         )}
 
+        {tags.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Tags
+            </h2>
+            <div className="flex flex-wrap gap-1.5">
+              {tags.map((t) => (
+                <Link
+                  key={t}
+                  to="/home"
+                  search={{ tag: t }}
+                  className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-1 text-[12px] font-medium text-foreground active:opacity-60"
+                >
+                  <Hash className="h-3 w-3 text-muted-foreground" />
+                  {prettyTag(t)}
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {related.length > 0 && (
+          <section className="mt-6">
+            <div className="mb-2 flex items-center gap-1.5 px-1">
+              <Sparkles className="h-3 w-3 text-muted-foreground" />
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Related
+              </h2>
+            </div>
+            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
+              {related.map((r, i) => (
+                <li key={r.id}>
+                  <Link
+                    to="/notes/$id"
+                    params={{ id: r.id }}
+                    className="flex items-start gap-3 px-4 py-3 active:bg-muted"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-[15px] font-medium text-foreground">
+                        {r.heading ?? "Untitled"}
+                      </p>
+                      {r._shared.length > 0 && (
+                        <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
+                          {r._shared.slice(0, 3).map(prettyTag).join(" · ")}
+                        </p>
+                      )}
+                    </div>
+                    <ChevronLeft className="mt-1 h-4 w-4 shrink-0 rotate-180 text-muted-foreground" />
+                  </Link>
+                  {i < related.length - 1 && <div className="ml-4 h-px bg-border" />}
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
       </div>
+
 
 
       {/* Full-screen edit overlay */}
