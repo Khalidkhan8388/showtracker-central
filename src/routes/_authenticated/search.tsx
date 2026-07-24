@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === "media" ? ("media" as const) : ("memories" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Search — Braintape" },
@@ -259,7 +262,8 @@ function SearchPage() {
   const [pillHeight, setPillHeight] = useState(140);
   const [tmdbHits, setTmdbHits] = useState<TmdbSearchHit[]>([]);
   const [tmdbLoading, setTmdbLoading] = useState(false);
-  const [tab, setTab] = useState<"memories" | "media">("memories");
+  const initialTab = Route.useSearch({ select: (s) => s.tab });
+  const [tab, setTab] = useState<"memories" | "media">(initialTab);
   const [tmdbAdding, setTmdbAdding] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const sentinelRef = useRef<HTMLDivElement>(null);
