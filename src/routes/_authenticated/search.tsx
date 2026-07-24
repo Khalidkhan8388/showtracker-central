@@ -650,24 +650,8 @@ function SearchPage() {
         )}
 
 
-        {/* Tab switcher: memories vs movies/TV — sits just above the results count */}
-        <div className="mb-3 flex justify-center">
-          <div className="inline-flex items-center rounded-full bg-muted p-1">
-            {(["memories", "media"] as const).map((t) => (
-              <button
-                key={t}
-                onClick={() => setTab(t)}
-                className={`rounded-full px-4 py-1.5 text-[12px] font-semibold transition ${
-                  tab === t
-                    ? "bg-background text-foreground shadow-sm"
-                    : "text-muted-foreground"
-                }`}
-              >
-                {t === "memories" ? "Memories" : "Movies & TV"}
-              </button>
-            ))}
-          </div>
-        </div>
+
+
 
         {/* Section label */}
         <div className="mb-3 flex items-center justify-between px-1">
