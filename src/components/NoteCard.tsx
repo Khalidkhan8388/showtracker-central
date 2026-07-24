@@ -172,7 +172,8 @@ export const NoteCard = memo(function NoteCard({
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
     sizing = isText
-      ? "flex w-full flex-col gap-2 min-h-[9rem] max-h-[26rem]"
+      ? "flex w-full flex-col gap-3 min-h-[9rem] max-h-[30rem]"
+
       : hasImage && !isLink
       ? "flex aspect-[4/5] w-full flex-col gap-2"
       : "flex w-full flex-col gap-3 min-h-[7rem]";
