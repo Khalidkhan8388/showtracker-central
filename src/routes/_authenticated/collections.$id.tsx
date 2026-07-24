@@ -1234,6 +1234,24 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
       <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
       {/* right shadow */}
       <div className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/50 to-transparent" />
+      {/* soft vertical scrim so title reads on any poster */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/55" />
+
+      {/* Series title rendered in poster-style typography (display serif),
+          vertically oriented like the title on a DVD spine. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[2px]">
+        <span
+          className="max-h-[160px] whitespace-nowrap font-serif text-[12px] font-semibold italic leading-none tracking-[0.02em] text-white"
+          style={{
+            writingMode: "vertical-rl",
+            transform: "rotate(180deg)",
+            textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)",
+          }}
+        >
+          {title}
+        </span>
+      </div>
+
 
     </button>
   );
