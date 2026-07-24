@@ -1187,7 +1187,7 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
       {/* Shelf row */}
       <div className="relative">
-        <div className="scrollbar-none flex items-end gap-[3px] overflow-x-auto px-2 pb-2 pt-1">
+        <div className="scrollbar-none flex items-end gap-[10px] overflow-x-auto px-2 pb-2 pt-1">
           {watched.map((m) => (
             <SpineTile key={m.id} member={m} onOpen={() => setOpen(m)} />
           ))}
