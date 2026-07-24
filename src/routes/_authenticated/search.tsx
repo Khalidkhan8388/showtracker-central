@@ -510,7 +510,7 @@ function SearchPage() {
   const showTasks = matchingTasks.length > 0;
 
   return (
-    <div className="relative mx-auto flex h-screen w-full max-w-md flex-col overflow-hidden bg-background">
+    <div className="relative mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-background">
       {/* Minimal top bar */}
       <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
         <div className={`flex items-center gap-3 px-4 transition-all duration-200 ${collapsed ? "pb-2 pt-2" : "pb-3 pt-4"}`}>
