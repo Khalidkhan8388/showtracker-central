@@ -13,6 +13,7 @@ import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, res
 import { useCollections, addNotesToCollection, createCollection, backfillMediaCollections } from "@/lib/collections";
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
+import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 
 
 
