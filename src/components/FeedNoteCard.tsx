@@ -57,6 +57,61 @@ function VoiceWaveform({ seed, bars = 36 }: { seed: string; bars?: number }) {
   );
 }
 
+function InlinePlayButton({ audioPath }: { audioPath: string }) {
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playing, setPlaying] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    return () => {
+      const a = audioRef.current;
+      if (a) { a.pause(); audioRef.current = null; }
+    };
+  }, []);
+
+  const toggle = async (e: React.MouseEvent | React.PointerEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    let a = audioRef.current;
+    if (a && !a.paused) {
+      a.pause();
+      setPlaying(false);
+      return;
+    }
+    if (!a) {
+      setLoading(true);
+      try {
+        const url = await getAudioUrl(audioPath);
+        if (!url) { setLoading(false); return; }
+        a = new Audio(url);
+        a.onended = () => setPlaying(false);
+        a.onpause = () => setPlaying(false);
+        a.onplay = () => setPlaying(true);
+        audioRef.current = a;
+      } finally {
+        setLoading(false);
+      }
+    }
+    try { await a.play(); } catch {}
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={playing ? "Pause voice note" : "Play voice note"}
+      onClick={toggle}
+      onPointerDown={(e) => e.stopPropagation()}
+      onPointerUp={(e) => e.stopPropagation()}
+      onTouchStart={(e) => e.stopPropagation()}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground text-background shadow-sm transition-transform active:scale-95"
+    >
+      {playing ? <Pause className="h-4 w-4" strokeWidth={2.5} /> : <Play className="h-4 w-4 translate-x-[1px]" strokeWidth={2.5} fill="currentColor" />}
+      {loading && <span className="sr-only">Loading</span>}
+    </button>
+  );
+}
+
+
 export const FeedNoteCard = memo(function FeedNoteCard({
   note,
   variant,
