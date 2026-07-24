@@ -83,15 +83,23 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "twitter:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
+      { name: "theme-color", content: "#ffffff" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: "Braintape" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "default" },
+      { name: "mobile-web-app-capable", content: "yes" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "icon", href: "/favicon.ico", type: "image/x-icon" },
+      { rel: "icon", href: "/icon-192.png", type: "image/png", sizes: "192x192" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png", sizes: "180x180" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" },
     ],
+
 
   }),
   shellComponent: RootShell,
@@ -120,9 +128,34 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
-    // Register once — the SW handles Web Share Target intake + asset caching.
+    if (typeof window === "undefined") return;
+    // Never register the SW inside Lovable preview / iframe / dev — it keeps
+    // stale HTML around and breaks live editing. Ship it only in the real app.
+    const host = window.location.hostname;
+    const inIframe = window.self !== window.top;
+    const isPreview =
+      !import.meta.env.PROD ||
+      inIframe ||
+      host.startsWith("id-preview--") ||
+      host.startsWith("preview--") ||
+      host === "lovableproject.com" ||
+      host.endsWith(".lovableproject.com") ||
+      host === "lovableproject-dev.com" ||
+      host.endsWith(".lovableproject-dev.com") ||
+      host === "beta.lovable.dev" ||
+      host.endsWith(".beta.lovable.dev") ||
+      new URLSearchParams(window.location.search).get("sw") === "off";
+    if (isPreview) {
+      navigator.serviceWorker.getRegistrations?.().then((regs) => {
+        regs.forEach((r) => {
+          if (r.active?.scriptURL.endsWith("/sw.js")) r.unregister().catch(() => {});
+        });
+      }).catch(() => {});
+      return;
+    }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
   }, []);
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>

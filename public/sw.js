@@ -3,9 +3,10 @@
 //   in IndexedDB so the /share page can turn them into notes on the main thread.
 // - Runtime caches static assets for fast reloads.
 
-const CACHE = 'braintape-v2';
+const CACHE = 'braintape-v3';
 const DB_NAME = 'braintape-share';
 const STORE = 'inbox';
+const APP_SHELL = ['/', '/home', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-touch-icon.png', '/favicon.ico'];
 
 function openDb() {
   return new Promise((resolve, reject) => {
@@ -29,7 +30,10 @@ async function putShare(rec) {
 }
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(CACHE));
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await Promise.allSettled(APP_SHELL.map((u) => cache.add(u).catch(() => {})));
+  })());
   self.skipWaiting();
 });
 
@@ -40,6 +44,7 @@ self.addEventListener('activate', (event) => {
     await self.clients.claim();
   })());
 });
+
 
 self.addEventListener('fetch', (event) => {
   const req = event.request;
@@ -119,8 +124,12 @@ self.addEventListener('fetch', (event) => {
       } catch {
         const cache = await caches.open(CACHE);
         const hit = await cache.match(req);
-        return hit || Response.error();
+        if (hit) return hit;
+        // Last-resort offline fallback: any cached shell HTML.
+        const shell = (await cache.match('/home')) || (await cache.match('/'));
+        return shell || Response.error();
       }
     })());
   }
 });
+
