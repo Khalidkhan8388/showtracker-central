@@ -209,6 +209,35 @@ function ProfilePage() {
 
       </section>
 
+      {/* Sharing */}
+      <section className="px-4 pt-8">
+        <SectionTitle>Sharing</SectionTitle>
+        <button
+          type="button"
+          onClick={() => toggleAutoOpenShare(!autoOpenShare)}
+          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+        >
+          <div className="min-w-0 flex-1">
+            <div className="text-[15px]">Auto-open after sharing</div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">
+              {autoOpenShare
+                ? "Sharing a screenshot or file opens Braintape to review it."
+                : "Sharing saves silently in the background."}
+            </div>
+          </div>
+          <span
+            role="switch"
+            aria-checked={autoOpenShare}
+            className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${autoOpenShare ? "bg-primary" : "bg-muted"}`}
+          >
+            <span
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              style={{ transform: autoOpenShare ? "translateX(20px)" : "translateX(0)" }}
+            />
+          </span>
+        </button>
+      </section>
+
 
       {/* Data */}
       <section className="px-4 pt-8">
