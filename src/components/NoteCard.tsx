@@ -304,30 +304,9 @@ export const NoteCard = memo(function NoteCard({
         </div>
       ) : isText ? (
         (() => {
-          // Show image_paths inline (top) only when the body doesn't already
-          // embed them via ![](local://...) — mirrors detail page ordering.
-          const bodyHasImg = !!note.transcript && /!\[[^\]]*\]\(/.test(note.transcript);
-          const extraImages = !bodyHasImg && Array.isArray(note.image_paths)
-            ? (note.image_paths as string[]).slice(0, 1)
-            : [];
           return (
             <>
-              {extraImages.length > 0 && (
-                <div className="relative z-10 -mx-1 overflow-hidden rounded-xl">
-                  <img
-                    src={effectiveThumb}
-                    alt=""
-                    loading="lazy"
-                    decoding="async"
-                    className="h-40 w-full object-cover"
-                  />
-                  {imageCount > 1 && (
-                    <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                      +{imageCount - 1}
-                    </div>
-                  )}
-                </div>
-              )}
+
               <div className="relative z-10 flex items-start gap-1.5 pr-5">
                 <h3 className="text-[20px] font-bold leading-[1.15] tracking-tight break-words line-clamp-2 text-foreground">
                   {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
