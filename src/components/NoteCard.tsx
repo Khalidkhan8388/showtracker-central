@@ -156,7 +156,9 @@ export const NoteCard = memo(function NoteCard({
   const useTint = false;
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
-  const base = isText
+  const isImageCard = !isText && !isLink && hasImage && isSquareLike;
+
+  const base = isText || isImageCard
     ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-5 shadow-sm transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
 
@@ -177,11 +179,8 @@ export const NoteCard = memo(function NoteCard({
   } else if (variant === "wide") {
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
-    sizing = isText
+    sizing = isText || isImageCard
       ? "flex w-full flex-col gap-3 min-h-[9rem] max-h-[30rem]"
-
-      : hasImage && !isLink
-      ? "flex aspect-[4/5] w-full flex-col gap-2"
       : "flex w-full flex-col gap-3 min-h-[7rem]";
 
   } else if (fullWidth) {
@@ -190,7 +189,7 @@ export const NoteCard = memo(function NoteCard({
     sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
   }
 
-  const textNoteStyle: React.CSSProperties | undefined = isText
+  const textNoteStyle: React.CSSProperties | undefined = isText || isImageCard
     ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
     : tintBg
       ? { backgroundColor: tintBg }
