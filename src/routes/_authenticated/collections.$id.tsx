@@ -8,7 +8,7 @@ import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched, setWatchStatus } from "@/lib/media";
 import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
-import { NoteCard, n as useLongPress } from "@/components/NoteCard";
+import { NoteCard, useLongPress } from "@/components/NoteCard";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
 import {
   AlertDialog,
