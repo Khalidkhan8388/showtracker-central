@@ -439,6 +439,11 @@ function SearchPage() {
 
   const filteredNotes = useMemo(() => {
     let list = notes;
+    if (tab === "media") {
+      list = list.filter((n) => !!(n as any).media);
+    } else {
+      list = list.filter((n) => !(n as any).media);
+    }
     if (activeTag) list = list.filter((n) => (n.tags ?? []).includes(activeTag));
     const q = query.trim().toLowerCase();
     if (aiMode && aiIds) {
@@ -452,7 +457,7 @@ function SearchPage() {
       });
     }
     return list.slice(0, 60);
-  }, [notes, activeTag, query, aiMode, aiIds]);
+  }, [notes, activeTag, query, aiMode, aiIds, tab]);
 
   const matchingTasks = useMemo(() => {
     const q = query.trim().toLowerCase();
