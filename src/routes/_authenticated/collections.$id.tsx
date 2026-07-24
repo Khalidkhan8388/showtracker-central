@@ -1168,7 +1168,7 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
   return (
     <button
       type="button"
-      onClick={onOpen}
+      onClick={(e) => { if (lp.wasLongPress()) { e.preventDefault(); return; } onOpen(); }}
       className="group relative h-[172px] w-[38px] flex-shrink-0 overflow-hidden rounded-[3px] shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.97]"
       aria-label={`Open ${title}`}
     >
@@ -1369,7 +1369,7 @@ function MediaListRow({
     <li>
       <button
         type="button"
-        onClick={onOpen}
+        onClick={(e) => { if (lp.wasLongPress()) { e.preventDefault(); return; } onOpen(); }}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
         {...lp.handlers}
         className={`relative flex w-full items-stretch gap-3 overflow-hidden rounded-2xl bg-card p-2 text-left shadow-sm ring-1 ring-border/60 active:opacity-80 ${
@@ -1478,7 +1478,7 @@ function MediaGridTile({
     <li className="relative">
       <button
         type="button"
-        onClick={onOpen}
+        onClick={(e) => { if (lp.wasLongPress()) { e.preventDefault(); return; } onOpen(); }}
         onContextMenu={(e) => { e.preventDefault(); onLongPress(); }}
         {...lp.handlers}
         style={isMedia ? { borderRadius: 15 } : undefined}
