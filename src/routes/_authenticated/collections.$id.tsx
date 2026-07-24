@@ -354,10 +354,8 @@ function CollectionDetail() {
                 )}
               </div>
             </div>
-
-              </div>
-            </div>
             )}
+
 
             {!hasMedia ? (
               members.length === 0 ? (
