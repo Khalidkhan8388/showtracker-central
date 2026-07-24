@@ -24,6 +24,35 @@ export type FeedNote = {
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
 
+function VoiceWaveform({ seed, bars = 36 }: { seed: string; bars?: number }) {
+  // Deterministic pseudo-random heights from the note id so each card is unique but stable.
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const heights: number[] = [];
+  for (let i = 0; i < bars; i++) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    const n = ((h >>> 0) % 1000) / 1000;
+    // Envelope: emphasize center for a natural voice shape.
+    const t = i / (bars - 1);
+    const env = 0.55 + 0.45 * Math.sin(Math.PI * t);
+    heights.push(Math.max(0.18, Math.min(1, n * env + 0.15)));
+  }
+  return (
+    <div className="flex h-9 w-full items-center gap-[2px]">
+      {heights.map((v, i) => (
+        <span
+          key={i}
+          className="flex-1 rounded-full bg-foreground/70"
+          style={{ height: `${Math.round(v * 100)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export const FeedNoteCard = memo(function FeedNoteCard({
   note,
   variant,
