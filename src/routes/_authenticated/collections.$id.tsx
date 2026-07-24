@@ -7,6 +7,7 @@ import { formatDistanceToNow, format } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
+import { NoteCard } from "@/components/NoteCard";
 
 
 
@@ -291,6 +292,7 @@ function CollectionDetail() {
                 Add memories
               </button>
             </div>
+            {hasMedia && (
             <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
               <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
                 {hasTv && (
@@ -352,8 +354,34 @@ function CollectionDetail() {
                 )}
               </div>
             </div>
+            )}
 
-            {hasTv && tvView === "episodes" ? (
+
+            {!hasMedia ? (
+              members.length === 0 ? (
+                <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
+                  This collection is empty.
+                </p>
+              ) : (
+                <div className="columns-2 gap-3 [column-fill:_balance]">
+                  {members.map((n) => (
+                    <div key={n.id} className="mb-3 break-inside-avoid">
+                      <NoteCard
+                        note={n as any}
+                        variant="masonry"
+                        fullWidth
+                        thumbUrl={thumbs[n.id]}
+                        selected={false}
+                        selectMode={false}
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => {}}
+                        onToggleSel={() => {}}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : hasTv && tvView === "episodes" ? (
               <EpisodeTracker members={mediaMembers} />
             ) : (
             <>
