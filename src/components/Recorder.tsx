@@ -80,13 +80,14 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     if (files.length === 0) return;
     setUploadingMd(true);
     try {
-      const urls: string[] = [];
+      const paths: string[] = [];
       for (const f of files) {
         const path = await storeLocalPhoto(f, f.type);
-        const url = await getPhotoUrl(path);
-        if (url) urls.push(url);
+        // Warm the object URL cache so the just-inserted image renders instantly.
+        await getPhotoUrl(path);
+        paths.push(path);
       }
-      const snippet = urls.map((u) => `\n![](${u})\n`).join("");
+      const snippet = paths.map((p) => `\n![](${p})\n`).join("");
       insertAtCursor(snippet);
     } catch (err: any) {
       toast.error(err?.message ?? "Could not attach image");
