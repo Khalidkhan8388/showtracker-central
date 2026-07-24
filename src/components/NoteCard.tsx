@@ -110,19 +110,20 @@ export const NoteCard = memo(function NoteCard({
   const isVoice = note.duration_seconds != null;
   const isText = !isVoice && note.transcript != null;
   const isLink = !!note.source_url && !isText;
-  // Body-embedded image: first ![](...) in transcript. Lets text notes render
-  // an image hero (like image notes) even when image_paths is empty.
-  const bodyImageMatch = !thumbUrl && note.transcript
+  // Only non-text notes hoist a body image into a hero thumbnail. Text notes
+  // render their transcript verbatim so inline images stay where the user put
+  // them and no extracted preview is shown.
+  const bodyImageMatch = !thumbUrl && !isText && note.transcript
     ? note.transcript.match(/!\[[^\]]*\]\(([^)\s]+)\)/)
     : null;
   const bodyImageUrl = bodyImageMatch?.[1];
   const resolvedBodyImage = useResolvedImageSrc(bodyImageUrl);
   const effectiveThumb = thumbUrl || resolvedBodyImage || bodyImageUrl;
   const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
-  // Text card preview: strip images/code/hr for a clean minimal preview.
+  // Text card preview: keep body verbatim (including inline images the user
+  // placed); only drop code blocks and horizontal rules for a tidy preview.
   const previewBody = note.transcript
     ? note.transcript
-        .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
         .replace(/```[\s\S]*?```/g, "")
         .replace(/^---+$/gm, "")
         .replace(/\n{3,}/g, "\n\n")
