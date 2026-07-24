@@ -423,7 +423,7 @@ function Home() {
                 {derived.latest && (
                   <NoteCard
                     note={derived.latest}
-                    variant="default"
+                    variant="wide"
                     thumbUrl={thumbs[derived.latest.id]}
                     selected={selectedNotes.has(derived.latest.id)}
                     selectMode={noteSelectMode}
