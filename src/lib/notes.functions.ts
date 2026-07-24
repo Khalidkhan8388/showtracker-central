@@ -435,6 +435,18 @@ export async function generateLinkLabel({ data }: { data: { url: string } }) {
   return generateLinkLabelFn({ data });
 }
 
+/** Ensure a media note is filed into the right auto collection. */
+async function fileMediaNoteIntoCollection(noteId: string, type: "movie" | "tv") {
+  try {
+    const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } =
+      await import("./collections");
+    const c = await ensureCollectionByTitle(type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
+    await addNotesToCollection(c.id, [noteId]);
+  } catch (err) {
+    console.error("[collections] failed to file media note", err);
+  }
+}
+
 /** Add a movie/TV show to the app by TMDB id, from the in-app search. */
 export async function addTmdbMedia({
   data,
@@ -445,7 +457,12 @@ export async function addTmdbMedia({
   const existing = await db.notes
     .filter((n) => !n.deleted_at && n.media?.type === data.type && n.media?.tmdb_id === data.tmdb_id)
     .first();
-  if (existing) return { ok: true as const, noteId: existing.id, duplicate: true as const };
+  if (existing) {
+    // Still make sure it's filed — a previous add may have raced or the
+    // auto-collection could have been deleted / recreated in the meantime.
+    await fileMediaNoteIntoCollection(existing.id, data.type);
+    return { ok: true as const, noteId: existing.id, duplicate: true as const };
+  }
 
   const { lookupTmdbByIdFn } = await import("./tmdb.functions");
   const media = await lookupTmdbByIdFn({ data: { type: data.type, tmdb_id: data.tmdb_id } });
@@ -465,12 +482,7 @@ export async function addTmdbMedia({
     },
   });
   await db.notes.put(note);
-  try {
-    const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } =
-      await import("./collections");
-    const c = await ensureCollectionByTitle(media.type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
-    await addNotesToCollection(c.id, [note.id]);
-  } catch {}
+  await fileMediaNoteIntoCollection(note.id, media.type);
   return { ok: true as const, noteId: note.id, duplicate: false as const };
 }
 
