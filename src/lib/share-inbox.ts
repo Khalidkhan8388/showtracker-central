@@ -1,5 +1,10 @@
 // Client-side reader for the Web Share Target inbox the service worker fills.
-// Keep this dependency-free (raw IndexedDB) so it can't drift from sw.js.
+// Keep raw-IndexedDB access here so it can't drift from sw.js, and provide
+// a single `drainAndSaveShares()` helper that both the /share route and the
+// background SW-message listener call — so a share never opens the app UI
+// unnecessarily.
+
+import { createMediaNote, saveTextNote, saveWebLink } from "./notes.functions";
 
 const DB_NAME = "braintape-share";
 const STORE = "inbox";
@@ -44,4 +49,75 @@ export async function drainSharedItems(): Promise<SharedItem[]> {
     };
     req.onerror = () => resolve([]);
   });
+}
+
+const URL_RE = /https?:\/\/[^\s]+/i;
+
+export async function processSharedItem(item: {
+  url?: string;
+  text?: string;
+  title?: string;
+  files?: SharedItem["files"];
+}): Promise<number> {
+  let saved = 0;
+
+  const files = item.files ?? [];
+  const images: Blob[] = [];
+  let audio: { blob: Blob; mime: string } | null = null;
+  for (const f of files) {
+    const blob = new Blob([f.buf], { type: f.type || "application/octet-stream" });
+    if (f.type.startsWith("image/")) images.push(blob);
+    else if (f.type.startsWith("audio/") || f.type.startsWith("video/")) {
+      if (!audio) audio = { blob, mime: f.type };
+    }
+  }
+  if (images.length > 0 || audio) {
+    await createMediaNote({
+      audioBlob: audio?.blob ?? null,
+      audioMime: audio?.mime ?? null,
+      durationSeconds: null,
+      imageBlobs: images,
+    });
+    saved++;
+  }
+
+  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
+  const match = raw.match(URL_RE);
+  if (match) {
+    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
+    await saveWebLink({ data: { url: normalized } });
+    saved++;
+  } else if ((item.text ?? "").trim() && !audio && images.length === 0) {
+    const heading = (item.title ?? "").trim() || (item.text ?? "").trim().slice(0, 80);
+    await saveTextNote({ data: { heading, body: (item.text ?? "").trim() } });
+    saved++;
+  }
+
+  return saved;
+}
+
+// Drain everything in the SW inbox and save it silently. Safe to call from
+// multiple places (SW postMessage listener + /share route) — a small in-memory
+// lock keeps concurrent drains from double-saving the same item.
+let inflight: Promise<number> | null = null;
+
+export function drainAndSaveShares(): Promise<number> {
+  if (inflight) return inflight;
+  inflight = (async () => {
+    try {
+      const items = await drainSharedItems();
+      let total = 0;
+      for (const it of items) {
+        try {
+          total += await processSharedItem(it);
+        } catch {
+          // keep processing remaining items
+        }
+      }
+      return total;
+    } finally {
+      inflight = null;
+    }
+  })();
+  return inflight;
 }

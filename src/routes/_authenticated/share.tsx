@@ -1,7 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { createMediaNote, saveTextNote, saveWebLink } from "@/lib/notes.functions";
-import { drainSharedItems, type SharedItem } from "@/lib/share-inbox";
+import { drainAndSaveShares, processSharedItem } from "@/lib/share-inbox";
 import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { z } from "zod";
@@ -19,52 +18,6 @@ export const Route = createFileRoute("/_authenticated/share")({
   component: SharePage,
 });
 
-const URL_RE = /https?:\/\/[^\s]+/i;
-
-async function processItem(item: {
-  url?: string;
-  text?: string;
-  title?: string;
-  files?: SharedItem["files"];
-}): Promise<number> {
-  let saved = 0;
-
-  const files = item.files ?? [];
-  const images: Blob[] = [];
-  let audio: { blob: Blob; mime: string } | null = null;
-  for (const f of files) {
-    const blob = new Blob([f.buf], { type: f.type || "application/octet-stream" });
-    if (f.type.startsWith("image/")) images.push(blob);
-    else if (f.type.startsWith("audio/") || f.type.startsWith("video/")) {
-      // First audio/video wins; extras become images if any, else ignored.
-      if (!audio) audio = { blob, mime: f.type };
-    }
-  }
-  if (images.length > 0 || audio) {
-    await createMediaNote({
-      audioBlob: audio?.blob ?? null,
-      audioMime: audio?.mime ?? null,
-      durationSeconds: null,
-      imageBlobs: images,
-    });
-    saved++;
-  }
-
-  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
-  const match = raw.match(URL_RE);
-  if (match) {
-    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
-    await saveWebLink({ data: { url: normalized } });
-    saved++;
-  } else if ((item.text ?? "").trim() && !audio && images.length === 0) {
-    const heading = (item.title ?? "").trim() || (item.text ?? "").trim().slice(0, 80);
-    await saveTextNote({ data: { heading, body: (item.text ?? "").trim() } });
-    saved++;
-  }
-
-  return saved;
-}
-
 function SharePage() {
   const search = Route.useSearch();
   const navigate = useNavigate();
@@ -79,16 +32,13 @@ function SharePage() {
       try {
         let total = 0;
 
-        // 1) POST/multipart shares live in the SW inbox — drain first.
-        if (search.pending) {
-          const items = await drainSharedItems();
-          for (const it of items) total += await processItem(it);
-        }
+        // POST/multipart shares live in the SW inbox — drain silently.
+        if (search.pending) total += await drainAndSaveShares();
 
-        // 2) GET share fallback (older Androids / desktop) also carries data.
+        // GET share fallback (older Androids / desktop) also carries data.
         const hasGetPayload = search.url || search.text || search.title;
         if (!search.pending && hasGetPayload) {
-          total += await processItem({
+          total += await processSharedItem({
             url: search.url,
             text: search.text,
             title: search.title,
@@ -128,3 +78,4 @@ function SharePage() {
     </div>
   );
 }
+

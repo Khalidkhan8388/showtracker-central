@@ -51,16 +51,18 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(req.url);
 
   // Share Target intake — POST /share with multipart form.
+  // Stash the payload in IndexedDB, notify any open Braintape client so it
+  // can drain silently in the background, then respond with a tiny
+  // self-closing confirmation page instead of opening the full app UI.
   if (req.method === 'POST' && url.pathname === '/share') {
     event.respondWith((async () => {
+      let ok = false;
       try {
         const form = await req.formData();
         const files = [];
         const collect = (key) => {
           for (const val of form.getAll(key)) {
-            if (val instanceof File && val.size > 0) {
-              files.push(val); // keep as File for later arrayBuffer
-            }
+            if (val instanceof File && val.size > 0) files.push(val);
           }
         };
         collect('files');
@@ -83,13 +85,52 @@ self.addEventListener('fetch', (event) => {
           title: String(form.get('title') || ''),
           files: fileRecords,
         });
+        ok = true;
       } catch (err) {
-        // swallow — the /share page will show "nothing to save" if inbox empty
+        ok = false;
       }
-      return Response.redirect('/share?pending=1', 303);
+
+      // Nudge any open Braintape client to drain the inbox in background.
+      let hasClient = false;
+      try {
+        const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const c of wins) {
+          if (new URL(c.url).origin === self.location.origin) {
+            hasClient = true;
+            c.postMessage({ type: 'braintape-share-received' });
+          }
+        }
+      } catch {}
+
+      // If nothing is open yet, boot the app in the background so it can
+      // pick up the inbox — but keep the share-sheet page itself tiny.
+      const bootUrl = hasClient ? '' : '/home?share=1';
+
+      const html = `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Saved to Braintape</title><style>
+        html,body{margin:0;height:100%;background:#fff;color:#000;font:500 15px -apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+        .wrap{height:100%;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:10px}
+        .dot{width:44px;height:44px;border-radius:50%;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px}
+        @media (prefers-color-scheme: dark){html,body{background:#000;color:#fff}.dot{background:#fff;color:#000}}
+      </style></head><body><div class="wrap"><div class="dot">${ok ? '✓' : '!'}</div><div>${ok ? 'Saved to Braintape' : 'Nothing to save'}</div></div>
+      <script>
+        (function(){
+          ${bootUrl ? `try{var f=document.createElement('iframe');f.style.display='none';f.src=${JSON.stringify(bootUrl)};document.body.appendChild(f);}catch(e){}` : ''}
+          setTimeout(function(){
+            try{ window.close(); }catch(e){}
+            try{ if(history.length>1) history.back(); }catch(e){}
+          }, 450);
+        })();
+      </script>
+      </body></html>`;
+
+      return new Response(html, {
+        status: 200,
+        headers: { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' },
+      });
     })());
     return;
   }
+
 
   if (req.method !== 'GET' || url.origin !== self.location.origin) return;
 
