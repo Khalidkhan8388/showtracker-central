@@ -355,7 +355,35 @@ function CollectionDetail() {
               </div>
             </div>
 
-            {hasTv && tvView === "episodes" ? (
+              </div>
+            </div>
+            )}
+
+            {!hasMedia ? (
+              members.length === 0 ? (
+                <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
+                  This collection is empty.
+                </p>
+              ) : (
+                <div className="columns-2 gap-3 [column-fill:_balance]">
+                  {members.map((n) => (
+                    <div key={n.id} className="mb-3 break-inside-avoid">
+                      <NoteCard
+                        note={n as any}
+                        variant="masonry"
+                        fullWidth
+                        thumbUrl={thumbs[n.id]}
+                        selected={false}
+                        selectMode={false}
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => {}}
+                        onToggleSel={() => {}}
+                      />
+                    </div>
+                  ))}
+                </div>
+              )
+            ) : hasTv && tvView === "episodes" ? (
               <EpisodeTracker members={mediaMembers} />
             ) : (
             <>
