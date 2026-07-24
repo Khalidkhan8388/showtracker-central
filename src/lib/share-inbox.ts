@@ -75,8 +75,6 @@ export async function processSharedItem(item: {
   title?: string;
   files?: SharedItem["files"];
 }): Promise<number> {
-  let saved = 0;
-
   const files = item.files ?? [];
   const images: Blob[] = [];
   let audio: { blob: Blob; mime: string } | null = null;
@@ -87,6 +85,15 @@ export async function processSharedItem(item: {
       if (!audio) audio = { blob, mime: f.type };
     }
   }
+
+  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
+  const match = raw.match(URL_RE);
+  if (match) {
+    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
+    await saveWebLink({ data: { url: normalized } });
+    return 1;
+  }
+
   if (images.length > 0 || audio) {
     await createMediaNote({
       audioBlob: audio?.blob ?? null,
@@ -94,22 +101,16 @@ export async function processSharedItem(item: {
       durationSeconds: null,
       imageBlobs: images,
     });
-    saved++;
+    return 1;
   }
 
-  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
-  const match = raw.match(URL_RE);
-  if (match) {
-    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
-    await saveWebLink({ data: { url: normalized } });
-    saved++;
-  } else if ((item.text ?? "").trim() && !audio && images.length === 0) {
+  if ((item.text ?? "").trim()) {
     const heading = (item.title ?? "").trim() || (item.text ?? "").trim().slice(0, 80);
     await saveTextNote({ data: { heading, body: (item.text ?? "").trim() } });
-    saved++;
+    return 1;
   }
 
-  return saved;
+  return 0;
 }
 
 // Drain everything in the SW inbox and save it silently. Safe to call from
