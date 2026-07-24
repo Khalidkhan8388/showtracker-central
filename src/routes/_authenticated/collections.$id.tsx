@@ -292,6 +292,7 @@ function CollectionDetail() {
                 Add memories
               </button>
             </div>
+            {hasMedia && (
             <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
               <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
                 {hasTv && (
