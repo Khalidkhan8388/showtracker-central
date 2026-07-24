@@ -10,13 +10,27 @@ const APP_SHELL = ['/', '/home', '/manifest.webmanifest', '/icon-192.png', '/ico
 
 function openDb() {
   return new Promise((resolve, reject) => {
-    const r = indexedDB.open(DB_NAME, 1);
+    const r = indexedDB.open(DB_NAME, 2);
     r.onupgradeneeded = () => {
-      r.result.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+      const db = r.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: 'id', autoIncrement: true });
+      if (!db.objectStoreNames.contains('settings')) db.createObjectStore('settings');
     };
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
   });
+}
+
+async function readShareMode() {
+  try {
+    const db = await openDb();
+    return await new Promise((resolve) => {
+      const tx = db.transaction('settings', 'readonly');
+      const req = tx.objectStore('settings').get('share-mode');
+      req.onsuccess = () => resolve(req.result === 'open' ? 'open' : 'silent');
+      req.onerror = () => resolve('silent');
+    });
+  } catch { return 'silent'; }
 }
 
 async function putShare(rec) {
