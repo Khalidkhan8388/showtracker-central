@@ -497,7 +497,12 @@ function NoteDetail() {
     }
   }
 
-  const renderedBody = note.transcript ? resolveWikiLinks(note.transcript, wikiIndex) : "";
+  const transcriptForRender = note.transcript
+    ? (isImage
+        ? note.transcript.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\n{3,}/g, "\n\n").trim()
+        : note.transcript)
+    : "";
+  const renderedBody = transcriptForRender ? resolveWikiLinks(transcriptForRender, wikiIndex) : "";
 
   const media = (note as any).media as import("@/lib/local-db").LocalMedia | null | undefined;
   if (media) {
