@@ -49,11 +49,16 @@ function Home() {
   const localNotes = useLocalNotes();
   const notes = (localNotes ?? null) as Note[] | null;
   const [hideMedia, setHideMedia] = useState(false);
+  const [heroMode, setHeroMode] = useState<"latest" | "reminders">("latest");
   useEffect(() => {
-    const read = () => setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
+    const read = () => {
+      setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
+      const m = localStorage.getItem("home-hero-mode");
+      setHeroMode(m === "reminders" ? "reminders" : "latest");
+    };
     read();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "hide-media-on-home") read();
+      if (e.key === "hide-media-on-home" || e.key === "home-hero-mode") read();
     };
     const onCustom = () => read();
     window.addEventListener("storage", onStorage);
@@ -412,18 +417,38 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            <ReminderHero />
-            {derived.latest && (
-              <NoteCard
-                note={derived.latest}
-                variant="hero"
-                thumbUrl={thumbs[derived.latest.id]}
-                selected={selectedNotes.has(derived.latest.id)}
-                selectMode={noteSelectMode}
-                onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                onLongPress={() => toggleNoteSel(derived.latest.id)}
-                onToggleSel={() => toggleNoteSel(derived.latest.id)}
-              />
+            {heroMode === "reminders" ? (
+              <>
+                <ReminderHero />
+                {derived.latest && (
+                  <NoteCard
+                    note={derived.latest}
+                    variant="hero"
+                    thumbUrl={thumbs[derived.latest.id]}
+                    selected={selectedNotes.has(derived.latest.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                    onLongPress={() => toggleNoteSel(derived.latest.id)}
+                    onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                  />
+                )}
+              </>
+            ) : (
+              <>
+                {derived.latest && (
+                  <NoteCard
+                    note={derived.latest}
+                    variant="hero"
+                    thumbUrl={thumbs[derived.latest.id]}
+                    selected={selectedNotes.has(derived.latest.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                    onLongPress={() => toggleNoteSel(derived.latest.id)}
+                    onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                  />
+                )}
+                <ReminderHero />
+              </>
             )}
 
             {derived.suggested.length > 0 && (
