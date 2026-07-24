@@ -323,9 +323,21 @@ function CollectionDetail() {
                     </button>
                   </>
                 )}
-                {(!hasTv || tvView === "posters") && (
+                <button
+                  type="button"
+                  onClick={() => setTvView("stats")}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                    tvView === "stats"
+                      ? "bg-primary text-primary-foreground shadow-sm"
+                      : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
+                  }`}
+                >
+                  <BarChart3 className="h-3.5 w-3.5" />
+                  Stats
+                </button>
+                {tvView === "posters" && (
                   <>
-                    {hasTv && <span className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />}
+                    <span className="mx-1 h-5 w-px bg-black/10 dark:bg-white/10" />
                     <button
                       type="button"
                       aria-label="List view"
