@@ -1306,16 +1306,12 @@ function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => vo
   });
   const logoUrl = logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
 
-  // Reference layout: narrow SPINE faces the viewer (vertical wordmark + DVD
-  // badge at the bottom), and the front COVER hinges off the spine's right
-  // edge and recedes back into the shelf at a steep angle. Cases sit next to
-  // each other so each cover peeks out behind the next spine.
+  // Narrow spine faces the viewer, with just a small angled peek of the
+  // front cover behind on the right to hint at 3D depth.
   const SPINE_W = 34;
-  const HEIGHT = 230;
-  const COVER_W = 150;
-  // Visible slot each tile takes on the shelf — spine width + a peek of the
-  // cover behind. Small negative overlap gives the stacked-shelf look.
-  const SLOT_W = SPINE_W + 30;
+  const HEIGHT = 210;
+  const PEEK_W = 10;
+  const SLOT_W = SPINE_W + PEEK_W;
 
   return (
     <button
@@ -1323,31 +1319,31 @@ function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => vo
       onClick={onOpen}
       aria-label={`Open ${title}`}
       className="group relative flex-shrink-0 transition-transform active:scale-[0.98]"
-      style={{ width: SLOT_W, height: HEIGHT + 10, perspective: "1400px" }}
+      style={{ width: SLOT_W, height: HEIGHT + 8 }}
     >
       {/* ground shadow */}
       <div
-        className="pointer-events-none absolute left-[6px] bottom-0 h-[6px] w-[60px] rounded-[50%] bg-black/60 blur-[3px]"
+        className="pointer-events-none absolute left-[4px] bottom-0 h-[5px] w-[38px] rounded-[50%] bg-black/55 blur-[3px]"
       />
 
-      {/* Cover face — hinges off the spine's right edge and swings back */}
+      {/* Cover peek — thin angled sliver of the poster behind the spine */}
       <div
-        className="absolute top-0 left-[34px] overflow-hidden bg-neutral-800 shadow-[0_14px_22px_rgba(0,0,0,0.55)]"
+        className="absolute top-0 overflow-hidden bg-neutral-800"
         style={{
-          width: COVER_W,
+          left: SPINE_W - 2,
+          width: PEEK_W + 6,
           height: HEIGHT,
-          transform: "rotateY(-72deg)",
+          transform: "perspective(600px) rotateY(-62deg)",
           transformOrigin: "left center",
-          backfaceVisibility: "hidden",
         }}
       >
         {posterUrl && (
           <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
         )}
-        {/* depth darkening toward the hinge */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-[40%] bg-gradient-to-r from-black/55 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[20%] bg-gradient-to-l from-black/30 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-black/60 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[2px] bg-black/60" />
       </div>
+
 
       {/* Spine face — the forward-facing narrow strip */}
       <div
