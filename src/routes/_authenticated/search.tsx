@@ -6,6 +6,8 @@ import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
 import { poster as posterUrl } from "@/lib/media";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { MediaCard } from "@/components/MediaCard";
+import type { LocalMedia } from "@/lib/local-db";
 
 import {
   Search,
