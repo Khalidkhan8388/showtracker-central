@@ -979,7 +979,10 @@ const NoteCard = memo(function NoteCard({
   } else if (isMasonry) {
     sizing = hasImage && !isLink && !isText
       ? "flex aspect-[4/5] w-full flex-col gap-2"
-      : "flex w-full flex-col gap-3 min-h-[7rem]";
+      : isText
+        ? "flex w-full flex-col gap-2"
+        : "flex w-full flex-col gap-3 min-h-[7rem]";
+
   } else if (fullWidth) {
     sizing = "flex aspect-square w-full flex-col gap-3";
   } else {
@@ -1108,20 +1111,21 @@ const NoteCard = memo(function NoteCard({
         </div>
       ) : isText ? (
         <>
-          <div className="relative z-10 flex items-start justify-center gap-1.5 px-2">
-            <h3 className="font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground text-center">
+          <div className="relative z-10">
+            <h3 className="font-serif text-[16px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
               {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
             </h3>
           </div>
           {note.transcript && (
-            <div className="relative z-10 overflow-hidden text-foreground/70 text-center [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "9rem" : "16rem" }}>
-              <Markdown className="!text-[12px] !leading-snug [&_p]:!text-center [&_h1]:!text-center [&_h2]:!text-center [&_h3]:!text-center [&_ul]:!list-none [&_ul]:!pl-0 [&_ol]:!list-none [&_ol]:!pl-0 [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1 [&_img]:!mx-auto [&_img]:!rounded-lg [&_img]:!max-h-24 [&_img]:!w-auto [&_pre]:hidden [&_hr]:hidden">
+            <div className="relative z-10 overflow-hidden text-foreground/70 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]" style={{ maxHeight: hasImage ? "9rem" : "12rem" }}>
+              <Markdown className="!text-[12.5px] !leading-snug [&_ul]:!pl-4 [&_ol]:!pl-4 [&_h1]:!text-[14px] [&_h1]:!mt-0 [&_h1]:!mb-1 [&_h2]:!text-[13px] [&_h2]:!mt-1 [&_h2]:!mb-1 [&_h3]:!text-[12px] [&_h3]:!mt-1 [&_h3]:!mb-0.5 [&_p]:!my-1 [&_ul]:!my-1 [&_ol]:!my-1 [&_img]:!my-1.5 [&_img]:!rounded-lg [&_img]:!w-full [&_img]:!max-h-24 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden">
                 {note.transcript}
               </Markdown>
             </div>
           )}
 
         </>
+
 
       ) : (
         <>
