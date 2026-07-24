@@ -151,8 +151,9 @@ export const NoteCard = memo(function NoteCard({
   const tintBg = useTint ? mymindTints[tintIdx] : undefined;
 
   const base = isText
-    ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
+    ? "relative block overflow-hidden rounded-[15px] p-5 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
+
     : isHero
       ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
@@ -171,7 +172,8 @@ export const NoteCard = memo(function NoteCard({
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
     sizing = isText
-      ? "flex w-full flex-col gap-2 min-h-[9rem] max-h-[26rem]"
+      ? "flex w-full flex-col gap-3 min-h-[9rem] max-h-[30rem]"
+
       : hasImage && !isLink
       ? "flex aspect-[4/5] w-full flex-col gap-2"
       : "flex w-full flex-col gap-3 min-h-[7rem]";
@@ -299,27 +301,60 @@ export const NoteCard = memo(function NoteCard({
           </div>
         </div>
       ) : isText ? (
-        <>
-          <div className="relative z-10 flex items-start gap-1.5 pr-5">
-            <h3 className="font-serif text-[17px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground">
-              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-            </h3>
-          </div>
-          {previewBody && (
-            <div
-              className="relative z-10 flex-1 overflow-hidden text-foreground/75 [mask-image:linear-gradient(to_bottom,black_65%,transparent)]"
-            >
-              <Markdown className="!text-[13px] !leading-[1.55] [&>*:first-child]:!mt-0 [&_h1]:!text-[15px] [&_h1]:!font-semibold [&_h1]:!mt-2 [&_h1]:!mb-1 [&_h2]:!text-[14px] [&_h2]:!font-semibold [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h3]:!text-[13px] [&_h3]:!font-semibold [&_h3]:!mt-1.5 [&_h3]:!mb-0.5 [&_p]:!my-1.5 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_li]:!my-0.5 [&_img]:!my-2 [&_img]:!rounded-lg [&_img]:!w-full [&_img]:!max-h-48 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden [&_blockquote]:!my-1.5 [&_blockquote]:!pl-3 [&_blockquote]:!border-l-2 [&_blockquote]:!border-foreground/20">
-                {previewBody ?? ""}
-              </Markdown>
-            </div>
-          )}
-          {!previewBody && note.summary && (
-            <p className="relative z-10 text-[13px] leading-snug text-muted-foreground line-clamp-3">
-              {note.summary}
-            </p>
-          )}
-        </>
+        (() => {
+          // Show image_paths inline (top) only when the body doesn't already
+          // embed them via ![](local://...) — mirrors detail page ordering.
+          const bodyHasImg = !!note.transcript && /!\[[^\]]*\]\(/.test(note.transcript);
+          const extraImages = !bodyHasImg && Array.isArray(note.image_paths)
+            ? (note.image_paths as string[]).slice(0, 1)
+            : [];
+          return (
+            <>
+              {extraImages.length > 0 && (
+                <div className="relative z-10 -mx-1 overflow-hidden rounded-xl">
+                  <img
+                    src={effectiveThumb}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-40 w-full object-cover"
+                  />
+                  {imageCount > 1 && (
+                    <div className="absolute right-1.5 top-1.5 rounded-full bg-black/50 px-1.5 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                      +{imageCount - 1}
+                    </div>
+                  )}
+                </div>
+              )}
+              <div className="relative z-10 flex items-start gap-1.5 pr-5">
+                <h3 className="font-serif text-[19px] leading-[1.2] font-semibold tracking-tight break-words line-clamp-2 text-foreground">
+                  {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+                </h3>
+              </div>
+              {previewBody ? (
+                <div className="relative z-10 flex-1 overflow-hidden text-foreground/80 [mask-image:linear-gradient(to_bottom,black_70%,transparent)]">
+                  <Markdown className="!text-[13.5px] !leading-[1.55] [&>*:first-child]:!mt-0 [&_h1]:!text-[15px] [&_h1]:!font-semibold [&_h1]:!mt-2 [&_h1]:!mb-1 [&_h2]:!text-[14px] [&_h2]:!font-semibold [&_h2]:!mt-2 [&_h2]:!mb-1 [&_h3]:!text-[13px] [&_h3]:!font-semibold [&_h3]:!mt-1.5 [&_h3]:!mb-0.5 [&_p]:!my-1.5 [&_ul]:!my-1.5 [&_ol]:!my-1.5 [&_li]:!my-0.5 [&_img]:!my-2 [&_img]:!rounded-lg [&_img]:!w-full [&_img]:!max-h-48 [&_img]:!object-cover [&_pre]:hidden [&_hr]:hidden [&_a]:!text-foreground/80 [&_blockquote]:!my-1.5 [&_blockquote]:!pl-3 [&_blockquote]:!border-l-2 [&_blockquote]:!border-foreground/20">
+                    {previewBody}
+                  </Markdown>
+                </div>
+              ) : note.summary ? (
+                <p className="relative z-10 text-[13.5px] leading-snug text-muted-foreground line-clamp-3">
+                  {note.summary}
+                </p>
+              ) : null}
+              <div className="relative z-10 mt-1 flex items-center gap-3 text-[11px] text-muted-foreground">
+                <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+                {note.tasks && note.tasks.length > 0 && (
+                  <span className="flex items-center gap-1">
+                    <CheckCircle2 className="h-3 w-3" />
+                    {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+                  </span>
+                )}
+              </div>
+            </>
+          );
+        })()
+
 
       ) : (
         <>
