@@ -75,6 +75,8 @@ export type LocalNote = {
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
+  reminder_at?: string | null;
+  hidden_episode_reminders?: string[];
 };
 
 export type MetaRow = { key: string; value: string };
