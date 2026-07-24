@@ -34,6 +34,15 @@ function ProfilePage() {
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
+  const [heroMode, setHeroMode] = useState<"latest" | "reminders">(() => {
+    if (typeof window === "undefined") return "latest";
+    return (localStorage.getItem("home-hero-mode") as "latest" | "reminders") ?? "latest";
+  });
+  function updateHeroMode(next: "latest" | "reminders") {
+    setHeroMode(next);
+    localStorage.setItem("home-hero-mode", next);
+    window.dispatchEvent(new Event("braintape:pref-changed"));
+  }
   const [autoOpenShare, setAutoOpenShare] = useState(() => {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("share-auto-open") === "1";
@@ -184,10 +193,42 @@ function ProfilePage() {
       {/* Home preferences */}
       <section className="px-4 pt-8">
         <SectionTitle>Home page</SectionTitle>
+
+        {/* Hero: latest vs reminders */}
+        <div className="rounded-2xl bg-card p-3">
+          <div className="mb-2 px-1 text-[13px] font-medium text-foreground">Hero header</div>
+          <div className="relative flex rounded-full bg-muted p-1">
+            <span
+              aria-hidden
+              className="absolute top-1 bottom-1 w-[calc(50%-4px)] rounded-full bg-background shadow-sm transition-transform"
+              style={{ transform: heroMode === "latest" ? "translateX(0)" : "translateX(100%)" }}
+            />
+            <button
+              type="button"
+              onClick={() => updateHeroMode("latest")}
+              className={`relative z-[1] flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${heroMode === "latest" ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Latest entry
+            </button>
+            <button
+              type="button"
+              onClick={() => updateHeroMode("reminders")}
+              className={`relative z-[1] flex-1 rounded-full px-3 py-2 text-[13px] font-semibold transition-colors ${heroMode === "reminders" ? "text-foreground" : "text-muted-foreground"}`}
+            >
+              Reminders
+            </button>
+          </div>
+          <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+            {heroMode === "latest"
+              ? "Home opens with your most recent note. Reminders show below."
+              : "Home opens with reminders and follow-ups. Latest note shows below."}
+          </p>
+        </div>
+
         <button
           type="button"
           onClick={() => toggleHideMedia(!hideMedia)}
-          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+          className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
         >
           <div className="min-w-0 flex-1">
             <div className="text-[15px]">Hide movies & TV shows</div>
