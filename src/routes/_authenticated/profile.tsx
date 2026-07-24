@@ -34,15 +34,6 @@ function ProfilePage() {
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
-  const [shelf3D, setShelf3D] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("shelf-style") === "3d";
-  });
-  function toggleShelf3D(next: boolean) {
-    setShelf3D(next);
-    localStorage.setItem("shelf-style", next ? "3d" : "minimal");
-    window.dispatchEvent(new Event("braintape:pref-changed"));
-  }
 
 
   async function confirmDelete() {
