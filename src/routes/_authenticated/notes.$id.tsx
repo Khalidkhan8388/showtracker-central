@@ -582,50 +582,48 @@ function NoteDetail() {
           </div>
         )}
 
-        {/* Header card — consistent for every note type */}
-        <section className="rounded-2xl bg-card p-4 shadow-sm">
-          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-            <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
-          </div>
+        {/* Kind pill */}
+        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+          <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
+        </div>
 
-          <h1 className="text-[26px] font-bold leading-[1.15] tracking-tight">
-            {note.heading ?? (processing ? "Processing…" : "Untitled")}
-          </h1>
+        <h1 className="text-[30px] font-bold leading-[1.1] tracking-tight">
+          {note.heading ?? (processing ? "Processing…" : "Untitled")}
+        </h1>
 
-          <p
-            className="mt-1.5 text-[13px] text-muted-foreground"
-            title={new Date(note.created_at).toLocaleString()}
-          >
-            {relativeTime(note.created_at)}
-            {isVoice && note.duration_seconds != null && (
-              <> · {formatDuration(note.duration_seconds)}</>
-            )}
-            {isText && readingMinutes > 0 && (
-              <> · {readingMinutes} min read</>
-            )}
-          </p>
-
-          {note.source_url && (
-            <a
-              href={note.source_url}
-              target="_blank"
-              rel="noreferrer"
-              className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-yellow-400/20 px-2.5 py-1 text-[13px] font-medium text-yellow-700 no-underline active:opacity-60"
-            >
-              {linkHost ? (
-                <img
-                  src={`https://www.google.com/s2/favicons?domain=${linkHost}&sz=32`}
-                  alt=""
-                  className="h-3.5 w-3.5 flex-shrink-0 rounded-sm"
-                />
-              ) : (
-                <Link2 className="h-3.5 w-3.5 shrink-0" />
-              )}
-              <span className="truncate">{linkHost ?? note.source_url}</span>
-            </a>
+        <p
+          className="mt-1.5 text-[13px] text-muted-foreground"
+          title={new Date(note.created_at).toLocaleString()}
+        >
+          {relativeTime(note.created_at)}
+          {isVoice && note.duration_seconds != null && (
+            <> · {formatDuration(note.duration_seconds)}</>
           )}
-        </section>
+          {isText && readingMinutes > 0 && (
+            <> · {readingMinutes} min read</>
+          )}
+        </p>
+
+        {note.source_url && (
+          <a
+            href={note.source_url}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-yellow-400/20 px-2.5 py-1 text-[13px] font-medium text-yellow-700 no-underline active:opacity-60"
+          >
+            {linkHost ? (
+              <img
+                src={`https://www.google.com/s2/favicons?domain=${linkHost}&sz=32`}
+                alt=""
+                className="h-3.5 w-3.5 flex-shrink-0 rounded-sm"
+              />
+            ) : (
+              <Link2 className="h-3.5 w-3.5 shrink-0" />
+            )}
+            <span className="truncate">{linkHost ?? note.source_url}</span>
+          </a>
+        )}
 
         {!isText && (
           <section className="mt-6">
