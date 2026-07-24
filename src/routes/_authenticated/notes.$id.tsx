@@ -497,7 +497,12 @@ function NoteDetail() {
     }
   }
 
-  const renderedBody = note.transcript ? resolveWikiLinks(note.transcript, wikiIndex) : "";
+  const transcriptForRender = note.transcript
+    ? (isImage
+        ? note.transcript.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\n{3,}/g, "\n\n").trim()
+        : note.transcript)
+    : "";
+  const renderedBody = transcriptForRender ? resolveWikiLinks(transcriptForRender, wikiIndex) : "";
 
   const media = (note as any).media as import("@/lib/local-db").LocalMedia | null | undefined;
   if (media) {
@@ -712,7 +717,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {note.transcript && (
+        {note.transcript && renderedBody && (
           <section className="mt-6">
             {isVoice && (
               <div className="mb-2 flex items-center justify-between px-1">
