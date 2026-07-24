@@ -1306,128 +1306,114 @@ function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => vo
   });
   const logoUrl = logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
 
-  // Real DVD case proportions: front cover + thin spine, tilted so the spine
-  // dominates the view and the front cover peeks on the right (matches a row
-  // of cases standing on a shelf, viewed from the left).
-  const COVER_W = 130;
-  const HEIGHT = 210;
-  const DEPTH = 22;
+  // Reference layout: narrow SPINE faces the viewer (vertical wordmark + DVD
+  // badge at the bottom), and the front COVER hinges off the spine's right
+  // edge and recedes back into the shelf at a steep angle. Cases sit next to
+  // each other so each cover peeks out behind the next spine.
+  const SPINE_W = 34;
+  const HEIGHT = 230;
+  const COVER_W = 150;
+  // Visible slot each tile takes on the shelf — spine width + a peek of the
+  // cover behind. Small negative overlap gives the stacked-shelf look.
+  const SLOT_W = SPINE_W + 30;
 
   return (
     <button
       type="button"
       onClick={onOpen}
       aria-label={`Open ${title}`}
-      className="group relative flex-shrink-0 transition-transform active:scale-[0.97]"
-      style={{ width: 82, height: HEIGHT + 12, perspective: "1000px" }}
+      className="group relative flex-shrink-0 transition-transform active:scale-[0.98]"
+      style={{ width: SLOT_W, height: HEIGHT + 10, perspective: "1400px" }}
     >
       {/* ground shadow */}
       <div
-        className="pointer-events-none absolute left-1/2 bottom-0 h-[6px] w-[70px] -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]"
+        className="pointer-events-none absolute left-[6px] bottom-0 h-[6px] w-[60px] rounded-[50%] bg-black/60 blur-[3px]"
       />
+
+      {/* Cover face — hinges off the spine's right edge and swings back */}
       <div
-        className="absolute left-0 top-0"
+        className="absolute top-0 left-[34px] overflow-hidden bg-neutral-800 shadow-[0_14px_22px_rgba(0,0,0,0.55)]"
         style={{
           width: COVER_W,
           height: HEIGHT,
-          transformStyle: "preserve-3d",
-          transform: "rotateY(-58deg)",
+          transform: "rotateY(-72deg)",
           transformOrigin: "left center",
+          backfaceVisibility: "hidden",
         }}
       >
-        {/* Front cover face */}
-        <div
-          className="absolute inset-0 overflow-hidden rounded-[2px] bg-neutral-800 shadow-[0_10px_22px_rgba(0,0,0,0.55)]"
-          style={{ transform: `translateZ(${DEPTH / 2}px)`, backfaceVisibility: "hidden" }}
-        >
-          {posterUrl && (
-            <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-          )}
-          {/* subtle right-edge cover darkening for depth */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-[10px] bg-gradient-to-r from-black/40 to-transparent" />
-        </div>
+        {posterUrl && (
+          <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+        )}
+        {/* depth darkening toward the hinge */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[40%] bg-gradient-to-r from-black/55 to-transparent" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[20%] bg-gradient-to-l from-black/30 to-transparent" />
+      </div>
 
-        {/* Spine face (left side of the box) */}
-        <div
-          className="absolute top-0 overflow-hidden bg-black"
-          style={{
-            left: 0,
-            width: DEPTH,
-            height: HEIGHT,
-            transform: `rotateY(-90deg) translateZ(${DEPTH / 2}px)`,
-            transformOrigin: "left center",
-            backfaceVisibility: "hidden",
-          }}
-        >
-          {posterUrl && (
+      {/* Spine face — the forward-facing narrow strip */}
+      <div
+        className="absolute top-0 left-0 overflow-hidden rounded-[2px] bg-black shadow-[0_6px_14px_rgba(0,0,0,0.5)]"
+        style={{ width: SPINE_W, height: HEIGHT }}
+      >
+        {posterUrl && (
+          <img
+            src={posterUrl}
+            alt=""
+            aria-hidden
+            className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover opacity-90"
+            style={{ width: HEIGHT, height: SPINE_W }}
+            loading="lazy"
+          />
+        )}
+        {/* scrim so wordmark reads */}
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/85" />
+        {/* left & right creases */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/25" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-black/70" />
+        {/* top edge shadow */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 h-[6px] bg-gradient-to-b from-black/70 to-transparent" />
+
+        {/* Wordmark, rotated to spine orientation */}
+        <div className="pointer-events-none absolute inset-x-0 top-[10px] bottom-[22px] flex items-center justify-center">
+          {logoUrl ? (
             <img
-              src={posterUrl}
-              alt=""
-              className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover"
-              style={{ width: HEIGHT, height: DEPTH }}
+              src={logoUrl}
+              alt={title}
+              className="max-h-[180px] max-w-[26px] -rotate-90 object-contain"
+              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) brightness(1.1)" }}
               loading="lazy"
             />
-          )}
-          {/* scrim so wordmark reads */}
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/70" />
-          {/* highlight + shadow creases */}
-          <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/25" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-black/60" />
-
-          {/* Wordmark */}
-          <div className="pointer-events-none absolute inset-x-0 top-[10px] bottom-[20px] flex items-center justify-center">
-            {logoUrl ? (
-              <img
-                src={logoUrl}
-                alt={title}
-                className="max-h-[160px] max-w-[18px] -rotate-90 object-contain"
-                style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) brightness(1.08)" }}
-                loading="lazy"
-              />
-            ) : (
-              <span
-                className="max-h-[160px] whitespace-nowrap font-serif text-[10px] font-semibold italic leading-none text-white"
-                style={{
-                  writingMode: "vertical-rl",
-                  transform: "rotate(180deg)",
-                  textShadow: "0 1px 3px rgba(0,0,0,0.9)",
-                }}
-              >
-                {title}
-              </span>
-            )}
-          </div>
-
-          {/* DVD footer badge */}
-          <div className="pointer-events-none absolute inset-x-0 bottom-[3px] flex justify-center">
+          ) : (
             <span
-              className="text-white/75"
+              className="max-h-[180px] whitespace-nowrap font-serif text-[13px] font-semibold italic leading-none text-white"
               style={{
-                fontFamily: "serif",
-                fontStyle: "italic",
-                fontWeight: 900,
-                fontSize: 6,
-                letterSpacing: "0.18em",
+                writingMode: "vertical-rl",
+                transform: "rotate(180deg)",
+                textShadow: "0 1px 3px rgba(0,0,0,0.9)",
               }}
             >
-              DVD
+              {title}
             </span>
-          </div>
+          )}
         </div>
 
-        {/* Top face — thin sliver for a bit of 3D closure */}
-        <div
-          className="absolute left-0 top-0 bg-neutral-900"
-          style={{
-            width: COVER_W,
-            height: DEPTH,
-            transform: `rotateX(90deg) translateZ(${DEPTH / 2}px)`,
-            transformOrigin: "top center",
-            backfaceVisibility: "hidden",
-          }}
-        />
+        {/* DVD footer badge */}
+        <div className="pointer-events-none absolute inset-x-0 bottom-[4px] flex justify-center">
+          <span
+            className="text-white/80"
+            style={{
+              fontFamily: "serif",
+              fontStyle: "italic",
+              fontWeight: 900,
+              fontSize: 8,
+              letterSpacing: "0.16em",
+            }}
+          >
+            DVD
+          </span>
+        </div>
       </div>
     </button>
+
   );
 }
 
