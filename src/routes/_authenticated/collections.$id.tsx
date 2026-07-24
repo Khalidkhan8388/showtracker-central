@@ -385,21 +385,43 @@ function CollectionDetail() {
                 </p>
               ) : (
                 <div className="columns-2 gap-3 [column-fill:_balance]">
-                  {members.map((n) => (
-                    <div key={n.id} className="mb-3 break-inside-avoid">
-                      <NoteCard
-                        note={n as any}
-                        variant="masonry"
-                        fullWidth
-                        thumbUrl={thumbs[n.id]}
-                        selected={false}
-                        selectMode={false}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => {}}
-                        onToggleSel={() => {}}
-                      />
-                    </div>
-                  ))}
+                  {members.map((n) => {
+                    const sel = removeSel.has(n.id);
+                    return (
+                      <div key={n.id} className="mb-3 break-inside-avoid">
+                        <FeedNoteCard
+                          note={n as any}
+                          variant="masonry"
+                          fullWidth
+                          thumbUrl={thumbs[n.id]}
+                          selected={sel}
+                          selectMode={removing}
+                          onOpen={() => {
+                            if (removing) {
+                              setRemoveSel((prev) => {
+                                const next = new Set(prev);
+                                next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                                return next;
+                              });
+                            } else {
+                              navigate({ to: "/notes/$id", params: { id: n.id } });
+                            }
+                          }}
+                          onLongPress={() => {
+                            setRemoving(true);
+                            setRemoveSel(new Set([n.id]));
+                          }}
+                          onToggleSel={() => {
+                            setRemoveSel((prev) => {
+                              const next = new Set(prev);
+                              next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )
             ) : hasMedia && tvView === "stats" ? (
