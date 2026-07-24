@@ -7,7 +7,11 @@
 import { createMediaNote, saveTextNote, saveWebLink } from "./notes.functions";
 
 const DB_NAME = "braintape-share";
+const DB_VERSION = 3;
 const STORE = "inbox";
+const SETTINGS = "settings";
+const RECENT_PREFIX = "processed-share:";
+const DEDUPE_WINDOW_MS = 10 * 60 * 1000;
 
 export type SharedFile = { name: string; type: string; buf: ArrayBuffer };
 export type SharedItem = {
@@ -17,17 +21,29 @@ export type SharedItem = {
   text: string;
   title: string;
   files: SharedFile[];
+  fingerprint?: string;
 };
 
 function openDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const r = indexedDB.open(DB_NAME, 1);
+    const r = indexedDB.open(DB_NAME, DB_VERSION);
     r.onupgradeneeded = () => {
-      r.result.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+      const db = r.result;
+      if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE, { keyPath: "id", autoIncrement: true });
+      if (!db.objectStoreNames.contains(SETTINGS)) db.createObjectStore(SETTINGS);
     };
     r.onsuccess = () => resolve(r.result);
     r.onerror = () => reject(r.error);
   });
+}
+
+function normalizePart(value?: string) {
+  return String(value || "").replace(/\s+/g, " ").trim().toLowerCase();
+}
+
+function fallbackFingerprint(item: SharedItem) {
+  const filePart = (item.files ?? []).map((f) => `${f.name}:${f.type}:${f.buf.byteLength}`).join("|");
+  return [normalizePart(item.url), normalizePart(item.text), normalizePart(item.title), filePart].join("\n");
 }
 
 export async function drainSharedItems(): Promise<SharedItem[]> {
@@ -59,8 +75,6 @@ export async function processSharedItem(item: {
   title?: string;
   files?: SharedItem["files"];
 }): Promise<number> {
-  let saved = 0;
-
   const files = item.files ?? [];
   const images: Blob[] = [];
   let audio: { blob: Blob; mime: string } | null = null;
@@ -71,6 +85,15 @@ export async function processSharedItem(item: {
       if (!audio) audio = { blob, mime: f.type };
     }
   }
+
+  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
+  const match = raw.match(URL_RE);
+  if (match) {
+    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
+    await saveWebLink({ data: { url: normalized } });
+    return 1;
+  }
+
   if (images.length > 0 || audio) {
     await createMediaNote({
       audioBlob: audio?.blob ?? null,
@@ -78,22 +101,16 @@ export async function processSharedItem(item: {
       durationSeconds: null,
       imageBlobs: images,
     });
-    saved++;
+    return 1;
   }
 
-  const raw = `${item.url ?? ""} ${item.text ?? ""}`.trim();
-  const match = raw.match(URL_RE);
-  if (match) {
-    const normalized = /^https?:\/\//i.test(match[0]) ? match[0] : `https://${match[0]}`;
-    await saveWebLink({ data: { url: normalized } });
-    saved++;
-  } else if ((item.text ?? "").trim() && !audio && images.length === 0) {
+  if ((item.text ?? "").trim()) {
     const heading = (item.title ?? "").trim() || (item.text ?? "").trim().slice(0, 80);
     await saveTextNote({ data: { heading, body: (item.text ?? "").trim() } });
-    saved++;
+    return 1;
   }
 
-  return saved;
+  return 0;
 }
 
 // Drain everything in the SW inbox and save it silently. Safe to call from
@@ -106,7 +123,39 @@ export function drainAndSaveShares(): Promise<number> {
   const run = async (): Promise<number> => {
     const items = await drainSharedItems();
     let total = 0;
+    const seenThisDrain = new Set<string>();
+    let shareDb: IDBDatabase | null = null;
+    try {
+      shareDb = await openDb();
+    } catch {
+      shareDb = null;
+    }
     for (const it of items) {
+      const fingerprint = it.fingerprint || fallbackFingerprint(it);
+      if (seenThisDrain.has(fingerprint)) continue;
+      seenThisDrain.add(fingerprint);
+
+      let alreadyProcessed = false;
+      if (shareDb?.objectStoreNames.contains(SETTINGS)) {
+        alreadyProcessed = await new Promise<boolean>((resolve) => {
+          const tx = shareDb.transaction(SETTINGS, "readwrite");
+          const settings = tx.objectStore(SETTINGS);
+          const key = `${RECENT_PREFIX}${fingerprint}`;
+          const req = settings.get(key);
+          req.onsuccess = () => {
+            const last = Number(req.result || 0);
+            if (last && Date.now() - last < DEDUPE_WINDOW_MS) {
+              resolve(true);
+              return;
+            }
+            settings.put(Date.now(), key);
+            resolve(false);
+          };
+          req.onerror = () => resolve(false);
+        });
+      }
+      if (alreadyProcessed) continue;
+
       try {
         total += await processSharedItem(it);
       } catch {
