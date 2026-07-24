@@ -8,6 +8,7 @@ export type LocalTask = {
   done: boolean;
   pinned?: boolean;
   pending?: boolean;
+  reminder_at?: string | null;
 };
 
 export type WatchStatus = "watchlist" | "watching" | "watched" | "dropped";
