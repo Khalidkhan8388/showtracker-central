@@ -19,6 +19,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+
 
 
 
@@ -1066,6 +1068,10 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
         </p>
       </div>
 
+      {/* Watched shelf */}
+      <WatchedShelf members={members} />
+
+
       {stats.hasMovies && (
         <>
           <Header icon={<Film className="h-3.5 w-3.5 text-muted-foreground" />} title="Movies" />
@@ -1137,5 +1143,191 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
         <Clock className="h-3 w-3" /> Runtimes from TMDB · dropped items counted in totals
       </p>
     </div>
+  );
+}
+
+// ============================================================
+// Watched shelf — minimal DVD spines that open a CD case dialog
+// ============================================================
+
+type ShelfMember = { id: string; heading: string | null; media?: LocalMedia | null };
+
+function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
+  const [open, setOpen] = useState<ShelfMember | null>(null);
+
+  const watched = useMemo(() => {
+    return members.filter((m) => {
+      const md = m.media;
+      if (!md) return false;
+      if (md.type === "movie") return md.watch_status === "watched";
+      if (md.type === "tv") {
+        if (md.watch_status === "watched") return true;
+        // A show counts as "on the shelf" once every aired episode is checked
+        const total = mediaTotal(md);
+        const done = mediaDone(md);
+        return total > 0 && done >= total;
+      }
+      return false;
+    });
+  }, [members]);
+
+  if (watched.length === 0) return null;
+
+  return (
+    <div className="mt-5">
+      <div className="mb-2 flex items-end justify-between px-1">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          Shelf
+        </h2>
+        <span className="text-[11px] text-muted-foreground tabular-nums">{watched.length}</span>
+      </div>
+
+      {/* Shelf row */}
+      <div className="relative">
+        <div className="scrollbar-none flex items-end gap-[3px] overflow-x-auto px-1 pb-2 pt-1">
+          {watched.map((m) => (
+            <SpineTile key={m.id} member={m} onOpen={() => setOpen(m)} />
+          ))}
+        </div>
+        {/* subtle shelf line */}
+        <div className="mx-1 h-px bg-border/70" />
+        <div className="mx-1 mt-[2px] h-[3px] rounded-b-md bg-gradient-to-b from-border/40 to-transparent" />
+      </div>
+
+      <MediaCaseDialog member={open} onClose={() => setOpen(null)} />
+    </div>
+  );
+}
+
+function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void }) {
+  const md = member.media!;
+  const posterUrl = md.poster_path ? tmdbPoster(md.poster_path, "w342") : null;
+  const title = md.title || member.heading || "Untitled";
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="group relative h-[172px] w-[38px] flex-shrink-0 overflow-hidden rounded-[3px] shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.97]"
+      aria-label={`Open ${title}`}
+    >
+      {posterUrl ? (
+        <img
+          src={posterUrl}
+          alt=""
+          className="absolute inset-0 h-full w-full object-cover"
+          style={{ objectPosition: "35% center" }}
+          loading="lazy"
+        />
+      ) : (
+        <div className="absolute inset-0 bg-neutral-800" />
+      )}
+      {/* darken for legibility */}
+      <div className="absolute inset-0 bg-black/45" />
+      {/* left crease highlight */}
+      <div className="absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
+      {/* right shadow */}
+      <div className="absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/60 to-transparent" />
+
+      {/* vertical title */}
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span
+          className="max-h-[160px] whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/95"
+          style={{ writingMode: "vertical-rl", transform: "rotate(180deg)", textShadow: "0 1px 2px rgba(0,0,0,0.6)" }}
+        >
+          {title}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onClose: () => void }) {
+  const navigate = useNavigate();
+  const md = member?.media ?? null;
+  const posterUrl = md?.poster_path ? tmdbPoster(md.poster_path, "w500") : null;
+  const title = md?.title || member?.heading || "Untitled";
+  const year = md?.release_date ? new Date(md.release_date).getFullYear() : null;
+
+  return (
+    <Dialog open={!!member} onOpenChange={(v) => { if (!v) onClose(); }}>
+      <DialogContent
+        className="max-w-[360px] gap-0 overflow-hidden rounded-3xl border-0 bg-neutral-900 p-0 text-white shadow-2xl [&>button]:text-white/70 [&>button]:hover:text-white"
+      >
+
+        <DialogTitle className="sr-only">{title}</DialogTitle>
+        <DialogDescription className="sr-only">Disc case preview</DialogDescription>
+
+        {member && md && (
+          <>
+            {/* Case: poster + disc */}
+            <div className="relative flex bg-neutral-800/40 p-3">
+              {/* Cover art (left) */}
+              <div className="relative w-[46%] flex-shrink-0 overflow-hidden rounded-sm shadow-[4px_0_12px_rgba(0,0,0,0.5)]">
+                {posterUrl ? (
+                  <img src={posterUrl} alt={title} className="h-full w-full object-cover" />
+                ) : (
+                  <div className="aspect-[2/3] w-full bg-neutral-700" />
+                )}
+              </div>
+
+              {/* Black case with disc (right) */}
+              <div className="relative ml-1 flex-1 rounded-sm bg-black shadow-inner">
+                {/* disc */}
+                <div className="absolute left-1/2 top-1/2 h-[78%] w-[78%] -translate-x-1/2 -translate-y-1/2">
+                  <div className="relative h-full w-full overflow-hidden rounded-full bg-neutral-900 shadow-[0_6px_18px_rgba(0,0,0,0.55)]">
+                    {posterUrl && (
+                      <img
+                        src={posterUrl}
+                        alt=""
+                        className="absolute inset-0 h-full w-full object-cover opacity-70 blur-[0.5px]"
+                      />
+                    )}
+                    {/* glossy sheen */}
+                    <div className="absolute inset-0 bg-[conic-gradient(from_210deg,rgba(255,255,255,0)_0deg,rgba(255,255,255,0.18)_40deg,rgba(255,255,255,0)_120deg,rgba(255,255,255,0.12)_240deg,rgba(255,255,255,0)_360deg)]" />
+                    {/* center hub */}
+                    <div className="absolute left-1/2 top-1/2 h-[26%] w-[26%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-300 ring-1 ring-black/40">
+                      <div className="absolute left-1/2 top-1/2 h-[38%] w-[38%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-neutral-900" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Meta */}
+            <div className="px-5 pb-5 pt-3">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-white/50">
+                {md.type === "movie" ? "Movie" : "TV Show"}
+                {year ? ` · ${year}` : ""}
+              </p>
+              <h3 className="mt-1 text-[17px] font-semibold leading-tight tracking-tight">
+                {title}
+              </h3>
+
+              <div className="mt-4 flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const id = member.id;
+                    onClose();
+                    navigate({ to: "/notes/$id", params: { id } });
+                  }}
+                  className="flex-1 rounded-full bg-white px-4 py-2.5 text-[13px] font-semibold text-neutral-900 active:scale-[0.98]"
+                >
+                  Open details
+                </button>
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="rounded-full bg-white/10 px-4 py-2.5 text-[13px] font-semibold text-white/90 active:scale-[0.98]"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
