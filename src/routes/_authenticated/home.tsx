@@ -14,11 +14,16 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
+import { noteTags, topTags, prettyTag } from "@/lib/tags";
+import { Hash } from "lucide-react";
 
 
 
 
 export const Route = createFileRoute("/_authenticated/home")({
+  validateSearch: (s: Record<string, unknown>) => ({
+    tag: typeof s.tag === "string" && s.tag.length > 0 ? s.tag : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Home — Braintape" },
