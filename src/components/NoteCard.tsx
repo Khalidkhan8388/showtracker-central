@@ -340,29 +340,18 @@ export const NoteCard = memo(function NoteCard({
               <span className="text-[10px] font-medium uppercase tracking-wide">Voice</span>
             </div>
           )}
-          {!(hasImage && !isLink) && (
-            <div className="relative z-10 flex items-start gap-1.5 pr-5">
-              <h3 className="text-[13px] font-semibold leading-snug break-words line-clamp-3 text-foreground">
-                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-              </h3>
-            </div>
-          )}
-          {!(hasImage && !isLink) && note.summary && (
+          <div className="relative z-10 flex items-start gap-1.5 pr-5">
+            <h3 className="text-[13px] font-semibold leading-snug break-words line-clamp-3 text-foreground">
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+            </h3>
+          </div>
+          {note.summary && (
             <p className="relative z-10 text-[11px] leading-snug text-muted-foreground line-clamp-2">
               {note.summary}
             </p>
           )}
 
-          <div
-            className={`relative z-10 mt-auto flex flex-col gap-1 text-[10px] ${
-              hasImage && !isLink ? "text-white/85" : "text-muted-foreground"
-            }`}
-          >
-            {hasImage && !isLink && (
-              <h3 className="text-[13px] font-semibold leading-tight break-words text-white drop-shadow line-clamp-3 pr-5">
-                {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
-              </h3>
-            )}
+          <div className="relative z-10 mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
             {note.tasks && note.tasks.length > 0 && (
               <span className="flex items-center gap-1">
                 <CheckCircle2 className="h-3 w-3" />
