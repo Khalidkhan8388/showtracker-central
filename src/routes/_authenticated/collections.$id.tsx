@@ -326,12 +326,12 @@ function CollectionDetail() {
               </button>
             </div>
             {hasMedia && (
-            <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
+            <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-start px-4">
               <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
                 <button
                   type="button"
                   onClick={() => setTvView("posters")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                  className={`inline-flex items-center justify-start gap-1.5 rounded-full px-3.5 py-2 text-left text-xs font-semibold transition-colors ${
                     tvView === "posters"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
@@ -344,7 +344,7 @@ function CollectionDetail() {
                   <button
                     type="button"
                     onClick={() => setTvView("episodes")}
-                    className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                    className={`inline-flex items-center justify-start gap-1.5 rounded-full px-3.5 py-2 text-left text-xs font-semibold transition-colors ${
                       tvView === "episodes"
                         ? "bg-primary text-primary-foreground shadow-sm"
                         : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
@@ -357,7 +357,7 @@ function CollectionDetail() {
                 <button
                   type="button"
                   onClick={() => setTvView("stats")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3.5 py-2 text-xs font-semibold transition-colors ${
+                  className={`inline-flex items-center justify-start gap-1.5 rounded-full px-3.5 py-2 text-left text-xs font-semibold transition-colors ${
                     tvView === "stats"
                       ? "bg-primary text-primary-foreground shadow-sm"
                       : "text-neutral-900 hover:bg-black/5 dark:text-white dark:hover:bg-white/10"
