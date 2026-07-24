@@ -198,7 +198,7 @@ export const NoteCard = memo(function NoteCard({
       {isSquareLike && hasImage && !isLink && (
         <>
           <img
-            src={thumbUrl}
+            src={effectiveThumb}
             alt=""
             loading="lazy"
             decoding="async"
@@ -233,7 +233,7 @@ export const NoteCard = memo(function NoteCard({
         <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
-              src={thumbUrl}
+              src={effectiveThumb}
               alt=""
               loading="lazy"
               decoding="async"
