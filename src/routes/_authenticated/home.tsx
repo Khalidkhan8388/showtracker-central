@@ -304,9 +304,14 @@ function Home() {
   const selectMode = noteSelectMode || taskSelectMode;
 
   // Memoized derivations — only recompute when notes actually change.
+  const { tag: activeTag } = Route.useSearch();
+  const navigate2 = useNavigate();
+  const availableTags = useMemo(() => topTags(notes ?? [], 20), [notes]);
+
   const derived = useMemo(() => {
     if (!notes) return null;
-    const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
+    let displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
+    if (activeTag) displayNotes = displayNotes.filter((n) => noteTags(n as any).includes(activeTag));
     const [latest, ...rest] = displayNotes;
     const pinnedRest = rest.filter((n) => n.pinned);
     const unpinnedRest = rest.filter((n) => !n.pinned);
