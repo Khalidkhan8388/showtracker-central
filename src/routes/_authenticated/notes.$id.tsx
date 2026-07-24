@@ -450,6 +450,12 @@ function NoteDetail() {
   const doneCount = note.tasks?.filter((t) => t.done).length ?? 0;
   const taskTotal = note.tasks?.length ?? 0;
 
+  const tags = noteTags(note as unknown as NoteLike);
+  const related = useMemo(
+    () => relatedNotes(note as unknown as NoteLike, (allLocal ?? []) as unknown as NoteLike[], 6),
+    [note, allLocal],
+  );
+
   async function onShare() {
     const url = typeof window !== "undefined" ? window.location.href : "";
     const title = note?.heading ?? "Note";
