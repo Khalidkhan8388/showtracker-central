@@ -422,21 +422,7 @@ function Home() {
         ) : (
           <div className="space-y-4">
             {heroMode === "reminders" ? (
-              <>
-                <ReminderHero />
-                {derived.latest && (
-                  <NoteCard
-                    note={derived.latest}
-                    variant="wide"
-                    thumbUrl={thumbs[derived.latest.id]}
-                    selected={selectedNotes.has(derived.latest.id)}
-                    selectMode={noteSelectMode}
-                    onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                    onLongPress={() => toggleNoteSel(derived.latest.id)}
-                    onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                  />
-                )}
-              </>
+              <ReminderHero />
             ) : (
               derived.latest && (
                 <NoteCard
@@ -451,6 +437,7 @@ function Home() {
                 />
               )
             )}
+
 
             {derived.suggested.length > 0 && (
               <Link
