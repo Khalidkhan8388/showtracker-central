@@ -306,7 +306,7 @@ function Home() {
   // Memoized derivations — only recompute when notes actually change.
   const { tag: activeTag } = Route.useSearch();
   const navigate2 = useNavigate();
-  const availableTags = useMemo(() => topTags(notes ?? [], 20), [notes]);
+  const availableTags = useMemo(() => topTags((notes ?? []) as any, 20), [notes]);
 
   const derived = useMemo(() => {
     if (!notes) return null;
