@@ -119,9 +119,11 @@ export const NoteCard = memo(function NoteCard({
   const resolvedBodyImage = useResolvedImageSrc(bodyImageUrl);
   const effectiveThumb = thumbUrl || resolvedBodyImage || bodyImageUrl;
   const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
-  // For text notes we render the body markdown inline (images and all) so the
-  // card preview matches what the user sees when they open the note.
-  const previewBody = note.transcript;
+  // Text card previews show plain text on a clean white/dark card — strip any
+  // embedded images so the title/body stay legible without an image backdrop.
+  const previewBody = note.transcript
+    ? note.transcript.replace(/!\[[^\]]*\]\([^)]*\)/g, "").replace(/\n{3,}/g, "\n\n").trim()
+    : null;
 
   const linkHost = (() => {
     if (!note.source_url) return null;
