@@ -112,9 +112,9 @@
   --sidebar-ring: #000000;
 
   /* Scrim tokens — light mode fades to white */
-  --scrim-strong: rgba(255, 255, 255, 0.94);
-  --scrim-mid: rgba(255, 255, 255, 0.55);
-  --scrim-fg: #0a0a0a;
+  --scrim-strong: rgba(0, 0, 0, 0.85);
+  --scrim-mid: rgba(0, 0, 0, 0.4);
+  --scrim-fg: #ffffff;
 
 
 }
