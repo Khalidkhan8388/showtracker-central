@@ -538,8 +538,27 @@ function SearchPage() {
           </div>
         )}
 
-        {/* TMDB search results — always shown when the user is typing */}
-        {query.trim().length >= 2 && !aiMode && (tmdbLoading || tmdbHits.length > 0) && (
+        {/* Tab switcher: memories vs movies/TV */}
+        <div className="mb-4 flex justify-center">
+          <div className="inline-flex items-center rounded-full bg-muted p-1">
+            {(["memories", "media"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-full px-4 py-1.5 text-[12px] font-semibold transition ${
+                  tab === t
+                    ? "bg-background text-foreground shadow-sm"
+                    : "text-muted-foreground"
+                }`}
+              >
+                {t === "memories" ? "Memories" : "Movies & TV"}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* TMDB search results — Movies & TV tab only */}
+        {tab === "media" && query.trim().length >= 2 && !aiMode && (tmdbLoading || tmdbHits.length > 0) && (
           <section className="mb-5">
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
