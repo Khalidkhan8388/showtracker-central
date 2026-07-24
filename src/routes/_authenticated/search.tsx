@@ -31,6 +31,9 @@ import {
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
+  validateSearch: (search: Record<string, unknown>) => ({
+    tab: search.tab === "media" ? ("media" as const) : ("memories" as const),
+  }),
   head: () => ({
     meta: [
       { title: "Search — Braintape" },
