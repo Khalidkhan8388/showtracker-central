@@ -1,13 +1,14 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv } from "lucide-react";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow, format } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
-import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
+import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched, setWatchStatus } from "@/lib/media";
+import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
-import { NoteCard } from "@/components/NoteCard";
+import { NoteCard, n as useLongPress } from "@/components/NoteCard";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
 import {
   AlertDialog,
