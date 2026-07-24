@@ -1157,21 +1157,6 @@ type ShelfMember = { id: string; heading: string | null; media?: LocalMedia | nu
 
 function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
   const [open, setOpen] = useState<ShelfMember | null>(null);
-  const [style3D, setStyle3D] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return localStorage.getItem("shelf-style") === "3d";
-  });
-  useEffect(() => {
-    function sync() {
-      setStyle3D(localStorage.getItem("shelf-style") === "3d");
-    }
-    window.addEventListener("braintape:pref-changed", sync);
-    window.addEventListener("storage", sync);
-    return () => {
-      window.removeEventListener("braintape:pref-changed", sync);
-      window.removeEventListener("storage", sync);
-    };
-  }, []);
 
   const watched = useMemo(() => {
     return members.filter((m) => {
@@ -1191,8 +1176,6 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
   if (watched.length === 0) return null;
 
-  const Tile = style3D ? Spine3DTile : SpineTile;
-
   return (
     <div className="mt-5">
       <div className="mb-2 flex items-end justify-between px-1">
@@ -1204,9 +1187,9 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
       {/* Shelf row */}
       <div className="relative">
-        <div className={`scrollbar-none flex items-end overflow-x-auto px-2 pb-2 ${style3D ? "gap-[14px] pt-4" : "gap-[3px] pt-1"}`}>
+        <div className="scrollbar-none flex items-end gap-[3px] overflow-x-auto px-2 pb-2 pt-1">
           {watched.map((m) => (
-            <Tile key={m.id} member={m} onOpen={() => setOpen(m)} />
+            <SpineTile key={m.id} member={m} onOpen={() => setOpen(m)} />
           ))}
         </div>
         {/* subtle shelf line */}
@@ -1218,6 +1201,7 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
     </div>
   );
 }
+
 
 function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void }) {
   const md = member.media!;
@@ -1290,128 +1274,6 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
     </button>
   );
 
-}
-
-function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void }) {
-  const md = member.media!;
-  const posterUrl = md.poster_path ? tmdbPoster(md.poster_path, "w500") : null;
-  const title = md.title || member.heading || "Untitled";
-
-  const { data: logo } = useQuery({
-    queryKey: ["tmdb-logo", md.type, md.tmdb_id],
-    queryFn: () => fetchTmdbLogoFn({ data: { type: md.type, tmdb_id: md.tmdb_id } }),
-    staleTime: 1000 * 60 * 60 * 24,
-    gcTime: 1000 * 60 * 60 * 24,
-    enabled: !!md.tmdb_id,
-  });
-  const logoUrl = logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
-
-  // Narrow spine faces the viewer, with just a small angled peek of the
-  // front cover behind on the right to hint at 3D depth.
-  const SPINE_W = 34;
-  const HEIGHT = 210;
-  const PEEK_W = 6;
-  const SLOT_W = SPINE_W + PEEK_W;
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      aria-label={`Open ${title}`}
-      className="group relative flex-shrink-0 transition-transform active:scale-[0.98]"
-      style={{ width: SLOT_W, height: HEIGHT + 8 }}
-    >
-      {/* ground shadow */}
-      <div
-        className="pointer-events-none absolute left-[4px] bottom-0 h-[5px] w-[38px] rounded-[50%] bg-black/55 blur-[3px]"
-      />
-
-      {/* Cover peek — small angled sliver of the poster behind the spine */}
-      <div
-        className="absolute top-0 overflow-hidden bg-neutral-800"
-        style={{
-          left: SPINE_W - 1,
-          width: PEEK_W + 10,
-          height: HEIGHT,
-          transform: "perspective(800px) rotateY(-22deg)",
-          transformOrigin: "left center",
-        }}
-
-      >
-        {posterUrl && (
-          <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
-        )}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-1/2 bg-gradient-to-r from-black/60 to-transparent" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[2px] bg-black/60" />
-      </div>
-
-
-      {/* Spine face — the forward-facing narrow strip */}
-      <div
-        className="absolute top-0 left-0 overflow-hidden rounded-[2px] bg-black shadow-[0_6px_14px_rgba(0,0,0,0.5)]"
-        style={{ width: SPINE_W, height: HEIGHT }}
-      >
-        {posterUrl && (
-          <img
-            src={posterUrl}
-            alt=""
-            aria-hidden
-            className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover opacity-90"
-            style={{ width: HEIGHT, height: SPINE_W }}
-            loading="lazy"
-          />
-        )}
-        {/* scrim so wordmark reads */}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/30 to-black/85" />
-        {/* left & right creases */}
-        <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/25" />
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-black/70" />
-        {/* top edge shadow */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 h-[6px] bg-gradient-to-b from-black/70 to-transparent" />
-
-        {/* Wordmark, rotated to spine orientation */}
-        <div className="pointer-events-none absolute inset-x-0 top-[10px] bottom-[22px] flex items-center justify-center">
-          {logoUrl ? (
-            <img
-              src={logoUrl}
-              alt={title}
-              className="max-h-[180px] max-w-[26px] -rotate-90 object-contain"
-              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) brightness(1.1)" }}
-              loading="lazy"
-            />
-          ) : (
-            <span
-              className="max-h-[180px] whitespace-nowrap font-serif text-[13px] font-semibold italic leading-none text-white"
-              style={{
-                writingMode: "vertical-rl",
-                transform: "rotate(180deg)",
-                textShadow: "0 1px 3px rgba(0,0,0,0.9)",
-              }}
-            >
-              {title}
-            </span>
-          )}
-        </div>
-
-        {/* DVD footer badge */}
-        <div className="pointer-events-none absolute inset-x-0 bottom-[4px] flex justify-center">
-          <span
-            className="text-white/80"
-            style={{
-              fontFamily: "serif",
-              fontStyle: "italic",
-              fontWeight: 900,
-              fontSize: 8,
-              letterSpacing: "0.16em",
-            }}
-          >
-            DVD
-          </span>
-        </div>
-      </div>
-    </button>
-
-  );
 }
 
 function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onClose: () => void }) {
