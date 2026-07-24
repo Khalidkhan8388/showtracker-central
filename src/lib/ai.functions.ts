@@ -265,7 +265,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
   .handler(async ({ data }) => {
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-    const { title, text } = await fetchWebPage(data.url);
+    const { title, text, imageUrl } = await fetchWebPage(data.url);
     const effective = text && text.length >= 30
       ? text
       : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable content; summarize from the URL and title.)`;
@@ -291,7 +291,35 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
       summary: String(parsed.summary ?? "").slice(0, 2000),
       tasks: tasksFromRaw(parsed.tasks),
       tags: parseTags(parsed.tags),
+      imageUrl: imageUrl ?? null,
     };
+  });
+
+const FetchImageInput = z.object({ url: z.string().trim().url().max(4000) });
+export const fetchLinkImageFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => FetchImageInput.parse(d))
+  .handler(async ({ data }) => {
+    try {
+      const controller = new AbortController();
+      const to = setTimeout(() => controller.abort(), 10_000);
+      const res = await fetch(data.url, {
+        redirect: "follow",
+        signal: controller.signal,
+        headers: { "User-Agent": "Mozilla/5.0 (compatible; BraintapeBot/1.0)", Accept: "image/*" },
+      }).finally(() => clearTimeout(to));
+      if (!res.ok) return { ok: false as const };
+      const mime = res.headers.get("content-type")?.split(";")[0]?.trim() || "image/jpeg";
+      if (!mime.startsWith("image/")) return { ok: false as const };
+      const buf = new Uint8Array(await res.arrayBuffer());
+      if (buf.byteLength === 0 || buf.byteLength > 8 * 1024 * 1024) return { ok: false as const };
+      // Base64 encode
+      let bin = "";
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      const base64 = btoa(bin);
+      return { ok: true as const, mime, base64 };
+    } catch {
+      return { ok: false as const };
+    }
   });
 
 // ---------- text note enrichment ------------------------------------------
