@@ -855,15 +855,22 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
     let moviesDropped = 0;
     let moviesWatchedMins = 0;
     let moviesPendingMins = 0;
+    let moviesUpcoming = 0;
+    let moviesUpcomingMins = 0;
     for (const m of movies) {
       const rt = Math.max(0, m.runtime ?? 0);
+      const releaseMs = m.release_date ? new Date(m.release_date).getTime() : null;
+      const released = releaseMs === null || !Number.isFinite(releaseMs) || releaseMs <= now;
       if (m.watch_status === "watched") {
         moviesWatched++;
         moviesWatchedMins += rt;
       } else if (m.watch_status === "dropped") {
         moviesDropped++;
+      } else if (!released) {
+        moviesUpcoming++;
+        moviesUpcomingMins += rt;
       } else {
-        // watchlist / watching / null → count as pending to watch
+        // watchlist / watching / null on released titles → pending
         moviesWatchlist++;
         moviesPendingMins += rt;
       }
@@ -889,6 +896,7 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
       }
       const watched = new Set(m.watched_episodes);
       const fallbackRt = Math.max(0, m.runtime ?? 0);
+      const isDropped = m.watch_status === "dropped";
       for (const s of m.seasons ?? []) {
         for (const ep of s.episodes) {
           const rt = Math.max(0, ep.runtime ?? fallbackRt);
@@ -897,6 +905,9 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
           if (watched.has(epKey(ep.season_number, ep.episode_number))) {
             epsWatched++;
             epsWatchedMins += rt;
+          } else if (isDropped) {
+            // dropped shows: don't count remaining episodes as pending/upcoming
+            continue;
           } else if (aired) {
             epsPending++;
             epsPendingMins += rt;
@@ -921,6 +932,8 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
         dropped: moviesDropped,
         watchedMins: moviesWatchedMins,
         pendingMins: moviesPendingMins,
+        upcoming: moviesUpcoming,
+        upcomingMins: moviesUpcomingMins,
       },
       shows: {
         total: shows.length,
