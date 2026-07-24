@@ -8,6 +8,17 @@ import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 import { NoteCard } from "@/components/NoteCard";
+import { FeedNoteCard } from "@/components/FeedNoteCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 
