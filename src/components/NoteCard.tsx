@@ -106,10 +106,22 @@ export const NoteCard = memo(function NoteCard({
   };
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
-  const hasImage = imageCount > 0 && !!thumbUrl;
   const isVoice = note.duration_seconds != null;
   const isText = !isVoice && note.transcript != null;
   const isLink = !!note.source_url && !isText;
+  // Body-embedded image: first ![](...) in transcript. Lets text notes render
+  // an image hero (like image notes) even when image_paths is empty.
+  const bodyImageMatch = !thumbUrl && note.transcript
+    ? note.transcript.match(/!\[[^\]]*\]\(([^)\s]+)\)/)
+    : null;
+  const bodyImageUrl = bodyImageMatch?.[1];
+  const effectiveThumb = thumbUrl || bodyImageUrl;
+  const hasImage = !!effectiveThumb && (imageCount > 0 || !!bodyImageUrl);
+  // Strip the leading image (and any adjacent images) from body preview so it
+  // isn't duplicated once we render the hero thumbnail.
+  const previewBody = bodyImageUrl && note.transcript
+    ? note.transcript.replace(/!\[[^\]]*\]\([^)\s]+\)/g, "").trim()
+    : note.transcript;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
