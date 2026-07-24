@@ -1248,13 +1248,13 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
       {/* Title wordmark — the movie/show's own poster logo, rotated to spine
           orientation. Falls back to a display-serif italic title while the
           logo loads or when TMDB has no logo asset. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[3px]">
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[1px]">
         {logoUrl ? (
           <img
             src={logoUrl}
             alt={title}
-            className="max-h-[160px] max-w-[30px] -rotate-90 object-contain"
-            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.75)) brightness(1.05)" }}
+            className="max-h-[168px] max-w-[36px] -rotate-90 object-contain"
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.8)) brightness(1.08) contrast(1.05)" }}
             loading="lazy"
           />
         ) : (
