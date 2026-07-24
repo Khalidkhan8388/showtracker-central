@@ -20,6 +20,9 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Dialog, DialogContent, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { useQuery } from "@tanstack/react-query";
+import { fetchTmdbLogoFn } from "@/lib/tmdb.functions";
+
 
 
 
@@ -1204,6 +1207,18 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
   const posterUrl = md.poster_path ? tmdbPoster(md.poster_path, "w342") : null;
   const title = md.title || member.heading || "Untitled";
 
+  // Fetch the show/movie's official title logo (transparent PNG). Cached by
+  // TanStack Query — displayed rotated on the spine so it looks like the
+  // real poster/DVD wordmark rather than typeset text.
+  const { data: logo } = useQuery({
+    queryKey: ["tmdb-logo", md.type, md.tmdb_id],
+    queryFn: () => fetchTmdbLogoFn({ data: { type: md.type, tmdb_id: md.tmdb_id } }),
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24,
+    enabled: !!md.tmdb_id,
+  });
+  const logoUrl = logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
+
   return (
     <button
       type="button"
@@ -1216,45 +1231,48 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
         // like a real DVD spine — the poster is the text.
         <img
           src={posterUrl}
-          alt={title}
+          alt=""
           className="absolute left-1/2 top-1/2 h-[38px] w-[172px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover"
           loading="lazy"
         />
       ) : (
-        <div className="absolute inset-0 flex items-center justify-center bg-neutral-800">
-          <span
-            className="max-h-[160px] whitespace-nowrap text-[10.5px] font-semibold uppercase tracking-[0.14em] text-white/90"
-            style={{ writingMode: "vertical-rl", transform: "rotate(180deg)" }}
-          >
-            {title}
-          </span>
-        </div>
+        <div className="absolute inset-0 bg-neutral-800" />
       )}
       {/* left crease highlight */}
       <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
       {/* right shadow */}
       <div className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/50 to-transparent" />
-      {/* soft vertical scrim so title reads on any poster */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/15 to-black/55" />
+      {/* soft vertical scrim so wordmark reads on any poster */}
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/60" />
 
-      {/* Series title rendered in poster-style typography (display serif),
-          vertically oriented like the title on a DVD spine. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[2px]">
-        <span
-          className="max-h-[160px] whitespace-nowrap font-serif text-[12px] font-semibold italic leading-none tracking-[0.02em] text-white"
-          style={{
-            writingMode: "vertical-rl",
-            transform: "rotate(180deg)",
-            textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)",
-          }}
-        >
-          {title}
-        </span>
+      {/* Title wordmark — the movie/show's own poster logo, rotated to spine
+          orientation. Falls back to a display-serif italic title while the
+          logo loads or when TMDB has no logo asset. */}
+      <div className="pointer-events-none absolute inset-0 flex items-center justify-center px-[3px]">
+        {logoUrl ? (
+          <img
+            src={logoUrl}
+            alt={title}
+            className="max-h-[160px] max-w-[30px] -rotate-90 object-contain"
+            style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.75)) brightness(1.05)" }}
+            loading="lazy"
+          />
+        ) : (
+          <span
+            className="max-h-[160px] whitespace-nowrap font-serif text-[12px] font-semibold italic leading-none tracking-[0.02em] text-white"
+            style={{
+              writingMode: "vertical-rl",
+              transform: "rotate(180deg)",
+              textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)",
+            }}
+          >
+            {title}
+          </span>
+        )}
       </div>
-
-
     </button>
   );
+
 }
 
 function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onClose: () => void }) {
