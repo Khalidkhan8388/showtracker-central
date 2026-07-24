@@ -646,8 +646,40 @@ function NoteDetail() {
 
 
 
-        {isImage && note.summary && (
+        {isImage && imageUrls.length > 0 && (
           <section className="mt-5">
+            <div className={imageUrls.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
+              {imageUrls.map((url, i) => (
+                <a
+                  key={`${url}-${i}`}
+                  href={url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="block overflow-hidden rounded-2xl bg-muted"
+                >
+                  <img
+                    src={url}
+                    alt=""
+                    className="h-full w-full object-cover"
+                    style={imageUrls.length === 1 ? { maxHeight: "70vh" } : { aspectRatio: "1 / 1" }}
+                  />
+                </a>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => viewAddImagesRef.current?.click()}
+              disabled={addingImages}
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
+            >
+              {addingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+              Add photos
+            </button>
+          </section>
+        )}
+
+        {isImage && note.summary && (
+          <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
             </h2>
@@ -712,37 +744,6 @@ function NoteDetail() {
           </section>
         )}
 
-        {isImage && imageUrls.length > 0 && (
-          <section className="mt-6">
-            <div className={imageUrls.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
-              {imageUrls.map((url, i) => (
-                <a
-                  key={`${url}-${i}`}
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block overflow-hidden rounded-2xl bg-muted"
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    style={imageUrls.length === 1 ? { maxHeight: "70vh" } : { aspectRatio: "1 / 1" }}
-                  />
-                </a>
-              ))}
-            </div>
-            <button
-              type="button"
-              onClick={() => viewAddImagesRef.current?.click()}
-              disabled={addingImages}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
-            >
-              {addingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-              Add photos
-            </button>
-          </section>
-        )}
       </div>
 
 
