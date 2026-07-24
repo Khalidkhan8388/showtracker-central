@@ -249,11 +249,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
           <h3 className="relative z-10 font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground pr-5">
             {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
           </h3>
-          {note.summary && (
-            <p className="relative z-10 text-[11.5px] leading-snug text-muted-foreground line-clamp-2">
-              {note.summary}
-            </p>
-          )}
           <div className="relative z-10 mt-auto flex flex-col gap-1.5">
             <VoiceWaveform seed={note.id} />
             <div className="flex items-center justify-between text-[10px] text-muted-foreground">
