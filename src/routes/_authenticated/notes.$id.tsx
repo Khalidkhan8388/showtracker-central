@@ -361,19 +361,18 @@ function NoteDetail() {
     if (files.length === 0) return;
     setUploadingImg(true);
     try {
-      const urls: string[] = [];
+      const paths: string[] = [];
       for (const f of files) {
-        const path = await storeLocalPhoto(f, f.type);
-        const url = await getPhotoUrl(path);
-        if (url) urls.push(url);
+        paths.push(await storeLocalPhoto(f, f.type));
       }
-      appendToBody(urls.map((u) => `![](${u})`).join("\n"));
+      appendToBody(paths.map((p) => `![](${p})`).join("\n"));
     } catch (err: any) {
       toast.error(err?.message ?? "Could not attach image");
     } finally {
       setUploadingImg(false);
     }
   }
+
 
   async function commitLink() {
     const raw = linkDraft.trim();
