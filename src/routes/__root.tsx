@@ -154,8 +154,34 @@ function RootComponent() {
       return;
     }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
-  }, []);
 
+    // Background share intake — when the SW receives a Web Share Target POST
+    // it postMessages us; drain the inbox silently instead of navigating the
+    // user to /share.
+    const onMessage = async (ev: MessageEvent) => {
+      if (ev.data?.type !== "braintape-share-received") return;
+      try {
+        const { drainAndSaveShares } = await import("@/lib/share-inbox");
+        const { toast } = await import("sonner");
+        const n = await drainAndSaveShares();
+        if (n > 0) toast.success(n === 1 ? "Saved to Braintape" : `Saved ${n} items`);
+      } catch {
+        // silent — user will see any failed items on next /share visit
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+
+    // On startup, drain anything left over from a share that happened while
+    // the app wasn't open.
+    (async () => {
+      try {
+        const { drainAndSaveShares } = await import("@/lib/share-inbox");
+        await drainAndSaveShares();
+      } catch {}
+    })();
+
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
@@ -165,4 +191,5 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
+
 
