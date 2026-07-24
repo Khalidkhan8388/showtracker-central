@@ -1292,6 +1292,145 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
 
 }
 
+function Spine3DTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void }) {
+  const md = member.media!;
+  const posterUrl = md.poster_path ? tmdbPoster(md.poster_path, "w500") : null;
+  const title = md.title || member.heading || "Untitled";
+
+  const { data: logo } = useQuery({
+    queryKey: ["tmdb-logo", md.type, md.tmdb_id],
+    queryFn: () => fetchTmdbLogoFn({ data: { type: md.type, tmdb_id: md.tmdb_id } }),
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24,
+    enabled: !!md.tmdb_id,
+  });
+  const logoUrl = logo?.file_path ? `https://image.tmdb.org/t/p/w500${logo.file_path}` : null;
+
+  // Real DVD case proportions: front cover + thin spine, tilted so the spine
+  // dominates the view and the front cover peeks on the right (matches a row
+  // of cases standing on a shelf, viewed from the left).
+  const COVER_W = 130;
+  const HEIGHT = 210;
+  const DEPTH = 22;
+
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      aria-label={`Open ${title}`}
+      className="group relative flex-shrink-0 transition-transform active:scale-[0.97]"
+      style={{ width: 82, height: HEIGHT + 12, perspective: "1000px" }}
+    >
+      {/* ground shadow */}
+      <div
+        className="pointer-events-none absolute left-1/2 bottom-0 h-[6px] w-[70px] -translate-x-1/2 rounded-[50%] bg-black/55 blur-[3px]"
+      />
+      <div
+        className="absolute left-0 top-0"
+        style={{
+          width: COVER_W,
+          height: HEIGHT,
+          transformStyle: "preserve-3d",
+          transform: "rotateY(-58deg)",
+          transformOrigin: "left center",
+        }}
+      >
+        {/* Front cover face */}
+        <div
+          className="absolute inset-0 overflow-hidden rounded-[2px] bg-neutral-800 shadow-[0_10px_22px_rgba(0,0,0,0.55)]"
+          style={{ transform: `translateZ(${DEPTH / 2}px)`, backfaceVisibility: "hidden" }}
+        >
+          {posterUrl && (
+            <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          )}
+          {/* subtle right-edge cover darkening for depth */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[10px] bg-gradient-to-r from-black/40 to-transparent" />
+        </div>
+
+        {/* Spine face (left side of the box) */}
+        <div
+          className="absolute top-0 overflow-hidden bg-black"
+          style={{
+            left: 0,
+            width: DEPTH,
+            height: HEIGHT,
+            transform: `rotateY(-90deg) translateZ(${DEPTH / 2}px)`,
+            transformOrigin: "left center",
+            backfaceVisibility: "hidden",
+          }}
+        >
+          {posterUrl && (
+            <img
+              src={posterUrl}
+              alt=""
+              className="absolute left-1/2 top-1/2 max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover"
+              style={{ width: HEIGHT, height: DEPTH }}
+              loading="lazy"
+            />
+          )}
+          {/* scrim so wordmark reads */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/55 via-black/25 to-black/70" />
+          {/* highlight + shadow creases */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[1px] bg-white/25" />
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[1px] bg-black/60" />
+
+          {/* Wordmark */}
+          <div className="pointer-events-none absolute inset-x-0 top-[10px] bottom-[20px] flex items-center justify-center">
+            {logoUrl ? (
+              <img
+                src={logoUrl}
+                alt={title}
+                className="max-h-[160px] max-w-[18px] -rotate-90 object-contain"
+                style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.9)) brightness(1.08)" }}
+                loading="lazy"
+              />
+            ) : (
+              <span
+                className="max-h-[160px] whitespace-nowrap font-serif text-[10px] font-semibold italic leading-none text-white"
+                style={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                }}
+              >
+                {title}
+              </span>
+            )}
+          </div>
+
+          {/* DVD footer badge */}
+          <div className="pointer-events-none absolute inset-x-0 bottom-[3px] flex justify-center">
+            <span
+              className="text-white/75"
+              style={{
+                fontFamily: "serif",
+                fontStyle: "italic",
+                fontWeight: 900,
+                fontSize: 6,
+                letterSpacing: "0.18em",
+              }}
+            >
+              DVD
+            </span>
+          </div>
+        </div>
+
+        {/* Top face — thin sliver for a bit of 3D closure */}
+        <div
+          className="absolute left-0 top-0 bg-neutral-900"
+          style={{
+            width: COVER_W,
+            height: DEPTH,
+            transform: `rotateX(90deg) translateZ(${DEPTH / 2}px)`,
+            transformOrigin: "top center",
+            backfaceVisibility: "hidden",
+          }}
+        />
+      </div>
+    </button>
+  );
+}
+
 function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onClose: () => void }) {
   const navigate = useNavigate();
   const md = member?.media ?? null;
