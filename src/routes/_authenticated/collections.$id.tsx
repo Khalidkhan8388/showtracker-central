@@ -454,7 +454,7 @@ function CollectionDetail() {
             <>
             {hasMedia && (
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
-                <div className="inline-flex min-w-full gap-1.5">
+                <div className="inline-flex gap-1.5">
                   {((hasTv
                     ? ["all", "watchlist", "watching", "watched", "dropped"]
                     : ["all", "watchlist", "watching", "watched"]) as Array<WatchStatus | "all">).map((s) => {
@@ -467,7 +467,7 @@ function CollectionDetail() {
                         key={s}
                         type="button"
                         onClick={() => setStatusFilter(s)}
-                        className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
+                        className={`shrink-0 rounded-full px-3 py-1.5 text-left text-[12px] font-semibold transition-colors ${
                           active
                             ? "bg-primary text-primary-foreground"
                             : "bg-card text-muted-foreground ring-1 ring-border/60 active:opacity-70"
