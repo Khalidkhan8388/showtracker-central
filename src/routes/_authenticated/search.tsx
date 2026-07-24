@@ -8,6 +8,7 @@ import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { MediaCard } from "@/components/MediaCard";
 import type { LocalMedia } from "@/lib/local-db";
+import { FeedNoteCard } from "@/components/FeedNoteCard";
 
 import {
   Search,
@@ -661,10 +662,10 @@ function SearchPage() {
           <div className="columns-2 gap-3 [column-fill:_balance]">
             {filteredNotes.map((n) => (
               <div key={n.id} className="mb-3 break-inside-avoid">
-                <CaptureCard
-                  note={n}
-                  thumb={thumbs[n.id]}
-                  q={query}
+                <FeedNoteCard
+                  note={n as any}
+                  variant="masonry"
+                  thumbUrl={thumbs[n.id]}
                   onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
                 />
               </div>
