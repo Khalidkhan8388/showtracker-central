@@ -199,7 +199,7 @@ export const NoteCard = memo(function NoteCard({
       style={textNoteStyle}
       className={`${base} ${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 ${isProcessing ? "analyzing-shimmer" : ""}`}
     >
-      {isSquareLike && hasImage && !isLink && (
+      {isSquareLike && !isText && hasImage && !isLink && (
         <>
           <img
             src={effectiveThumb}
