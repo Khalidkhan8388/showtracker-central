@@ -311,3 +311,34 @@ export const lookupTmdbByIdFn = createServerFn({ method: "POST" })
       return null;
     }
   });
+
+// -- Title logo (transparent PNG of the movie/show's own title art) ----------
+
+export const fetchTmdbLogoFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => LookupIdInput.parse(d))
+  .handler(async ({ data }): Promise<{ file_path: string | null }> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    try {
+      const r = await tmdbGet(`/${data.type}/${data.tmdb_id}/images`, key, {
+        include_image_language: "en,null",
+      });
+      const logos: any[] = Array.isArray(r.logos) ? r.logos : [];
+      if (!logos.length) return { file_path: null };
+      // Prefer English PNGs, then transparent-friendly PNG, then anything.
+      const score = (l: any) => {
+        let s = 0;
+        if (l.iso_639_1 === "en") s += 10;
+        if (l.iso_639_1 === null) s += 5;
+        if (typeof l.file_path === "string" && l.file_path.endsWith(".png")) s += 3;
+        if (typeof l.vote_average === "number") s += l.vote_average;
+        return s;
+      };
+      logos.sort((a, b) => score(b) - score(a));
+      const pick = logos[0];
+      return { file_path: pick?.file_path ?? null };
+    } catch {
+      return { file_path: null };
+    }
+  });
+
