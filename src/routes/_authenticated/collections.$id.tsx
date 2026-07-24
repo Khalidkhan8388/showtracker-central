@@ -8,6 +8,17 @@ import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched } from "@/lib/media";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 import { NoteCard } from "@/components/NoteCard";
+import { FeedNoteCard } from "@/components/FeedNoteCard";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 
 
@@ -28,6 +39,9 @@ function CollectionDetail() {
   const notes = useLocalNotes();
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<Set<string>>(new Set());
+  const [removing, setRemoving] = useState(false);
+  const [removeSel, setRemoveSel] = useState<Set<string>>(new Set());
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
   const [title, setTitle] = useState("");
   const [view, setView] = useState<"list" | "grid">(() => {
@@ -202,12 +216,7 @@ function CollectionDetail() {
           )}
           <button
             type="button"
-            onClick={async () => {
-              if (confirm(`Delete "${collection.title}"? Memories inside won't be deleted.`)) {
-                await deleteCollection(id);
-                navigate({ to: "/collections" });
-              }
-            }}
+            onClick={() => setConfirmDelete(true)}
             aria-label="Delete collection"
             className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
           >
@@ -376,21 +385,43 @@ function CollectionDetail() {
                 </p>
               ) : (
                 <div className="columns-2 gap-3 [column-fill:_balance]">
-                  {members.map((n) => (
-                    <div key={n.id} className="mb-3 break-inside-avoid">
-                      <NoteCard
-                        note={n as any}
-                        variant="masonry"
-                        fullWidth
-                        thumbUrl={thumbs[n.id]}
-                        selected={false}
-                        selectMode={false}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => {}}
-                        onToggleSel={() => {}}
-                      />
-                    </div>
-                  ))}
+                  {members.map((n) => {
+                    const sel = removeSel.has(n.id);
+                    return (
+                      <div key={n.id} className="mb-3 break-inside-avoid">
+                        <FeedNoteCard
+                          note={n as any}
+                          variant="masonry"
+                          fullWidth
+                          thumbUrl={thumbs[n.id]}
+                          selected={sel}
+                          selectMode={removing}
+                          onOpen={() => {
+                            if (removing) {
+                              setRemoveSel((prev) => {
+                                const next = new Set(prev);
+                                next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                                return next;
+                              });
+                            } else {
+                              navigate({ to: "/notes/$id", params: { id: n.id } });
+                            }
+                          }}
+                          onLongPress={() => {
+                            setRemoving(true);
+                            setRemoveSel(new Set([n.id]));
+                          }}
+                          onToggleSel={() => {
+                            setRemoveSel((prev) => {
+                              const next = new Set(prev);
+                              next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
               )
             ) : hasMedia && tvView === "stats" ? (
@@ -642,6 +673,56 @@ function CollectionDetail() {
           </>
         )}
       </section>
+
+      {removing && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+          <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+            <button
+              type="button"
+              onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
+            >
+              Cancel
+            </button>
+            <span className="text-[12px] tabular-nums opacity-70">{removeSel.size} selected</span>
+            <button
+              type="button"
+              disabled={removeSel.size === 0}
+              onClick={async () => {
+                if (removeSel.size === 0) return;
+                await removeNotesFromCollection(id, Array.from(removeSel));
+                setRemoving(false);
+                setRemoveSel(new Set());
+              }}
+              className="rounded-full bg-background px-3 py-1.5 text-[12px] font-semibold text-foreground disabled:opacity-40"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete "{collection?.title}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The collection will be removed. Memories inside won't be deleted.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                await deleteCollection(id);
+                navigate({ to: "/collections" });
+              }}
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

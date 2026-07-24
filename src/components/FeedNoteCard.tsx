@@ -103,16 +103,20 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   const isWideLike = variant === "wide" || isHero;
   const isSquareLike = variant === "square" || isMasonry;
 
+  const isLinkTile = isLink && hasImage && !isWideLike;
   const base = isText
     ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
     : isHero
       ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
-      : "relative block overflow-hidden rounded-[15px] border border-border/60 p-3 transition-colors " +
-        (selected
-          ? "border-foreground bg-muted shadow-sm"
-          : "bg-card hover:bg-muted/50");
+      : isLinkTile
+        ? "relative block overflow-hidden rounded-[15px] transition-all " +
+          (selected ? "ring-2 ring-foreground" : "")
+        : "relative block overflow-hidden rounded-[15px] border border-border/60 p-3 transition-colors " +
+          (selected
+            ? "border-foreground bg-muted shadow-sm"
+            : "bg-card hover:bg-muted/50");
 
   let sizing: string;
   if (isHero) {
@@ -120,20 +124,24 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   } else if (variant === "wide") {
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
-    sizing = hasImage && !isLink && !isText
-      ? "flex aspect-[4/5] w-full flex-col gap-2"
-      : isText
-        ? "flex w-full flex-col gap-2"
-        : "flex w-full flex-col gap-3 min-h-[7rem]";
+    sizing = isLinkTile
+      ? "flex w-full flex-col"
+      : hasImage && !isText
+        ? "flex aspect-[4/5] w-full flex-col gap-2"
+        : isText
+          ? "flex w-full flex-col gap-2"
+          : "flex w-full flex-col gap-3 min-h-[7rem]";
   } else if (fullWidth) {
-    sizing = "flex aspect-square w-full flex-col gap-3";
+    sizing = isLinkTile ? "flex w-full flex-col" : "flex aspect-square w-full flex-col gap-3";
   } else {
     sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
   }
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
-    : undefined;
+    : isLinkTile
+      ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
+      : undefined;
 
   const isProcessing = note.status !== "ready" && note.status !== "failed";
 
@@ -182,7 +190,43 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         </div>
       )}
 
-      {isWideLike ? (
+      {isLinkTile ? (
+        <>
+          <div className="relative w-full bg-white dark:bg-white/95">
+            <img
+              src={thumbUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className="block h-auto max-h-72 w-full object-contain"
+            />
+            {linkHost && (
+              <div className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+                {linkHost}
+              </div>
+            )}
+          </div>
+          <div className={`flex flex-col gap-2 p-4 ${isDark ? "text-white" : "text-neutral-900"}`}>
+            <h3 className="text-[15px] font-semibold leading-snug break-words line-clamp-3 pr-5">
+              {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+            </h3>
+            {note.summary && (
+              <p className={`text-[12.5px] leading-snug line-clamp-2 ${isDark ? "text-white/70" : "text-neutral-500"}`}>
+                {note.summary}
+              </p>
+            )}
+            <div className={`mt-1 flex items-center gap-2 text-[11px] ${isDark ? "text-white/60" : "text-neutral-500"}`}>
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.tasks && note.tasks.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      ) : isWideLike ? (
         <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
