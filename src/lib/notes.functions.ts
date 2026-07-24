@@ -98,7 +98,7 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
         audio: audioInput,
         images,
         prior: priorHasContent ? prior : null,
-        skipTasks: !audioInput && images.length > 0, // image-only notes get no tasks
+        skipTasks: false, // extract tasks from voice and image notes alike
       },
     });
     // Preserve done/pending state where task text matches.
