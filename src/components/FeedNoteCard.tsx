@@ -24,6 +24,35 @@ export type FeedNote = {
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
 
+function VoiceWaveform({ seed, bars = 36 }: { seed: string; bars?: number }) {
+  // Deterministic pseudo-random heights from the note id so each card is unique but stable.
+  let h = 2166136261;
+  for (let i = 0; i < seed.length; i++) {
+    h ^= seed.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  const heights: number[] = [];
+  for (let i = 0; i < bars; i++) {
+    h ^= h << 13; h ^= h >>> 17; h ^= h << 5;
+    const n = ((h >>> 0) % 1000) / 1000;
+    // Envelope: emphasize center for a natural voice shape.
+    const t = i / (bars - 1);
+    const env = 0.55 + 0.45 * Math.sin(Math.PI * t);
+    heights.push(Math.max(0.18, Math.min(1, n * env + 0.15)));
+  }
+  return (
+    <div className="flex h-9 w-full items-center gap-[2px]">
+      {heights.map((v, i) => (
+        <span
+          key={i}
+          className="flex-1 rounded-full bg-foreground/70"
+          style={{ height: `${Math.round(v * 100)}%` }}
+        />
+      ))}
+    </div>
+  );
+}
+
 export const FeedNoteCard = memo(function FeedNoteCard({
   note,
   variant,
@@ -104,19 +133,23 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   const isSquareLike = variant === "square" || isMasonry;
 
   const isLinkTile = isLink && hasImage && !isWideLike;
+  const isVoiceTile = isVoice && !hasImage && !isWideLike;
   const base = isText
     ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
       (selected ? "ring-2 ring-foreground" : "")
-    : isHero
-      ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+    : isVoiceTile
+      ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
-      : isLinkTile
-        ? "relative block overflow-hidden rounded-[15px] transition-all " +
+      : isHero
+        ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
           (selected ? "ring-2 ring-foreground" : "")
-        : "relative block overflow-hidden rounded-[15px] border border-border/60 p-3 transition-colors " +
-          (selected
-            ? "border-foreground bg-muted shadow-sm"
-            : "bg-card hover:bg-muted/50");
+        : isLinkTile
+          ? "relative block overflow-hidden rounded-[15px] transition-all " +
+            (selected ? "ring-2 ring-foreground" : "")
+          : "relative block overflow-hidden rounded-[15px] border border-border/60 p-3 transition-colors " +
+            (selected
+              ? "border-foreground bg-muted shadow-sm"
+              : "bg-card hover:bg-muted/50");
 
   let sizing: string;
   if (isHero) {
@@ -126,22 +159,32 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   } else if (isMasonry) {
     sizing = isLinkTile
       ? "flex w-full flex-col"
-      : hasImage && !isText
-        ? "flex aspect-[4/5] w-full flex-col gap-2"
-        : isText
-          ? "flex w-full flex-col gap-2"
-          : "flex w-full flex-col gap-3 min-h-[7rem]";
+      : isVoiceTile
+        ? "flex w-full flex-col gap-2 min-h-[9rem]"
+        : hasImage && !isText
+          ? "flex aspect-[4/5] w-full flex-col gap-2"
+          : isText
+            ? "flex w-full flex-col gap-2"
+            : "flex w-full flex-col gap-3 min-h-[7rem]";
   } else if (fullWidth) {
-    sizing = isLinkTile ? "flex w-full flex-col" : "flex aspect-square w-full flex-col gap-3";
+    sizing = isLinkTile
+      ? "flex w-full flex-col"
+      : isVoiceTile
+        ? "flex aspect-square w-full flex-col gap-2"
+        : "flex aspect-square w-full flex-col gap-3";
   } else {
-    sizing = "flex aspect-square w-40 shrink-0 flex-col gap-3";
+    sizing = isVoiceTile
+      ? "flex aspect-square w-40 shrink-0 flex-col gap-2"
+      : "flex aspect-square w-40 shrink-0 flex-col gap-3";
   }
 
   const textNoteStyle: React.CSSProperties | undefined = isText
     ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
-    : isLinkTile
+    : isVoiceTile
       ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
-      : undefined;
+      : isLinkTile
+        ? { backgroundColor: isDark ? "#1c1c1e" : "#ffffff" }
+        : undefined;
 
   const isProcessing = note.status !== "ready" && note.status !== "failed";
 
@@ -190,7 +233,41 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         </div>
       )}
 
-      {isLinkTile ? (
+      {isVoiceTile ? (
+        <>
+          <div className="relative z-10 flex items-center gap-2">
+            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-foreground/10">
+              <Mic className="h-3 w-3 text-foreground" />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Voice</span>
+            {note.duration_seconds != null && (
+              <span className="ml-auto tabular-nums text-[11px] font-medium text-foreground/80">
+                {formatDur(note.duration_seconds)}
+              </span>
+            )}
+          </div>
+          <h3 className="relative z-10 font-serif text-[15px] leading-snug font-medium tracking-tight break-words line-clamp-2 text-foreground pr-5">
+            {note.heading ?? (note.status === "failed" ? "Failed" : <AnalyzingBadge />)}
+          </h3>
+          {note.summary && (
+            <p className="relative z-10 text-[11.5px] leading-snug text-muted-foreground line-clamp-2">
+              {note.summary}
+            </p>
+          )}
+          <div className="relative z-10 mt-auto flex flex-col gap-1.5">
+            <VoiceWaveform seed={note.id} />
+            <div className="flex items-center justify-between text-[10px] text-muted-foreground">
+              <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+              {note.tasks && note.tasks.length > 0 && (
+                <span className="flex items-center gap-1">
+                  <CheckCircle2 className="h-3 w-3" />
+                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+                </span>
+              )}
+            </div>
+          </div>
+        </>
+      ) : isLinkTile ? (
         <>
           <div className="relative w-full bg-white dark:bg-white/95">
             <img
