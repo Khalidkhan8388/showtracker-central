@@ -1204,7 +1204,7 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
 
       {/* Shelf row */}
       <div className="relative">
-        <div className={`scrollbar-none flex items-end overflow-x-auto px-2 pb-2 ${style3D ? "gap-[6px] pt-4" : "gap-[3px] pt-1"}`}>
+        <div className={`scrollbar-none flex items-end overflow-x-auto px-2 pb-2 ${style3D ? "gap-[14px] pt-4" : "gap-[3px] pt-1"}`}>
           {watched.map((m) => (
             <Tile key={m.id} member={m} onOpen={() => setOpen(m)} />
           ))}
