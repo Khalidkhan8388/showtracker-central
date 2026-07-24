@@ -647,6 +647,33 @@ function NoteDetail() {
 
 
 
+        {isLink && imageUrls.length > 0 && (
+          <section className="mt-5">
+            <a
+              href={note.source_url!}
+              target="_blank"
+              rel="noreferrer"
+              className="block overflow-hidden rounded-2xl bg-muted"
+            >
+              <img
+                src={imageUrls[0]}
+                alt=""
+                className="h-full w-full object-cover"
+                style={{ maxHeight: "60vh" }}
+              />
+            </a>
+          </section>
+        )}
+
+        {isLink && note.summary && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Summary
+            </h2>
+            <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
+          </section>
+        )}
+
         {isImage && imageUrls.length > 0 && (
           <section className="mt-5">
             <div className={imageUrls.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
@@ -687,6 +714,7 @@ function NoteDetail() {
             <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
           </section>
         )}
+
 
         {note.tasks && note.tasks.length > 0 && (
           <section className="mt-6">
