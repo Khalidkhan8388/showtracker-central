@@ -672,6 +672,109 @@ function SearchPage() {
           </div>
         )}
 
+        {/* TMDB search results — Movies & TV tab only; hides items already in your library */}
+        {tab === "media" && query.trim().length >= 2 && !aiMode && (() => {
+          const visibleHits = tmdbHits.filter(
+            (h) => !savedMediaKeys.has(`${h.type}:${h.tmdb_id}`),
+          );
+          if (!tmdbLoading && visibleHits.length === 0) return null;
+          return (
+            <section className="mt-5 mb-5">
+              <div className="mb-2 flex items-center justify-between px-1">
+                <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                  Movies &amp; TV
+                </span>
+                <span className="text-[10px] tabular-nums text-muted-foreground">
+                  {tmdbLoading ? "…" : visibleHits.length}
+                </span>
+              </div>
+              <div className="-mx-4 overflow-x-auto scrollbar-hide">
+                <div className="flex gap-2.5 px-4 pb-1">
+                  {tmdbLoading && visibleHits.length === 0
+                    ? Array.from({ length: 5 }).map((_, i) => (
+                        <div
+                          key={i}
+                          className="w-[120px] shrink-0 animate-pulse overflow-hidden rounded-[15px] bg-muted"
+                          style={{ aspectRatio: "2 / 3" }}
+                        />
+                      ))
+                    : visibleHits.map((hit) => {
+                        const key = `${hit.type}:${hit.tmdb_id}`;
+                        const adding = tmdbAdding.has(key);
+                        const poster = posterUrl(hit.poster_path, "w342");
+                        return (
+                          <div key={key} className="w-[120px] shrink-0">
+                            <div
+                              className="relative overflow-hidden bg-muted"
+                              style={{ aspectRatio: "2 / 3", borderRadius: 15 }}
+                            >
+                              {poster ? (
+                                <img
+                                  src={poster}
+                                  alt=""
+                                  loading="lazy"
+                                  className="absolute inset-0 h-full w-full object-cover"
+                                  onError={(e) => {
+                                    (e.currentTarget as HTMLImageElement).style.display = "none";
+                                  }}
+                                />
+                              ) : (
+                                <div className="absolute inset-0 grid place-items-center text-muted-foreground">
+                                  {hit.type === "tv" ? (
+                                    <Tv className="h-6 w-6" />
+                                  ) : (
+                                    <Film className="h-6 w-6" />
+                                  )}
+                                </div>
+                              )}
+                              {hit.vote_average != null && hit.vote_average > 0 && (
+                                <span className="absolute right-1.5 top-1.5 inline-flex items-center gap-0.5 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold text-white backdrop-blur-sm">
+                                  <Star className="h-2.5 w-2.5 fill-yellow-400 text-yellow-400" />
+                                  {hit.vote_average.toFixed(1)}
+                                </span>
+                              )}
+                              <button
+                                type="button"
+                                onClick={() => addMedia(hit)}
+                                disabled={adding}
+                                aria-label={`Add ${hit.title}`}
+                                className="absolute bottom-1.5 right-1.5 z-10 grid h-7 w-7 place-items-center rounded-full bg-white/95 text-neutral-900 shadow-lg backdrop-blur-md transition active:scale-95"
+                              >
+                                {adding ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Plus className="h-3.5 w-3.5" strokeWidth={3} />
+                                )}
+                              </button>
+
+                              <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-8">
+                                <span className="mb-1 inline-flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
+                                  {hit.type === "tv" ? (
+                                    <Tv className="h-2.5 w-2.5" />
+                                  ) : (
+                                    <Film className="h-2.5 w-2.5" />
+                                  )}
+                                  {hit.type === "tv" ? "TV" : "Movie"}
+                                </span>
+                                <p className="line-clamp-2 text-[12px] font-semibold leading-tight scrim-fg">
+                                  {hit.title}
+                                </p>
+                                <p className="text-[10px] scrim-fg-70">
+                                  {hit.year ?? "—"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                </div>
+              </div>
+            </section>
+          );
+        })()}
+
+
+
         {/* Recents when idle */}
         {idle && recents.length > 0 && (
           <div className="mt-6">
