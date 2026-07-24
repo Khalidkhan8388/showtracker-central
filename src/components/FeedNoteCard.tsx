@@ -120,7 +120,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   } else if (variant === "wide") {
     sizing = isText ? "p-5" : "p-4";
   } else if (isMasonry) {
-    sizing = hasImage && !isLink && !isText
+    sizing = hasImage && !isText
       ? "flex aspect-[4/5] w-full flex-col gap-2"
       : isText
         ? "flex w-full flex-col gap-2"
