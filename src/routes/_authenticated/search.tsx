@@ -817,6 +817,25 @@ function SearchPage() {
         style={{ transform: kbOffset > 0 ? `translateY(-${kbOffset}px)` : undefined }}
       >
         <div className="pointer-events-auto px-5 pb-[max(env(safe-area-inset-bottom),40px)] pt-3">
+          {/* Tab switcher: memories vs movies/TV — floats above search input */}
+          <div className="mb-2 flex justify-center">
+            <div className="pointer-events-auto inline-flex items-center rounded-full bg-white/90 p-1 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/10">
+              {(["memories", "media"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setTab(t)}
+                  className={`rounded-full px-4 py-1.5 text-[12px] font-semibold transition ${
+                    tab === t
+                      ? "bg-foreground text-background shadow-sm"
+                      : "text-muted-foreground"
+                  }`}
+                >
+                  {t === "memories" ? "Memories" : "Movies & TV"}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {(query.trim() || aiMode) && (
             <div className="mb-2 flex justify-center">
               <div className="inline-flex items-center gap-3 rounded-full bg-white/90 px-3 py-1 text-[11px] text-muted-foreground shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/10">
