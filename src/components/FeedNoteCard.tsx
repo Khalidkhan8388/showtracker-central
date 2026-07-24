@@ -1,11 +1,13 @@
-import { memo } from "react";
+import { memo, useEffect, useRef, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Play, Pause } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
+import { getAudioUrl } from "@/lib/audio-cache";
 import type { LocalMedia } from "@/lib/local-db";
+
 
 export type FeedNote = {
   id: string;
