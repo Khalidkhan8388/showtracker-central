@@ -149,7 +149,7 @@ export function detectActionReminders(text: string, now: Date = new Date()): Act
       diff = d.getTime() - now.getTime();
     }
     if (diff < 60 * 1000) continue;
-    if (diff > 365 * 24 * 3600 * 1000) continue;
+    if (diff > 10 * 365 * 24 * 3600 * 1000) continue;
 
     const start = r.index ?? 0;
     const end = start + (r.text?.length ?? 0);
