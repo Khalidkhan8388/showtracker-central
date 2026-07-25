@@ -45,6 +45,8 @@ type Note = {
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_at?: string | null;
+  reminders?: string[];
+
   reminder_suggestion_dismissed?: boolean;
 
 };
