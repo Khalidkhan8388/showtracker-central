@@ -179,6 +179,12 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       transcript,
       heading: String(parsed.heading ?? "Untitled note").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
+      key_points: Array.isArray(parsed.key_points)
+        ? parsed.key_points
+            .map((k: unknown) => String(k ?? "").trim())
+            .filter((k: string) => k.length > 0)
+            .slice(0, 6)
+        : [],
       tasks: data.skipTasks ? [] : tasksFromRaw(parsed.tasks),
       tags: [] as string[],
     };
