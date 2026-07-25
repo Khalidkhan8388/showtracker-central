@@ -166,8 +166,45 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       tasks: tasksPayload,
       error: null,
     });
+    // Auto-OCR any images on media notes (voice+image or image-only).
+    // Text notes are excluded because they go through saveTextNote, not here.
+    if (images.length > 0) {
+      void autoExtractOcr(noteId, images);
+    }
   } catch (err: any) {
     await updateNote(noteId, { status: "failed", error: err?.message ?? String(err) });
+  }
+}
+
+/**
+ * Silently run OCR on a note's images and store the result hidden by default.
+ * User can reveal via the "Show extracted text" button on the note detail.
+ * Skips if OCR already exists or note has no images.
+ */
+async function autoExtractOcr(
+  noteId: string,
+  preloadedImages?: Array<{ base64: string; mime: string }>,
+): Promise<void> {
+  try {
+    const note = await getNote(noteId);
+    if (!note) return;
+    if (note.ocr_text && note.ocr_text.trim()) return;
+    const paths = note.image_paths ?? [];
+    if (paths.length === 0) return;
+    let images = preloadedImages;
+    if (!images || images.length === 0) {
+      images = [];
+      for (const p of paths) {
+        const b = await readPhotoBytes(p);
+        if (b) images.push({ base64: bytesToBase64(b.bytes), mime: b.mime });
+      }
+    }
+    if (images.length === 0) return;
+    const { text } = await ocrImagesFn({ data: { images } });
+    if (!text || !text.trim()) return;
+    await updateNote(noteId, { ocr_text: text, ocr_hidden: true });
+  } catch {
+    /* silent — user can retry manually */
   }
 }
 
@@ -415,6 +452,9 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       tasks: tasksPayload,
       image_paths: imagePaths,
     });
+    if (imagePaths.length > 0) {
+      void autoExtractOcr(note.id);
+    }
   } catch (err: any) {
     await updateNote(note.id, { status: "failed", error: err?.message ?? String(err) });
     throw err;
