@@ -6,7 +6,7 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
-import { ActionReminderBanner } from "@/components/ActionReminderBanner";
+
 
 
 import { fetchReaderViewFn } from "@/lib/ai.functions";
