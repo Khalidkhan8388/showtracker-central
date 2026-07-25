@@ -550,86 +550,97 @@ function CollectionDetail() {
       </section>
 
       {removing && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+        <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-3">
+          <div
+            className="pointer-events-auto flex w-full max-w-[calc(100vw-1.5rem)] items-center gap-2 rounded-2xl border border-border/60 bg-foreground/95 px-2 py-2 text-background shadow-[0_10px_30px_-10px_rgba(0,0,0,0.5)] backdrop-blur-md sm:max-w-md"
+            role="toolbar"
+            aria-label="Bulk actions"
+          >
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
-              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-background/80 hover:bg-background/10 active:opacity-70"
+              aria-label="Cancel selection"
             >
-              Cancel
+              <X className="h-4 w-4" />
             </button>
-            <span className="px-1 text-[12px] tabular-nums opacity-70">{removeSel.size}</span>
-            {hasMedia ? (
-              <>
-                <BulkPillBtn
-                  icon={<Eye className="h-3.5 w-3.5" />}
-                  label="Watched"
-                  disabled={removeSel.size === 0}
-                  onClick={async () => {
-                    for (const nid of removeSel) await setWatchStatus(nid, "watched");
-                    setRemoving(false); setRemoveSel(new Set());
-                  }}
-                />
-                <BulkPillBtn
-                  icon={<PlayCircle className="h-3.5 w-3.5" />}
-                  label="Watching"
-                  disabled={removeSel.size === 0}
-                  onClick={async () => {
-                    for (const nid of removeSel) await setWatchStatus(nid, "watching");
-                    setRemoving(false); setRemoveSel(new Set());
-                  }}
-                />
-                <BulkPillBtn
-                  icon={<XCircle className="h-3.5 w-3.5" />}
-                  label="Dropped"
-                  disabled={removeSel.size === 0}
-                  onClick={async () => {
-                    for (const nid of removeSel) await setWatchStatus(nid, "dropped");
-                    setRemoving(false); setRemoveSel(new Set());
-                  }}
-                />
-                <BulkPillBtn
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
-                  label="Delete"
-                  danger
-                  disabled={removeSel.size === 0}
-                  onClick={() => setConfirmBulkDelete(true)}
-                />
-              </>
-            ) : (
-              <>
-                <BulkPillBtn
-                  icon={<Pin className="h-3.5 w-3.5" />}
-                  label={allSelectedPinned ? "Unpin" : "Pin"}
-                  disabled={removeSel.size === 0}
-                  onClick={async () => {
-                    const pin = !allSelectedPinned;
-                    for (const nid of removeSel) await pinNote({ data: { noteId: nid, pinned: pin } });
-                    setRemoving(false); setRemoveSel(new Set());
-                  }}
-                />
-                <BulkPillBtn
-                  icon={<X className="h-3.5 w-3.5" />}
-                  label="Remove"
-                  disabled={removeSel.size === 0}
-                  onClick={async () => {
-                    await removeNotesFromCollection(id, Array.from(removeSel));
-                    setRemoving(false); setRemoveSel(new Set());
-                  }}
-                />
-                <BulkPillBtn
-                  icon={<Trash2 className="h-3.5 w-3.5" />}
-                  label="Delete"
-                  danger
-                  disabled={removeSel.size === 0}
-                  onClick={() => setConfirmBulkDelete(true)}
-                />
-              </>
-            )}
+            <div className="flex shrink-0 items-center gap-1.5 rounded-full bg-background/10 px-2.5 py-1 text-[11px] font-semibold tabular-nums">
+              <span>{removeSel.size}</span>
+              <span className="text-background/60">selected</span>
+            </div>
+            <div className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto scrollbar-none" style={{ scrollbarWidth: "none" }}>
+              {hasMedia ? (
+                <>
+                  <BulkPillBtn
+                    icon={<Eye className="h-4 w-4" />}
+                    label="Watched"
+                    disabled={removeSel.size === 0}
+                    onClick={async () => {
+                      for (const nid of removeSel) await setWatchStatus(nid, "watched");
+                      setRemoving(false); setRemoveSel(new Set());
+                    }}
+                  />
+                  <BulkPillBtn
+                    icon={<PlayCircle className="h-4 w-4" />}
+                    label="Watching"
+                    disabled={removeSel.size === 0}
+                    onClick={async () => {
+                      for (const nid of removeSel) await setWatchStatus(nid, "watching");
+                      setRemoving(false); setRemoveSel(new Set());
+                    }}
+                  />
+                  <BulkPillBtn
+                    icon={<XCircle className="h-4 w-4" />}
+                    label="Dropped"
+                    disabled={removeSel.size === 0}
+                    onClick={async () => {
+                      for (const nid of removeSel) await setWatchStatus(nid, "dropped");
+                      setRemoving(false); setRemoveSel(new Set());
+                    }}
+                  />
+                  <BulkPillBtn
+                    icon={<Trash2 className="h-4 w-4" />}
+                    label="Delete"
+                    danger
+                    disabled={removeSel.size === 0}
+                    onClick={() => setConfirmBulkDelete(true)}
+                  />
+                </>
+              ) : (
+                <>
+                  <BulkPillBtn
+                    icon={<Pin className="h-4 w-4" />}
+                    label={allSelectedPinned ? "Unpin" : "Pin"}
+                    disabled={removeSel.size === 0}
+                    onClick={async () => {
+                      const pin = !allSelectedPinned;
+                      for (const nid of removeSel) await pinNote({ data: { noteId: nid, pinned: pin } });
+                      setRemoving(false); setRemoveSel(new Set());
+                    }}
+                  />
+                  <BulkPillBtn
+                    icon={<X className="h-4 w-4" />}
+                    label="Remove"
+                    disabled={removeSel.size === 0}
+                    onClick={async () => {
+                      await removeNotesFromCollection(id, Array.from(removeSel));
+                      setRemoving(false); setRemoveSel(new Set());
+                    }}
+                  />
+                  <BulkPillBtn
+                    icon={<Trash2 className="h-4 w-4" />}
+                    label="Delete"
+                    danger
+                    disabled={removeSel.size === 0}
+                    onClick={() => setConfirmBulkDelete(true)}
+                  />
+                </>
+              )}
+            </div>
           </div>
         </div>
       )}
+
 
       <AlertDialog open={confirmBulkDelete} onOpenChange={setConfirmBulkDelete}>
         <AlertDialogContent>
