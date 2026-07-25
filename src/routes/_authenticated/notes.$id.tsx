@@ -1373,7 +1373,7 @@ function NoteDetail() {
       )}
 
       {!editing && !media && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-[calc(theme(spacing.10)+3.75rem)] z-40 flex justify-center px-5">
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-5">
           <div className="pointer-events-auto max-w-full">
             <ReminderSuggestionChip
               text={[
