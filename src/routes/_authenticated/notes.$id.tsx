@@ -914,14 +914,27 @@ function NoteDetail() {
 
         {isImage && note.ocr_text && (
           <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Extracted text
-            </h2>
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Extracted text
+              </h2>
+              <button
+                type="button"
+                onClick={async () => {
+                  await updateTextNote({ data: { noteId: note.id, patch: { ocr_text: null } } });
+                  await patchLocalNote(note.id, { ocr_text: null });
+                }}
+                className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground active:opacity-70"
+              >
+                Hide
+              </button>
+            </div>
             <pre className="whitespace-pre-wrap rounded-2xl bg-muted/60 p-4 text-[14px] leading-[1.55] text-foreground font-sans selection:bg-foreground selection:text-background">
 {note.ocr_text}
             </pre>
           </section>
         )}
+
 
 
 
