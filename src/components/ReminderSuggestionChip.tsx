@@ -34,7 +34,7 @@ function parseAllFutureDates(text: string): Date[] {
       diff = d.getTime() - now.getTime();
     }
     if (diff < 60 * 1000) continue;
-    if (diff > 365 * 24 * 3600 * 1000) continue;
+    if (diff > 10 * 365 * 24 * 3600 * 1000) continue;
 
     const key = Math.floor(d.getTime() / 60000) * 60000;
     if (seen.has(key)) continue;
