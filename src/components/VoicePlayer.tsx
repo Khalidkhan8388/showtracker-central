@@ -259,8 +259,8 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
                   height: `${Math.round(p * 100)}%`,
                   minHeight: 4,
                   background: active
-                    ? "hsl(var(--foreground))"
-                    : "hsl(var(--foreground) / 0.28)",
+                    ? "var(--foreground)"
+                    : "color-mix(in oklab, var(--foreground) 35%, transparent)",
                 }}
               />
             );
