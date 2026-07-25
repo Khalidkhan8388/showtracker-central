@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import * as chrono from "chrono-node";
 import { Bell, X, Plus } from "lucide-react";
+import { detectActionReminders } from "@/lib/reminder-detect";
 
 type Props = {
   /** Concatenated scannable text (heading + body + transcript + ocr + summary). */
@@ -9,9 +10,11 @@ type Props = {
   existing: string[];
   /** True when the user previously dismissed the suggestion for this note. */
   dismissed: boolean;
-  onAccept: (isoDate: string) => void | Promise<void>;
+  onAccept: (isoDate: string, title?: string) => void | Promise<void>;
   onDismiss: () => void | Promise<void>;
 };
+
+type Suggestion = { key: number; iso: string; title?: string };
 
 /** Parse every distinct future date/time chrono can find. */
 function parseAllFutureDates(text: string): Date[] {
@@ -33,7 +36,6 @@ function parseAllFutureDates(text: string): Date[] {
     if (diff < 60 * 1000) continue;
     if (diff > 365 * 24 * 3600 * 1000) continue;
 
-    // Round to minute for dedupe.
     const key = Math.floor(d.getTime() / 60000) * 60000;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -85,15 +87,18 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
     return s;
   }, [existing]);
 
-  const parsed = useMemo(
-    () => (dismissed ? [] : parseAllFutureDates(debounced)),
-    [debounced, dismissed],
-  );
-
-  const suggestions = useMemo(
-    () => parsed.filter((d) => !existingKeys.has(d.getTime()) && !addedLocal.has(d.getTime())),
-    [parsed, existingKeys, addedLocal],
-  );
+  const suggestions: Suggestion[] = useMemo(() => {
+    if (dismissed) return [];
+    const titled = new Map<number, string>();
+    for (const a of detectActionReminders(debounced)) titled.set(a.key, a.title);
+    const dates = parseAllFutureDates(debounced);
+    const merged: Suggestion[] = dates.map((d) => ({
+      key: d.getTime(),
+      iso: d.toISOString(),
+      title: titled.get(d.getTime()),
+    }));
+    return merged.filter((s) => !existingKeys.has(s.key) && !addedLocal.has(s.key));
+  }, [debounced, dismissed, existingKeys, addedLocal]);
 
   if (suggestions.length === 0) return null;
 
@@ -120,27 +125,30 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
             Remind
           </span>
         )}
-        {suggestions.map((d) => {
-          const key = d.getTime();
+        {suggestions.map((s) => {
+          const d = new Date(s.iso);
+          const when = formatChipTime(d);
+          const label = s.title ? `${s.title} · ${when}` : when;
           return (
             <button
-              key={key}
+              key={s.key}
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 setAddedLocal((prev) => {
                   const n = new Set(prev);
-                  n.add(key);
+                  n.add(s.key);
                   return n;
                 });
-                void onAccept(d.toISOString());
+                void onAccept(s.iso, s.title);
               }}
-              className="inline-flex h-6 shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
+              className="inline-flex h-6 max-w-[220px] shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
               style={{ background: color }}
-              aria-label={`Set reminder for ${formatChipTime(d)}`}
+              aria-label={`Set reminder ${label}`}
+              title={label}
             >
-              <Plus className="h-3 w-3" aria-hidden="true" />
-              {formatChipTime(d)}
+              <Plus className="h-3 w-3 shrink-0" aria-hidden="true" />
+              <span className="truncate">{label}</span>
             </button>
           );
         })}
