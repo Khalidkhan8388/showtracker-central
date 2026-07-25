@@ -9,6 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
 import { BlockEditor } from "@/components/BlockEditor";
 import { VoicePlayer, HighlightedTranscript } from "@/components/VoicePlayer";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
@@ -35,6 +36,7 @@ type Note = {
   audio_path: string | null;
   audio_paths?: string[] | null;
   key_points?: string[] | null;
+  ocr_text?: string | null;
   reminder_at?: string | null;
 };
 
@@ -280,6 +282,12 @@ function NoteDetail() {
   const editFileRef = useRef<HTMLInputElement | null>(null);
   const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
   const [addingImages, setAddingImages] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [reorderBusy, setReorderBusy] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
 
