@@ -206,6 +206,47 @@ export const transcribeClipFn = createServerFn({ method: "POST" })
     return { transcript };
   });
 
+// ---------- OCR: extract selectable text from images ---------------------
+
+const OCR_SYSTEM_PROMPT = `You are an OCR engine. Read every image the user attaches and return the visible text VERBATIM.
+Preserve line breaks, punctuation, and reading order. Do NOT summarize, translate, or add commentary.
+If multiple images are provided, separate each image's text with a line "--- Image N ---".
+If an image has no legible text, output "(no text)" for that image.
+Return plain text only — no JSON, no code fences.`;
+
+const OcrInput = z.object({ images: z.array(ImageSchema).min(1).max(20) });
+export const ocrImagesFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => OcrInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const userBlocks: Array<Record<string, unknown>> = [
+      { type: "text", text: `Extract the text from ${data.images.length === 1 ? "this image" : `these ${data.images.length} images`}.` },
+    ];
+    for (const img of data.images) {
+      userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
+    }
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: OCR_SYSTEM_PROMPT },
+          { role: "user", content: userBlocks },
+        ],
+      }),
+    }, 90_000);
+    if (!res.ok) {
+      const body = await res.text().catch(() => "");
+      throw new Error(`OCR failed (${res.status}): ${body.slice(0, 200)}`);
+    }
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const text = (j.choices?.[0]?.message?.content ?? "").trim();
+    return { text };
+  });
+
+
 // ---------- web link ------------------------------------------------------
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.

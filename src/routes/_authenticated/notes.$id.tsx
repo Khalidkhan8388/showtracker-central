@@ -2,13 +2,14 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
-import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip } from "@/lib/notes.functions";
+import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, Bell, BellOff } from "lucide-react";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
 import { BlockEditor } from "@/components/BlockEditor";
 import { VoicePlayer, HighlightedTranscript } from "@/components/VoicePlayer";
+import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
@@ -35,6 +36,7 @@ type Note = {
   audio_path: string | null;
   audio_paths?: string[] | null;
   key_points?: string[] | null;
+  ocr_text?: string | null;
   reminder_at?: string | null;
 };
 
@@ -280,6 +282,12 @@ function NoteDetail() {
   const editFileRef = useRef<HTMLInputElement | null>(null);
   const viewAddImagesRef = useRef<HTMLInputElement | null>(null);
   const [addingImages, setAddingImages] = useState(false);
+  const [lightboxIdx, setLightboxIdx] = useState<number | null>(null);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [ocrBusy, setOcrBusy] = useState(false);
+  const [reorderBusy, setReorderBusy] = useState(false);
+  const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
 
@@ -771,34 +779,151 @@ function NoteDetail() {
         {isImage && imageUrls.length > 0 && (
           <section className="mt-5">
             <div className={imageUrls.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
-              {imageUrls.map((url, i) => (
-                <a
-                  key={`${url}-${i}`}
-                  href={url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="block overflow-hidden rounded-2xl bg-muted"
-                >
-                  <img
-                    src={url}
-                    alt=""
-                    className="h-full w-full object-cover"
-                    style={imageUrls.length === 1 ? { maxHeight: "70vh" } : { aspectRatio: "1 / 1" }}
-                  />
-                </a>
-              ))}
+              {imageUrls.map((url, i) => {
+                const path = (note.image_paths ?? [])[i];
+                const isSel = path ? selected.has(path) : false;
+                const startLongPress = () => {
+                  if (longPressRef.current) clearTimeout(longPressRef.current);
+                  longPressRef.current = setTimeout(() => {
+                    setSelectMode(true);
+                    if (path) setSelected((s) => new Set(s).add(path));
+                  }, 450);
+                };
+                const cancelLongPress = () => {
+                  if (longPressRef.current) { clearTimeout(longPressRef.current); longPressRef.current = null; }
+                };
+                return (
+                  <button
+                    type="button"
+                    key={`${url}-${i}`}
+                    onPointerDown={startLongPress}
+                    onPointerUp={cancelLongPress}
+                    onPointerLeave={cancelLongPress}
+                    onPointerCancel={cancelLongPress}
+                    onClick={() => {
+                      cancelLongPress();
+                      if (selectMode) {
+                        if (!path) return;
+                        setSelected((s) => {
+                          const n = new Set(s); n.has(path) ? n.delete(path) : n.add(path); return n;
+                        });
+                      } else {
+                        setLightboxIdx(i);
+                      }
+                    }}
+                    className={`relative block overflow-hidden rounded-2xl bg-muted active:opacity-90 ${isSel ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""}`}
+                  >
+                    <img
+                      src={url}
+                      alt=""
+                      className="h-full w-full object-cover"
+                      style={imageUrls.length === 1 ? { maxHeight: "70vh" } : { aspectRatio: "1 / 1" }}
+                    />
+                    {selectMode && (
+                      <span className={`absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold ${isSel ? "border-foreground bg-foreground text-background" : "border-white/80 bg-black/40 text-white"}`}>
+                        {isSel ? "✓" : ""}
+                      </span>
+                    )}
+                  </button>
+                );
+              })}
             </div>
-            <button
-              type="button"
-              onClick={() => viewAddImagesRef.current?.click()}
-              disabled={addingImages}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
-            >
-              {addingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
-              Add photos
-            </button>
+
+            {selectMode ? (
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <span className="text-[12px] text-muted-foreground">{selected.size} selected</span>
+                <button
+                  type="button"
+                  disabled={selected.size === 0 || reorderBusy}
+                  onClick={async () => {
+                    const paths = (note.image_paths ?? []).slice();
+                    const picked = paths.filter((p) => selected.has(p));
+                    const rest = paths.filter((p) => !selected.has(p));
+                    const next = [...picked, ...rest];
+                    setReorderBusy(true);
+                    try {
+                      await updateImagePaths({ data: { noteId: note.id, imagePaths: next } });
+                      await patchLocalNote(note.id, { image_paths: next });
+                    } finally { setReorderBusy(false); }
+                  }}
+                  className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium active:opacity-70 disabled:opacity-50"
+                >
+                  Move to front
+                </button>
+                <button
+                  type="button"
+                  disabled={selected.size === 0 || reorderBusy}
+                  onClick={async () => {
+                    const paths = (note.image_paths ?? []).slice();
+                    const next = paths.filter((p) => !selected.has(p));
+                    if (next.length === paths.length) return;
+                    setReorderBusy(true);
+                    try {
+                      await updateImagePaths({ data: { noteId: note.id, imagePaths: next } });
+                      await patchLocalNote(note.id, { image_paths: next });
+                      setSelected(new Set());
+                      if (next.length === 0) setSelectMode(false);
+                    } finally { setReorderBusy(false); }
+                  }}
+                  className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1.5 text-[13px] font-medium text-destructive active:opacity-70 disabled:opacity-50"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Delete
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setSelectMode(false); setSelected(new Set()); }}
+                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground active:opacity-70"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <div className="mt-3 flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => viewAddImagesRef.current?.click()}
+                  disabled={addingImages}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
+                >
+                  {addingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
+                  Add photos
+                </button>
+                <button
+                  type="button"
+                  disabled={ocrBusy}
+                  onClick={async () => {
+                    setOcrBusy(true);
+                    try {
+                      const { text } = await extractOcrForNote({ data: { noteId: note.id } });
+                      await patchLocalNote(note.id, { ocr_text: text || null });
+                      toast.success(text ? "Text extracted" : "No text found");
+                    } catch (e: any) {
+                      toast.error(e?.message ?? "OCR failed");
+                    } finally { setOcrBusy(false); }
+                  }}
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
+                >
+                  {ocrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
+                  {note.ocr_text ? "Re-extract text" : "Extract text"}
+                </button>
+              </div>
+            )}
           </section>
         )}
+
+        {isImage && note.ocr_text && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Extracted text
+            </h2>
+            <pre className="whitespace-pre-wrap rounded-2xl bg-muted/60 p-4 text-[14px] leading-[1.55] text-foreground font-sans selection:bg-foreground selection:text-background">
+{note.ocr_text}
+            </pre>
+          </section>
+        )}
+
+
 
         {isImage && note.summary && (
           <section className="mt-6">
@@ -1227,6 +1352,15 @@ function NoteDetail() {
             </button>
           </div>
         </div>
+      )}
+
+      {isImage && (
+        <PhotoLightbox
+          urls={imageUrls}
+          startIndex={lightboxIdx ?? 0}
+          open={lightboxIdx !== null}
+          onClose={() => setLightboxIdx(null)}
+        />
       )}
     </div>
 

@@ -79,6 +79,7 @@ export type LocalNote = {
   media?: LocalMedia | null;
   reminder_at?: string | null;
   hidden_episode_reminders?: string[];
+  ocr_text?: string | null;
 };
 
 export type MetaRow = { key: string; value: string };
@@ -156,6 +157,14 @@ class BraintapeDB extends Dexie {
     });
     // v8: add audio_paths (multi-clip voice notes) + key_points. No new index.
     this.version(8).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
+    // v9: add ocr_text (OCR result for image notes). No new index.
+    this.version(9).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
       meta: "key",
       photos: "path, cachedAt, size",
