@@ -544,3 +544,96 @@ export const fetchReaderViewFn = createServerFn({ method: "POST" })
     }
   });
 
+// ---------- reminder extraction (AI) --------------------------------------
+
+const ReminderInput = z.object({
+  text: z.string().trim().max(20_000),
+  nowIso: z.string().min(1),
+  tzOffsetMinutes: z.number().int().min(-14 * 60).max(14 * 60),
+  existing: z.array(z.string()).max(50).optional().default([]),
+});
+
+const REMINDER_SYSTEM_PROMPT = `You extract reminders from a user's note.
+
+Return ONE JSON object: { "reminders": [{ "iso": string, "title": string }, ...] }.
+No prose, no code fences.
+
+Rules:
+- Only include GENUINE, ACTIONABLE reminders the user would want a ping about
+  (calls, meetings, deadlines, releases, birthdays, appointments, follow-ups).
+- Skip vague references, past events, and generic mentions of dates with no intent.
+- Each "iso" MUST be a full ISO-8601 datetime in the user's local timezone (with offset).
+  If no explicit time is given, default to 09:00 local time.
+- Each "title" is short (max 8 words), Title Case, specific to the action
+  (e.g. "Call Sarah", "Release: Action Hero", "Sara & Gulfam's Marriage").
+  NEVER return a truncated title with "…" — write out the full words.
+- Do NOT include any reminder whose iso datetime already appears in the provided
+  "existing" list (compare to the minute).
+- Do NOT invent dates. If the note doesn't contain a real date/time, return [].
+- Sort by iso ascending. Cap at 8.
+
+Respond with ONLY the JSON object.`;
+
+export const extractRemindersFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => ReminderInput.parse(d))
+  .handler(async ({ data }) => {
+    const empty = { reminders: [] as Array<{ iso: string; title: string }> };
+    if (!data.text || data.text.trim().length < 4) return empty;
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const user = [
+      `Current datetime (user local): ${data.nowIso}`,
+      `Timezone offset (minutes from UTC): ${data.tzOffsetMinutes}`,
+      `Already-added reminders (skip these): ${JSON.stringify(data.existing)}`,
+      `Note text:\n"""\n${data.text}\n"""`,
+    ].join("\n\n");
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: REMINDER_SYSTEM_PROMPT },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 60_000);
+    if (!res.ok) return empty;
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { return empty; }
+
+    const nowMs = Date.now();
+    const maxMs = nowMs + 20 * 365 * 24 * 3600 * 1000;
+    const existingKeys = new Set<number>();
+    for (const iso of data.existing) {
+      const t = new Date(iso).getTime();
+      if (!isNaN(t)) existingKeys.add(Math.floor(t / 60000) * 60000);
+    }
+    const seen = new Set<number>();
+    const out: Array<{ iso: string; title: string }> = [];
+    const arr = Array.isArray(parsed.reminders) ? parsed.reminders : [];
+    for (const r of arr) {
+      const iso = typeof r?.iso === "string" ? r.iso : "";
+      const title = typeof r?.title === "string" ? r.title.trim() : "";
+      if (!iso || !title) continue;
+      const t = new Date(iso).getTime();
+      if (isNaN(t) || t < nowMs + 60_000 || t > maxMs) continue;
+      const key = Math.floor(t / 60000) * 60000;
+      if (existingKeys.has(key) || seen.has(key)) continue;
+      seen.add(key);
+      out.push({
+        iso: new Date(key).toISOString(),
+        title: title.replace(/\.{2,}|…/g, "").slice(0, 80),
+      });
+      if (out.length >= 8) break;
+    }
+    out.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+    return { reminders: out };
+  });
+
+
