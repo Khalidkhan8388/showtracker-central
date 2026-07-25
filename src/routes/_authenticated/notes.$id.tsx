@@ -17,6 +17,8 @@ import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
+import { getNoteReminders, addNoteReminder, removeNoteReminder, clearNoteReminders } from "@/lib/reminders";
+
 
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
