@@ -1390,7 +1390,7 @@ function NoteDetail() {
               hasReminder={!!note.reminder_at}
               dismissed={!!note.reminder_suggestion_dismissed}
               onAccept={async (iso) => {
-                await patchLocalNote(id, { reminder_at: iso });
+                await addNoteReminder(id, iso);
                 toast.success("Reminder set");
               }}
               onDismiss={async () => {
