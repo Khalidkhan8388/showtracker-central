@@ -1,12 +1,12 @@
 import { useCallback, useRef, useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock, X } from "lucide-react";
 import { setNoteReminder } from "@/lib/reminders";
 
 /**
- * Wraps a feed card and adds a right-swipe gesture that reveals four quick
- * reminder chips: Tonight · Tomorrow · Weekend · Next week. Tapping a chip
- * writes reminder_at on the note. A small ⏰ badge overlays cards that
- * already have a reminder set. Does NOT alter left-swipe behaviour.
+ * Wraps a feed card. Right-swipe ~60px opens a full-width reminder panel
+ * with four quick chips (Tonight · Tomorrow · Weekend · Next week) and an
+ * explicit close (X) button so users can back out without picking anything.
+ * Tapping outside the panel also closes it.
  */
 
 type Chip = { key: string; label: string; sub: string; date: () => Date };
@@ -15,7 +15,6 @@ function tonight(): Date {
   const d = new Date();
   const eight = new Date(d);
   eight.setHours(20, 0, 0, 0);
-  // If already past 8pm, schedule for now + 2h.
   if (d.getTime() >= eight.getTime()) {
     const later = new Date(d.getTime() + 2 * 60 * 60 * 1000);
     later.setSeconds(0, 0);
@@ -30,22 +29,20 @@ function tomorrow(): Date {
   return d;
 }
 function weekend(): Date {
-  // Next Saturday 10am; if today is Saturday, Sunday 10am.
   const d = new Date();
-  const dow = d.getDay(); // 0 Sun … 6 Sat
+  const dow = d.getDay();
   let add: number;
-  if (dow === 6) add = 1; // Sat → Sun
-  else if (dow === 0) add = 6; // Sun → next Sat
+  if (dow === 6) add = 1;
+  else if (dow === 0) add = 6;
   else add = 6 - dow;
   d.setDate(d.getDate() + add);
   d.setHours(10, 0, 0, 0);
   return d;
 }
 function nextWeek(): Date {
-  // Next Monday 9am.
   const d = new Date();
   const dow = d.getDay();
-  const add = ((8 - dow) % 7) || 7; // always in the future
+  const add = ((8 - dow) % 7) || 7;
   d.setDate(d.getDate() + add);
   d.setHours(9, 0, 0, 0);
   return d;
@@ -54,13 +51,13 @@ function nextWeek(): Date {
 const CHIPS: Chip[] = [
   { key: "tonight", label: "Tonight", sub: "8pm", date: tonight },
   { key: "tomorrow", label: "Tomorrow", sub: "9am", date: tomorrow },
-  { key: "weekend", label: "Weekend", sub: "Sat 10am", date: weekend },
-  { key: "week", label: "Next week", sub: "Mon 9am", date: nextWeek },
+  { key: "weekend", label: "Weekend", sub: "Sat", date: weekend },
+  { key: "week", label: "Next week", sub: "Mon", date: nextWeek },
 ];
 
-const OPEN_PX = 60; // threshold to latch open
-const MAX_PX = 220; // max drag distance
-const H_LOCK_RATIO = 1.2; // horizontal must dominate vertical by this ratio
+const OPEN_PX = 60;
+const MAX_PX = 90;
+const H_LOCK_RATIO = 1.2;
 
 export function SwipeReminderCard({
   noteId,
@@ -88,8 +85,7 @@ export function SwipeReminderCard({
   }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
-    if (disabled) return;
-    // Only track primary pointer (touch or left-mouse).
+    if (disabled || open) return;
     if (e.pointerType === "mouse" && e.button !== 0) return;
     start.current = { x: e.clientX, y: e.clientY, id: e.pointerId };
     locked.current = null;
@@ -109,7 +105,6 @@ export function SwipeReminderCard({
       }
     }
     if (locked.current !== "h") return;
-    // Only respond to right-swipes; ignore leftwards drag entirely.
     const next = Math.max(0, Math.min(MAX_PX, rawDx));
     if (next > 4) swiped.current = true;
     setDx(next);
@@ -119,8 +114,8 @@ export function SwipeReminderCard({
     if (!start.current || start.current.id !== e.pointerId) return;
     if (locked.current === "h") {
       if (dx >= OPEN_PX) {
-        setDx(OPEN_PX + 20);
         setOpen(true);
+        setDx(0);
       } else {
         reset();
       }
@@ -128,17 +123,10 @@ export function SwipeReminderCard({
       reset();
     }
     start.current = null;
-    // Keep swiped flag until the next click cycle finishes.
     setTimeout(() => (swiped.current = false), 300);
   };
 
   const handleClickCapture = (e: React.MouseEvent) => {
-    if (open) {
-      e.preventDefault();
-      e.stopPropagation();
-      reset();
-      return;
-    }
     if (swiped.current) {
       e.preventDefault();
       e.stopPropagation();
@@ -150,7 +138,6 @@ export function SwipeReminderCard({
     try {
       await setNoteReminder(noteId, chip.date().toISOString());
     } catch {}
-    // Snap closed after the flash.
     setTimeout(() => {
       setFlash(null);
       reset();
@@ -158,67 +145,93 @@ export function SwipeReminderCard({
   };
 
   return (
-    <div className="relative overflow-hidden rounded-[15px]">
-      {/* Chip strip behind the card (visible as card slides right). */}
-      <div
-        className="pointer-events-none absolute inset-y-0 left-0 flex items-stretch"
-        style={{ width: Math.max(dx, open ? OPEN_PX + 20 : 0) }}
-        aria-hidden={dx === 0 && !open}
-      >
+    <div className="relative">
+      <div className="relative overflow-hidden rounded-[15px]">
         <div
-          className={`pointer-events-auto flex h-full items-center gap-1.5 pl-2 pr-3 ${
-            dx > 20 || open ? "opacity-100" : "opacity-0"
-          } transition-opacity duration-150`}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          onClickCapture={handleClickCapture}
+          style={{
+            transform: `translateX(${dx}px)`,
+            transition: start.current ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
+            touchAction: "pan-y",
+          }}
+          className="relative"
         >
-          {CHIPS.map((c) => (
-            <button
-              key={c.key}
-              type="button"
-              disabled={!open || flash !== null}
-              onClick={(e) => {
-                e.stopPropagation();
-                void pickChip(c);
-              }}
-              className={`inline-flex h-[54px] shrink-0 flex-col items-center justify-center gap-0.5 rounded-2xl px-3 text-[11px] font-medium leading-tight transition-transform active:scale-95 ${
-                flash === c.label
-                  ? "scale-110 bg-foreground text-background"
-                  : "bg-foreground/10 text-foreground hover:bg-foreground/15"
-              }`}
+          {children}
+          {reminderAt && (
+            <div
+              className="pointer-events-none absolute bottom-2 left-2 z-20 flex h-5 items-center gap-1 rounded-full bg-amber-500/95 px-1.5 text-[10px] font-semibold text-white shadow-sm"
+              aria-label="Reminder set"
             >
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {c.label}
-              </span>
-              <span className="text-[10px] text-muted-foreground">{c.sub}</span>
-            </button>
-          ))}
+              <Clock className="h-3 w-3" />
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Card is translated right to reveal the strip. */}
-      <div
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={onPointerUp}
-        onPointerCancel={onPointerUp}
-        onClickCapture={handleClickCapture}
-        style={{
-          transform: `translateX(${dx}px)`,
-          transition: start.current ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
-          touchAction: "pan-y",
-        }}
-        className="relative"
-      >
-        {children}
-        {reminderAt && (
+        {/* Hint arrow shown during the drag */}
+        {dx > 8 && !open && (
           <div
-            className="pointer-events-none absolute bottom-2 left-2 z-20 flex h-5 items-center gap-1 rounded-full bg-amber-500/95 px-1.5 text-[10px] font-semibold text-white shadow-sm"
-            aria-label="Reminder set"
+            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-foreground/60"
+            style={{ opacity: Math.min(1, dx / OPEN_PX) }}
           >
-            <Clock className="h-3 w-3" />
+            <Clock className="h-4 w-4" />
           </div>
         )}
       </div>
+
+      {/* Full-width reminder panel overlays the card when open */}
+      {open && (
+        <>
+          {/* Tap-outside catcher */}
+          <button
+            type="button"
+            aria-label="Close reminder picker"
+            onClick={reset}
+            className="fixed inset-0 z-30 cursor-default bg-transparent"
+          />
+          <div
+            className="absolute inset-0 z-40 flex items-center gap-1.5 rounded-[15px] border border-foreground/10 bg-background/95 px-2 shadow-lg backdrop-blur-sm animate-fade-in"
+            role="dialog"
+            aria-label="Set a reminder"
+          >
+            <div className="flex flex-1 items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {CHIPS.map((c) => (
+                <button
+                  key={c.key}
+                  type="button"
+                  disabled={flash !== null}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    void pickChip(c);
+                  }}
+                  className={`inline-flex min-w-[68px] flex-1 shrink-0 flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 text-[11px] font-medium leading-tight transition-transform active:scale-95 ${
+                    flash === c.label
+                      ? "scale-105 bg-foreground text-background"
+                      : "bg-foreground/10 text-foreground hover:bg-foreground/15"
+                  }`}
+                >
+                  <span className="whitespace-nowrap">{c.label}</span>
+                  <span className="text-[10px] font-normal text-muted-foreground">{c.sub}</span>
+                </button>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                reset();
+              }}
+              aria-label="Close"
+              className="ml-1 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-foreground/10 text-foreground active:scale-95 hover:bg-foreground/15"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </>
+      )}
     </div>
   );
 }
