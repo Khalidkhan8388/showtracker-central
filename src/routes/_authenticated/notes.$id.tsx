@@ -313,6 +313,80 @@ function NoteDetail() {
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
 
+  // ---- AI-verified reminder suggestions (only runs in read mode) ----------
+  const scanText = useMemo(() => {
+    if (!note) return "";
+    return [
+      note.heading ?? "",
+      note.transcript ?? "",
+      note.summary ?? "",
+      note.ocr_text ?? "",
+      readerData?.markdown ?? "",
+    ].filter(Boolean).join("\n").trim();
+  }, [note?.heading, note?.transcript, note?.summary, note?.ocr_text, readerData?.markdown, note]);
+
+  const existingReminderIsos = useMemo(
+    () => (note ? getNoteReminders(note as any) : []),
+    [note?.reminders, note?.reminder_at, note],
+  );
+
+  const scanKey = useMemo(() => {
+    const norm = scanText.replace(/\s+/g, " ").trim().toLowerCase();
+    const existingKey = [...existingReminderIsos].sort().join("|");
+    return `${norm.length}:${norm.slice(0, 4000)}::${existingKey}`;
+  }, [scanText, existingReminderIsos]);
+
+  const aiReminderSuggestions = useMemo(() => {
+    if (!note?.ai_reminder_suggestions) return [] as Array<{ iso: string; title: string }>;
+    const existingKeys = new Set(
+      existingReminderIsos
+        .map((i) => new Date(i).getTime())
+        .filter((t) => !isNaN(t))
+        .map((t) => Math.floor(t / 60_000) * 60_000),
+    );
+    const nowMs = Date.now();
+    return note.ai_reminder_suggestions.filter((s) => {
+      const t = new Date(s.iso).getTime();
+      if (isNaN(t) || t < nowMs + 60_000) return false;
+      const k = Math.floor(t / 60_000) * 60_000;
+      return !existingKeys.has(k);
+    });
+  }, [note?.ai_reminder_suggestions, existingReminderIsos]);
+
+  useEffect(() => {
+    if (!note) return;
+    if (editing) return;                       // only after save, never while typing
+    if (note.reminder_suggestion_dismissed) return;
+    if (scanText.length < 8) return;
+    if (note.ai_reminder_scan_key === scanKey) return; // already analyzed
+
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const nowLocal = new Date();
+        const tzOffsetMinutes = -nowLocal.getTimezoneOffset();
+        const res = await extractRemindersFn({
+          data: {
+            text: scanText.slice(0, 20_000),
+            nowIso: nowLocal.toISOString(),
+            tzOffsetMinutes,
+            existing: existingReminderIsos,
+          },
+        });
+        if (cancelled) return;
+        await patchLocalNote(id, {
+          ai_reminder_suggestions: res.reminders ?? [],
+          ai_reminder_scan_key: scanKey,
+        });
+      } catch {
+        /* silent: no suggestions is a fine fallback */
+      }
+    }, 400);
+    return () => { cancelled = true; clearTimeout(t); };
+  }, [note, editing, scanText, scanKey, existingReminderIsos, id]);
+
+
+
   // Voice-append recorder state
   const [voiceRecording, setVoiceRecording] = useState(false);
   const [voiceBusy, setVoiceBusy] = useState(false);
