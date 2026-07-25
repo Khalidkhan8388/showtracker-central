@@ -59,6 +59,10 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
           />
         ) : null}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+        <div className="absolute left-3 top-3 z-10 inline-flex items-center gap-1.5 rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-md">
+          {isTv ? <Tv className="h-3 w-3 shrink-0" /> : <Film className="h-3 w-3 shrink-0" />}
+          <span>{isTv ? "TV Show" : "Movie"}</span>
+        </div>
       </div>
 
       <div className="-mt-16 flex items-end gap-4 px-1">
@@ -73,15 +77,11 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
           )}
         </div>
         <div className="min-w-0 flex-1 pb-1">
-          <div className="mb-1.5 inline-flex w-fit max-w-full items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
-            {isTv ? <Tv className="h-3 w-3 shrink-0" /> : <Film className="h-3 w-3 shrink-0" />}
-            <span className="truncate">{isTv ? "TV Show" : "Movie"}</span>
-          </div>
-
           <h1 className="text-[22px] font-bold leading-tight tracking-tight text-foreground">{media.title}</h1>
           {media.tagline && <p className="mt-1 text-[13px] italic text-muted-foreground line-clamp-2">{media.tagline}</p>}
         </div>
       </div>
+
 
       {/* Meta chips */}
       <div className="mt-4 flex flex-wrap gap-1.5 text-[11px]">
