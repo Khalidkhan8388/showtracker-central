@@ -33,6 +33,8 @@ type Note = {
   image_paths: string[] | null;
   source_url: string | null;
   audio_path: string | null;
+  audio_paths?: string[] | null;
+  key_points?: string[] | null;
   reminder_at?: string | null;
 };
 
