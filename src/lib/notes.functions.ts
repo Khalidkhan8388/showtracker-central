@@ -341,10 +341,6 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
         await db.notes.delete(note.id);
         return { ok: true as const, noteId: existingMedia, media: true as const, duplicate: true as const };
       }
-  try {
-    const { lookupTmdbFn } = await import("./tmdb.functions");
-    const media = await lookupTmdbFn({ data: { url } });
-    if (media) {
       await updateNote(note.id, {
         status: "ready",
         heading: media.title,
