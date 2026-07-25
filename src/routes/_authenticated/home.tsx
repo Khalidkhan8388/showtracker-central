@@ -15,6 +15,8 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { ReminderHero } from "@/components/ReminderHero";
+import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
+import { toast } from "sonner";
 import { useReminders } from "@/lib/reminders";
 
 
@@ -425,16 +427,39 @@ function Home() {
               <ReminderHero />
             ) : (
               derived.latest && (
-                <NoteCard
-                  note={derived.latest}
-                  variant="hero"
-                  thumbUrl={thumbs[derived.latest.id]}
-                  selected={selectedNotes.has(derived.latest.id)}
-                  selectMode={noteSelectMode}
-                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                  onLongPress={() => toggleNoteSel(derived.latest.id)}
-                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                />
+                <div className="space-y-2">
+                  <NoteCard
+                    note={derived.latest}
+                    variant="hero"
+                    thumbUrl={thumbs[derived.latest.id]}
+                    selected={selectedNotes.has(derived.latest.id)}
+                    selectMode={noteSelectMode}
+                    onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
+                    onLongPress={() => toggleNoteSel(derived.latest.id)}
+                    onToggleSel={() => toggleNoteSel(derived.latest.id)}
+                  />
+                  {!(derived.latest as any).media && (
+                    <div className="flex justify-center">
+                      <ReminderSuggestionChip
+                        text={[
+                          derived.latest.heading ?? "",
+                          derived.latest.transcript ?? "",
+                          (derived.latest as any).summary ?? "",
+                          (derived.latest as any).ocr_text ?? "",
+                        ].filter(Boolean).join("\n")}
+                        hasReminder={!!(derived.latest as any).reminder_at}
+                        dismissed={!!(derived.latest as any).reminder_suggestion_dismissed}
+                        onAccept={async (iso) => {
+                          await patchLocalNote(derived.latest!.id, { reminder_at: iso });
+                          toast.success("Reminder set");
+                        }}
+                        onDismiss={async () => {
+                          await patchLocalNote(derived.latest!.id, { reminder_suggestion_dismissed: true });
+                        }}
+                      />
+                    </div>
+                  )}
+                </div>
               )
             )}
 

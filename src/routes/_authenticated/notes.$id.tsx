@@ -1156,26 +1156,7 @@ function NoteDetail() {
 
 
 
-        {!editing && !media && (
-          <ReminderSuggestionChip
-            text={[
-              note.heading ?? "",
-              note.transcript ?? "",
-              note.summary ?? "",
-              note.ocr_text ?? "",
-              readerData?.markdown ?? "",
-            ].filter(Boolean).join("\n")}
-            hasReminder={!!note.reminder_at}
-            dismissed={!!note.reminder_suggestion_dismissed}
-            onAccept={async (iso) => {
-              await patchLocalNote(id, { reminder_at: iso });
-              toast.success("Reminder set");
-            }}
-            onDismiss={async () => {
-              await patchLocalNote(id, { reminder_suggestion_dismissed: true });
-            }}
-          />
-        )}
+        {/* Reminder suggestion chip moved above the floating action pill */}
 
       </div>
 
@@ -1387,6 +1368,31 @@ function NoteDetail() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {!editing && !media && (
+        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-5">
+          <div className="pointer-events-auto max-w-full">
+            <ReminderSuggestionChip
+              text={[
+                note.heading ?? "",
+                note.transcript ?? "",
+                note.summary ?? "",
+                note.ocr_text ?? "",
+                readerData?.markdown ?? "",
+              ].filter(Boolean).join("\n")}
+              hasReminder={!!note.reminder_at}
+              dismissed={!!note.reminder_suggestion_dismissed}
+              onAccept={async (iso) => {
+                await patchLocalNote(id, { reminder_at: iso });
+                toast.success("Reminder set");
+              }}
+              onDismiss={async () => {
+                await patchLocalNote(id, { reminder_suggestion_dismissed: true });
+              }}
+            />
           </div>
         </div>
       )}
