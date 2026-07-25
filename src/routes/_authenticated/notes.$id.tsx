@@ -6,7 +6,7 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
-import { ActionReminderBanner } from "@/components/ActionReminderBanner";
+
 
 
 import { fetchReaderViewFn } from "@/lib/ai.functions";
@@ -736,28 +736,6 @@ function NoteDetail() {
           )}
         </p>
 
-        {!media && (
-          <div className="mt-4">
-            <ActionReminderBanner
-              text={[
-                note.heading ?? "",
-                note.summary ?? "",
-                note.transcript ?? "",
-                note.ocr_text ?? "",
-                readerData?.markdown ?? "",
-              ].filter(Boolean).join("\n")}
-              existing={getNoteReminders(note as any)}
-              dismissed={!!note.action_suggestion_dismissed}
-              onAccept={async (iso, title) => {
-                await addNoteReminder(id, iso, title);
-                toast.success(`Reminder set · ${title}`);
-              }}
-              onDismiss={async () => {
-                await patchLocalNote(id, { action_suggestion_dismissed: true });
-              }}
-            />
-          </div>
-        )}
 
 
         {isLink && note.source_url && (
@@ -1252,9 +1230,9 @@ function NoteDetail() {
                   text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
                   existing={getNoteReminders(note as any)}
                   dismissed={!!note.reminder_suggestion_dismissed}
-                  onAccept={async (iso) => {
-                    await addNoteReminder(id, iso);
-                    toast.success("Reminder set");
+                  onAccept={async (iso, title) => {
+                    await addNoteReminder(id, iso, title);
+                    toast.success(title ? `Reminder set · ${title}` : "Reminder set");
                   }}
                   onDismiss={async () => {
                     await patchLocalNote(id, { reminder_suggestion_dismissed: true });
@@ -1418,9 +1396,9 @@ function NoteDetail() {
               ].filter(Boolean).join("\n")}
               existing={getNoteReminders(note as any)}
               dismissed={!!note.reminder_suggestion_dismissed}
-              onAccept={async (iso) => {
-                await addNoteReminder(id, iso);
-                toast.success("Reminder set");
+              onAccept={async (iso, title) => {
+                await addNoteReminder(id, iso, title);
+                toast.success(title ? `Reminder set · ${title}` : "Reminder set");
               }}
               onDismiss={async () => {
                 await patchLocalNote(id, { reminder_suggestion_dismissed: true });
