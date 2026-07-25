@@ -74,7 +74,7 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
   const [addedLocal, setAddedLocal] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(text), 800);
+    const t = setTimeout(() => setDebounced(text), 200);
     return () => clearTimeout(t);
   }, [text]);
 
