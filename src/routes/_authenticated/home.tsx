@@ -14,7 +14,6 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { SwipeReminderCard } from "@/components/SwipeReminderCard";
 import { ReminderHero } from "@/components/ReminderHero";
 import { useReminders } from "@/lib/reminders";
 
