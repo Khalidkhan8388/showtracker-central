@@ -1324,27 +1324,37 @@ function BulkPillBtn({
   onClick,
   disabled,
   danger,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  tone?: "watched" | "watching" | "dropped";
 }) {
+  const toneClass = danger
+    ? "bg-red-500 text-white hover:bg-red-600"
+    : tone === "watched"
+      ? "bg-emerald-500 text-white hover:bg-emerald-600"
+      : tone === "watching"
+        ? "bg-sky-500 text-white hover:bg-sky-600"
+        : tone === "dropped"
+          ? "bg-neutral-500 text-white hover:bg-neutral-600 dark:bg-neutral-600 dark:hover:bg-neutral-500"
+          : "bg-muted text-foreground hover:bg-muted/80";
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-40 ${
-        danger ? "bg-red-500 text-white" : "bg-background text-foreground"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-40 ${toneClass}`}
     >
       {icon}
       {label}
     </button>
   );
 }
+
 
 function MediaListRow({
   note,
