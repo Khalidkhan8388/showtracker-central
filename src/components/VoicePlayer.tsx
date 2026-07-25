@@ -189,23 +189,32 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
   }, [current, totalDuration, playing, onTimeUpdate]);
 
   // When a segment ends, if there's another queued, advance to it and keep playing.
+  const autoPlayNextRef = useRef(false);
   const onSegEnded = useCallback(() => {
     if (segIdx < segments.length - 1) {
-      const nextIdx = segIdx + 1;
-      const a = audioRef.current;
-      if (a) {
-        a.src = urls[nextIdx] ?? "";
-        a.playbackRate = SPEEDS[speedIdx];
-        // Play immediately without waiting on load event for tight continuity.
-        const p = a.play();
-        if (p && typeof p.catch === "function") p.catch(() => {});
-      }
-      setSegIdx(nextIdx);
+      autoPlayNextRef.current = true;
+      setSegIdx(segIdx + 1);
       setSegCurrent(0);
     } else {
       setPlaying(false);
     }
-  }, [segIdx, segments.length, urls, speedIdx]);
+  }, [segIdx, segments.length]);
+
+  // After React swaps the <audio src> to the new segment, resume playback.
+  useEffect(() => {
+    if (!autoPlayNextRef.current) return;
+    autoPlayNextRef.current = false;
+    const a = audioRef.current;
+    if (!a) return;
+    a.playbackRate = SPEEDS[speedIdx];
+    const start = () => {
+      const p = a.play();
+      if (p && typeof p.catch === "function") p.catch(() => {});
+      a.removeEventListener("loadeddata", start);
+    };
+    if (a.readyState >= 2) start();
+    else a.addEventListener("loadeddata", start);
+  }, [segIdx, speedIdx]);
 
   const progress = totalDuration > 0 ? Math.min(1, current / totalDuration) : 0;
   const timeLabel = useMemo(() => `${fmt(current)} / ${fmt(totalDuration)}`, [current, totalDuration]);
