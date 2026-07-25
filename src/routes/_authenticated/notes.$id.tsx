@@ -37,6 +37,7 @@ type Note = {
   audio_paths?: string[] | null;
   key_points?: string[] | null;
   ocr_text?: string | null;
+  ocr_hidden?: boolean;
   reminder_at?: string | null;
 };
 
