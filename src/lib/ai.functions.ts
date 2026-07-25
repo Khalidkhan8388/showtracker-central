@@ -507,3 +507,40 @@ Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is o
     const reasoning = typeof parsed.reasoning === "string" ? parsed.reasoning.slice(0, 300) : null;
     return { ids, reasoning };
   });
+
+// ---------- reader view (article extraction) -----------------------------
+
+const ReaderInput = z.object({ url: z.string().trim().url().max(2000) });
+export const fetchReaderViewFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => ReaderInput.parse(d))
+  .handler(async ({ data }) => {
+    const url = data.url;
+    let hostname = "";
+    try { hostname = new URL(url).hostname.replace(/^www\./, ""); } catch {}
+    try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15_000);
+      const res = await fetch(`https://r.jina.ai/${url}`, {
+        method: "GET",
+        redirect: "follow",
+        signal: controller.signal,
+        headers: {
+          "Accept": "text/plain",
+          "X-Return-Format": "markdown",
+        },
+      }).finally(() => clearTimeout(timeout));
+      if (!res.ok) throw new Error(`Reader failed (${res.status})`);
+      const raw = (await res.text()).slice(0, 200_000);
+      // r.jina.ai returns a small header block (Title:, URL Source:, Markdown Content:)
+      // then the article. Strip the header so we render body only.
+      const marker = raw.indexOf("Markdown Content:");
+      const body = (marker >= 0 ? raw.slice(marker + "Markdown Content:".length) : raw).trim();
+      const words = body.split(/\s+/).filter(Boolean).length;
+      const readingMinutes = Math.max(1, Math.round(words / 220));
+      if (!body || words < 30) throw new Error("No readable content found");
+      return { markdown: body, hostname, words, readingMinutes };
+    } catch (e: any) {
+      throw new Error(e?.message ?? "Reader view failed");
+    }
+  });
+
