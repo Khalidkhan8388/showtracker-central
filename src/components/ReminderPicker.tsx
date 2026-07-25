@@ -350,6 +350,76 @@ export function ReminderPicker({ values, onAdd, onRemove, onClearAll, noteContex
 
             {(showAdd || !hasAny) && (
               <>
+                {canSmart && (
+                  <div className="mb-4">
+                    <div className="mb-2 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-neutral-500 dark:text-white/50">
+                      <Sparkles className="h-3.5 w-3.5" style={{ color: "var(--reminder-strong)" }} />
+                      Smart suggestions
+                    </div>
+                    {smartLoading && (
+                      <div className="flex items-center gap-2 rounded-2xl border border-dashed border-black/10 px-4 py-3 text-[12px] text-neutral-500 dark:border-white/10 dark:text-white/50">
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        Analyzing your note and when you're usually free…
+                      </div>
+                    )}
+                    {!smartLoading && smartError && (
+                      <div className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-[12px] text-neutral-500 dark:border-white/10 dark:text-white/50">
+                        Couldn't load smart suggestions.
+                      </div>
+                    )}
+                    {!smartLoading && !smartError && smartVisible.length === 0 && (
+                      <div className="rounded-2xl border border-dashed border-black/10 px-4 py-3 text-[12px] text-neutral-500 dark:border-white/10 dark:text-white/50">
+                        No smart suggestions for this note.
+                      </div>
+                    )}
+                    {!smartLoading && smartVisible.length > 0 && (
+                      <ul className="flex flex-col gap-1.5">
+                        {smartVisible.map((s, i) => {
+                          const isCtx = !s.iso && !!s.id;
+                          const dateLabel = s.iso
+                            ? new Date(s.iso).toLocaleString(undefined, {
+                                weekday: "short", month: "short", day: "numeric",
+                                hour: "numeric", minute: "2-digit",
+                              })
+                            : "When you next open the app";
+                          return (
+                            <li key={`${s.id ?? s.iso ?? i}`}>
+                              <button
+                                onClick={async () => {
+                                  if (isCtx && s.id && onAddContextual) {
+                                    await onAddContextual(s.id, s.label);
+                                    setAddedContext((prev) => new Set(prev).add(s.id!));
+                                  } else if (s.iso) {
+                                    await add(new Date(s.iso));
+                                  }
+                                }}
+                                className="group flex w-full items-center gap-3 rounded-2xl border border-black/8 bg-white px-3 py-2.5 text-left transition active:scale-[0.99] dark:border-white/10 dark:bg-white/[0.04]"
+                              >
+                                <span
+                                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full"
+                                  style={{ background: "var(--reminder-bg)", color: "var(--reminder-strong)" }}
+                                >
+                                  {isCtx ? <Zap className="h-4 w-4" /> : <Sparkles className="h-4 w-4" />}
+                                </span>
+                                <span className="min-w-0 flex-1">
+                                  <span className="block truncate text-[13px] font-medium text-neutral-900 dark:text-white">
+                                    {s.label}
+                                  </span>
+                                  <span className="block truncate text-[11px] text-neutral-500 dark:text-white/50">
+                                    {dateLabel}{s.reason ? ` · ${s.reason}` : ""}
+                                  </span>
+                                </span>
+                                <Plus className="h-4 w-4 shrink-0 text-neutral-400 group-hover:text-neutral-700 dark:text-white/40 dark:group-hover:text-white/80" />
+                              </button>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    )}
+                  </div>
+                )}
+
+
                 <div className="grid grid-cols-2 gap-2">
                   {presets.map((p) => (
                     <button
