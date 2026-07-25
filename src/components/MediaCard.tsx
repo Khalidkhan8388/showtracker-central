@@ -89,13 +89,14 @@ export function MediaCard({
         )
       )}
 
-      <div className={`absolute inset-x-0 bottom-0 z-10 scrim-t p-2.5 pt-8 ${isRow ? "text-[11px]" : "text-[12px]"}`}>
+      <div className={`absolute inset-x-0 bottom-0 z-10 scrim-t p-2.5 pt-8 text-left ${isRow ? "text-[11px]" : "text-[12px]"}`}>
         {media.watch_status && (
-          <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
+          <span className={`mb-1 inline-flex self-start rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
             {WATCH_LABEL[media.watch_status]}
           </span>
         )}
-        <p className="line-clamp-2 text-[13px] font-semibold leading-tight scrim-fg">{media.title}</p>
+        <p className="line-clamp-2 text-left text-[13px] font-semibold leading-tight scrim-fg">{media.title}</p>
+
         <div className="mt-1 flex items-center gap-2 text-[10px] scrim-fg-80">
           {year && <span>{year}</span>}
           {media.vote_average != null && media.vote_average > 0 && (
