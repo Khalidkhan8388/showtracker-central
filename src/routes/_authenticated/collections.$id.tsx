@@ -10,7 +10,6 @@ import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 import { NoteCard, useLongPress } from "@/components/NoteCard";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
-import { SwipeReminderCard } from "@/components/SwipeReminderCard";
 import {
   AlertDialog,
   AlertDialogAction,
