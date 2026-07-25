@@ -85,10 +85,11 @@ function tasksFromRaw(input: unknown): string[] {
 // ---------- media analysis -------------------------------------------------
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 sentences. If images are attached, describe what's visible and weave that into the summary.
+- key_points: array of 3-6 short bullets (max ~12 words each) capturing the most important ideas, decisions, or facts. Return [] only if there's truly nothing to bullet.
 - tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
 
 Respond with ONLY the JSON object.`;
