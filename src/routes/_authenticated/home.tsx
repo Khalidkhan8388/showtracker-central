@@ -773,14 +773,7 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
         </Link>
       </div>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
-        <Link
-          to="/collections"
-          style={{ borderRadius: 15 }}
-          className="flex aspect-[2/3] w-28 shrink-0 snap-start flex-col items-center justify-center gap-2 border border-dashed border-border bg-card/60 text-muted-foreground active:opacity-70"
-        >
-          <Plus className="h-5 w-5" />
-          <span className="text-[11px] font-medium">New</span>
-        </Link>
+
         {list.map((c) => {
           const ids = c.note_ids ?? [];
           // Prefer a media poster from any member note

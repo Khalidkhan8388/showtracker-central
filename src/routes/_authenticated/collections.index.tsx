@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft, FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useCollections, createCollection, deleteCollection, backfillMediaCollections } from "@/lib/collections";
+import { useCollections, createCollection, deleteCollection, backfillMediaCollections, pruneEmptyCollections } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 
 export const Route = createFileRoute("/_authenticated/collections/")({
@@ -23,9 +23,17 @@ function CollectionsPage() {
 
   // Auto-file any movie/TV notes into Movies / TV Shows on mount so newly
   // added media always shows up here even if the initial file step raced.
+  // Also prune collections that have ended up empty (all members deleted
+  // or never added) so the list only shows collections with real content.
   useEffect(() => {
-    void backfillMediaCollections();
-  }, []);
+    (async () => {
+      await backfillMediaCollections();
+      if (notes) {
+        const alive = new Set(notes.filter((n) => !n.deleted_at).map((n) => n.id));
+        await pruneEmptyCollections(alive);
+      }
+    })();
+  }, [notes]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();

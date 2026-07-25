@@ -59,6 +59,24 @@ export async function deleteCollection(id: string): Promise<void> {
   await db.collections.delete(id);
 }
 
+/**
+ * Delete any collection whose members no longer reference an alive note.
+ * Callers pass the current set of alive (non-deleted) note ids so we can
+ * detect collections that ended up empty because their members were trashed.
+ */
+export async function pruneEmptyCollections(aliveNoteIds: Set<string>): Promise<number> {
+  const all = await db.collections.toArray();
+  let pruned = 0;
+  for (const c of all) {
+    const alive = (c.note_ids ?? []).filter((id) => aliveNoteIds.has(id));
+    if (alive.length === 0) {
+      await db.collections.delete(c.id);
+      pruned++;
+    }
+  }
+  return pruned;
+}
+
 export async function addNotesToCollection(id: string, noteIds: string[]): Promise<void> {
   const c = await db.collections.get(id);
   if (!c) return;
