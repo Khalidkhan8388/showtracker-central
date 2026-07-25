@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import * as chrono from "chrono-node";
-import { Bell, X, Plus } from "lucide-react";
+import { Bell, X, Plus, Loader2 } from "lucide-react";
 import { detectActionReminders } from "@/lib/reminder-detect";
+import { verifyRemindersFn } from "@/lib/ai.functions";
 
 type Props = {
   /** Concatenated scannable text (heading + body + transcript + ocr + summary). */
@@ -14,7 +15,7 @@ type Props = {
   onDismiss: () => void | Promise<void>;
 };
 
-type Suggestion = { key: number; iso: string; title?: string };
+type Suggestion = { key: number; iso: string; title: string };
 
 /** Parse every distinct future date/time chrono can find. */
 function parseAllFutureDates(text: string): Date[] {
@@ -42,13 +43,14 @@ function parseAllFutureDates(text: string): Date[] {
     out.push(new Date(key));
   }
   out.sort((a, b) => a.getTime() - b.getTime());
-  return out.slice(0, 6);
+  return out.slice(0, 8);
 }
 
 function formatChipTime(d: Date): string {
   const now = new Date();
+  const sameYear = d.getFullYear() === now.getFullYear();
   const sameDay =
-    d.getFullYear() === now.getFullYear() &&
+    sameYear &&
     d.getMonth() === now.getMonth() &&
     d.getDate() === now.getDate();
   const tomorrow = new Date(now);
@@ -59,19 +61,24 @@ function formatChipTime(d: Date): string {
     d.getDate() === tomorrow.getDate();
 
   const time = d.toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" });
-  if (sameDay) return `today ${time}`;
-  if (isTomorrow) return `tomorrow ${time}`;
-  const diffDays = Math.round((d.getTime() - now.getTime()) / (24 * 3600 * 1000));
-  if (diffDays >= 2 && diffDays <= 6) {
-    const wd = d.toLocaleDateString(undefined, { weekday: "short" });
-    return `${wd} ${time}`;
-  }
-  return `${d.toLocaleDateString(undefined, { month: "short", day: "numeric" })} ${time}`;
+  if (sameDay) return `Today ${time}`;
+  if (isTomorrow) return `Tomorrow ${time}`;
+  const dateStr = d.toLocaleDateString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  });
+  return `${dateStr} · ${time}`;
 }
 
 export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, onDismiss }: Props) {
   const [debounced, setDebounced] = useState(text);
   const [addedLocal, setAddedLocal] = useState<Set<number>>(new Set());
+  const [verified, setVerified] = useState<Suggestion[]>([]);
+  const [verifying, setVerifying] = useState(false);
+  const verifyReqId = useRef(0);
+  const cacheRef = useRef<Map<string, Suggestion[]>>(new Map());
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(text), 200);
@@ -87,23 +94,77 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
     return s;
   }, [existing]);
 
-  const suggestions: Suggestion[] = useMemo(() => {
-    if (dismissed) return [];
+  // Local candidate detection (fast, offline).
+  const localCandidates = useMemo(() => {
+    if (dismissed) return [] as Array<{ iso: string; title?: string; key: number }>;
     const titled = new Map<number, string>();
     for (const a of detectActionReminders(debounced)) titled.set(a.key, a.title);
     const dates = parseAllFutureDates(debounced);
-    const merged: Suggestion[] = dates.map((d) => ({
+    return dates.map((d) => ({
       key: d.getTime(),
       iso: d.toISOString(),
       title: titled.get(d.getTime()),
     }));
-    return merged.filter((s) => !existingKeys.has(s.key) && !addedLocal.has(s.key));
-  }, [debounced, dismissed, existingKeys, addedLocal]);
+  }, [debounced, dismissed]);
 
-  if (suggestions.length === 0) return null;
+  // AI verification pass — corrects titles, drops overlaps, ensures full text.
+  useEffect(() => {
+    if (dismissed) { setVerified([]); setVerifying(false); return; }
+    const candidates = localCandidates.filter((c) => !existingKeys.has(c.key));
+    if (candidates.length === 0) { setVerified([]); setVerifying(false); return; }
+
+    const cacheKey = JSON.stringify({
+      c: candidates.map((c) => [c.iso, c.title ?? ""]),
+      e: Array.from(existingKeys).sort(),
+      t: debounced.slice(0, 4000),
+    });
+    const cached = cacheRef.current.get(cacheKey);
+    if (cached) { setVerified(cached); setVerifying(false); return; }
+
+    const reqId = ++verifyReqId.current;
+    setVerifying(true);
+    const timer = setTimeout(async () => {
+      try {
+        const res = await verifyRemindersFn({
+          data: {
+            text: debounced.slice(0, 12000),
+            nowIso: new Date().toISOString(),
+            candidates: candidates.map(({ iso, title }) => ({ iso, title })),
+            existing,
+          },
+        });
+        if (reqId !== verifyReqId.current) return;
+        const items: Suggestion[] = (res?.reminders ?? [])
+          .filter((r) => !existingKeys.has(Math.floor(new Date(r.iso).getTime() / 60000) * 60000))
+          .map((r) => ({ key: new Date(r.iso).getTime(), iso: r.iso, title: r.title }));
+        cacheRef.current.set(cacheKey, items);
+        setVerified(items);
+      } catch {
+        if (reqId !== verifyReqId.current) return;
+        // Fallback: show local candidates with best-effort titles, no truncation ellipsis.
+        const fallback: Suggestion[] = candidates.map((c) => ({
+          key: c.key,
+          iso: c.iso,
+          title: (c.title && c.title.replace(/[…]+/g, "").trim()) || "Reminder",
+        }));
+        setVerified(fallback);
+      } finally {
+        if (reqId === verifyReqId.current) setVerifying(false);
+      }
+    }, 400);
+    return () => clearTimeout(timer);
+  }, [localCandidates, existingKeys, existing, debounced, dismissed]);
+
+  const suggestions = useMemo(
+    () => verified.filter((s) => !addedLocal.has(s.key) && !existingKeys.has(s.key)),
+    [verified, addedLocal, existingKeys],
+  );
+
+  if (dismissed) return null;
+  if (!verifying && suggestions.length === 0) return null;
 
   const color = "var(--reminder-strong, #d97706)";
-  const multi = suggestions.length > 1;
+  const showLabel = !verifying && suggestions.length === 1;
 
   return (
     <div
@@ -115,12 +176,21 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
       role="group"
       aria-label="Reminder suggestions"
     >
-      <Bell className="h-3 w-3 shrink-0" style={{ color }} aria-hidden="true" />
+      {verifying ? (
+        <Loader2 className="h-3 w-3 shrink-0 animate-spin" style={{ color }} aria-hidden="true" />
+      ) : (
+        <Bell className="h-3 w-3 shrink-0" style={{ color }} aria-hidden="true" />
+      )}
       <div
         className="flex min-w-0 flex-1 items-center gap-1 overflow-x-auto scrollbar-none"
         style={{ scrollbarWidth: "none" }}
       >
-        {!multi && (
+        {verifying && suggestions.length === 0 && (
+          <span className="shrink-0 px-1 text-[11px] leading-tight text-foreground">
+            Verifying with AI…
+          </span>
+        )}
+        {showLabel && (
           <span className="shrink-0 pr-0.5 text-[11px] leading-tight text-foreground">
             Remind
           </span>
@@ -128,7 +198,7 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
         {suggestions.map((s) => {
           const d = new Date(s.iso);
           const when = formatChipTime(d);
-          const label = s.title ? `${s.title} · ${when}` : when;
+          const label = `${s.title} · ${when}`;
           return (
             <button
               key={s.key}
@@ -142,16 +212,21 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
                 });
                 void onAccept(s.iso, s.title);
               }}
-              className="inline-flex h-6 max-w-[220px] shrink-0 items-center gap-1 rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
+              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
               style={{ background: color }}
               aria-label={`Set reminder ${label}`}
               title={label}
             >
               <Plus className="h-3 w-3 shrink-0" aria-hidden="true" />
-              <span className="truncate">{label}</span>
+              <span>{label}</span>
             </button>
           );
         })}
+        {verifying && suggestions.length > 0 && (
+          <span className="shrink-0 px-1 text-[11px] leading-tight text-muted-foreground">
+            Verifying…
+          </span>
+        )}
       </div>
       <button
         type="button"
