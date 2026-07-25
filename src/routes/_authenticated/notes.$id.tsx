@@ -1353,6 +1353,15 @@ function NoteDetail() {
           </div>
         </div>
       )}
+
+      {isImage && (
+        <PhotoLightbox
+          urls={imageUrls}
+          startIndex={lightboxIdx ?? 0}
+          open={lightboxIdx !== null}
+          onClose={() => setLightboxIdx(null)}
+        />
+      )}
     </div>
 
   );
