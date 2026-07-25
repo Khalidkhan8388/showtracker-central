@@ -153,7 +153,7 @@ export function detectActionReminders(text: string, now: Date = new Date()): Act
 
     const start = r.index ?? 0;
     const end = start + (r.text?.length ?? 0);
-    const title = extractTitleAround(text, start, end);
+    const title = extractTitleAround(text, start, end, r.text ?? "");
     if (!title) continue; // action intent required
 
     const key = Math.floor(d.getTime() / 60000) * 60000;
