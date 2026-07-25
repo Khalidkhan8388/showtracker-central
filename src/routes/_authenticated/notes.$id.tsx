@@ -5,6 +5,8 @@ import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
 import { ReminderPicker } from "@/components/ReminderPicker";
+import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
+
 import { fetchReaderViewFn } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
