@@ -81,6 +81,8 @@ export type LocalNote = {
   hidden_episode_reminders?: string[];
   ocr_text?: string | null;
   ocr_hidden?: boolean;
+  reminder_suggestion_dismissed?: boolean;
+
 };
 
 export type MetaRow = { key: string; value: string };

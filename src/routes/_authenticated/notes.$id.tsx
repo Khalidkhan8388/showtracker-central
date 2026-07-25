@@ -5,6 +5,8 @@ import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
 import { ReminderPicker } from "@/components/ReminderPicker";
+import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
+
 import { fetchReaderViewFn } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -41,6 +43,8 @@ type Note = {
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_at?: string | null;
+  reminder_suggestion_dismissed?: boolean;
+
 };
 
 type LinkTarget = { id: string; heading: string };
@@ -1152,7 +1156,29 @@ function NoteDetail() {
 
 
 
+        {!editing && !media && (
+          <ReminderSuggestionChip
+            text={[
+              note.heading ?? "",
+              note.transcript ?? "",
+              note.summary ?? "",
+              note.ocr_text ?? "",
+              readerData?.markdown ?? "",
+            ].filter(Boolean).join("\n")}
+            hasReminder={!!note.reminder_at}
+            dismissed={!!note.reminder_suggestion_dismissed}
+            onAccept={async (iso) => {
+              await patchLocalNote(id, { reminder_at: iso });
+              toast.success("Reminder set");
+            }}
+            onDismiss={async () => {
+              await patchLocalNote(id, { reminder_suggestion_dismissed: true });
+            }}
+          />
+        )}
+
       </div>
+
 
 
       {/* Full-screen edit overlay */}
@@ -1207,6 +1233,23 @@ function NoteDetail() {
                   wikiIndex={wikiIndex}
                 />
               </div>
+
+              {!media && (
+                <ReminderSuggestionChip
+                  text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
+                  hasReminder={!!note.reminder_at}
+                  dismissed={!!note.reminder_suggestion_dismissed}
+                  onAccept={async (iso) => {
+                    await patchLocalNote(id, { reminder_at: iso });
+                    toast.success("Reminder set");
+                  }}
+                  onDismiss={async () => {
+                    await patchLocalNote(id, { reminder_suggestion_dismissed: true });
+                  }}
+                />
+              )}
+
+
 
               {(() => {
                 const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
