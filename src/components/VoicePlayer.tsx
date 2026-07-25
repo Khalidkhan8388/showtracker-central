@@ -235,6 +235,9 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
         onPause={() => setPlaying(false)}
         onEnded={onSegEnded}
       />
+      {urls[segIdx + 1] && (
+        <audio src={urls[segIdx + 1]} preload="auto" style={{ display: "none" }} />
+      )}
       <div className="flex items-center gap-3">
         <button
           type="button"
