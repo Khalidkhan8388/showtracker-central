@@ -3,7 +3,7 @@
 //   in IndexedDB so the app can turn them into notes silently.
 // - Runtime caches static assets for fast reloads.
 
-const CACHE = 'braintape-v7';
+const CACHE = 'braintape-v8';
 const DB_NAME = 'braintape-share';
 const DB_VERSION = 3;
 const STORE = 'inbox';
@@ -124,10 +124,13 @@ self.addEventListener('fetch', (event) => {
   // Stash the payload in IndexedDB, notify any open Braintape client so it
   // can drain silently in the background, then respond with a tiny self-closing
   // page so the full app UI is not opened for every share.
-  if (req.method === 'POST' && url.pathname === '/share') {
+  const isShareSink = url.pathname === '/share-sink' || url.pathname === '/share-sink/' || url.pathname === '/share' || url.pathname === '/share/';
+  if (isShareSink && (req.method === 'POST' || req.method === 'GET')) {
     event.respondWith((async () => {
       let ok = false;
       let added = false;
+      let hadPayload = false;
+      if (req.method === 'POST') {
       try {
         const form = await req.formData();
         const files = [];
@@ -156,8 +159,8 @@ self.addEventListener('fetch', (event) => {
           title: String(form.get('title') || ''),
           files: fileRecords,
         };
-        const hasPayload = rec.url.trim() || rec.text.trim() || rec.title.trim() || rec.files.length > 0;
-        if (!hasPayload) throw new Error('empty share');
+        hadPayload = !!(rec.url.trim() || rec.text.trim() || rec.title.trim() || rec.files.length > 0);
+        if (!hadPayload) throw new Error('empty share');
 
         rec.fingerprint = await shareFingerprint(rec);
         const saved = await putShare(rec);
@@ -166,6 +169,7 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         ok = false;
       }
+      } // end POST branch
 
       // Nudge any open Braintape client to drain the inbox in background.
       let hasClient = false;
@@ -182,7 +186,7 @@ self.addEventListener('fetch', (event) => {
       // Background status via a native notification. This is the assurance that
       // the entry was captured; it is not a prompt to open the app.
       try {
-        if (self.registration?.showNotification && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        if (req.method === 'POST' && self.registration?.showNotification && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const title = ok ? (added ? 'Saved in Braintape' : 'Already saved') : 'Nothing to save';
           const body = ok
             ? (added ? 'Your entry was saved in the background.' : 'This share was already captured.')
