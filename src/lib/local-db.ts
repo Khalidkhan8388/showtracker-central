@@ -85,15 +85,10 @@ export type LocalNote = {
   reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
   reminder_titles?: Record<string, string>;
-  /** Cached AI-verified reminder suggestions for the current note text. */
-  ai_reminder_suggestions?: Array<{ iso: string; title: string }>;
-  /** Hash/fingerprint of the text the suggestions were derived from. */
-  ai_reminder_scan_key?: string | null;
 
 
 
 };
-
 
 
 export type MetaRow = { key: string; value: string };
