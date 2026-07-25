@@ -452,6 +452,9 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       tasks: tasksPayload,
       image_paths: imagePaths,
     });
+    if (imagePaths.length > 0) {
+      void autoExtractOcr(note.id);
+    }
   } catch (err: any) {
     await updateNote(note.id, { status: "failed", error: err?.message ?? String(err) });
     throw err;
