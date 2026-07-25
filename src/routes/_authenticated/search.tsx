@@ -577,23 +577,6 @@ function SearchPage() {
           )}
         </div>
 
-        {/* Tags row when idle */}
-        {idle && allTags.length > 0 && (
-          <div className="-mx-4 mb-4 overflow-x-auto scrollbar-hide">
-            <div className="flex gap-1.5 px-4">
-              {allTags.slice(0, 20).map(([t, count]) => (
-                <button
-                  key={t}
-                  onClick={() => setActiveTag(t)}
-                  className="inline-flex shrink-0 items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-[12px] text-foreground active:opacity-60"
-                >
-                  #{t}
-                  <span className="text-muted-foreground">{count}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
 
         {activeTag && (
           <div className="mb-3">
