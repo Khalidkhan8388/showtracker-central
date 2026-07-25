@@ -1396,9 +1396,9 @@ function NoteDetail() {
               ].filter(Boolean).join("\n")}
               existing={getNoteReminders(note as any)}
               dismissed={!!note.reminder_suggestion_dismissed}
-              onAccept={async (iso) => {
-                await addNoteReminder(id, iso);
-                toast.success("Reminder set");
+              onAccept={async (iso, title) => {
+                await addNoteReminder(id, iso, title);
+                toast.success(title ? `Reminder set · ${title}` : "Reminder set");
               }}
               onDismiss={async () => {
                 await patchLocalNote(id, { reminder_suggestion_dismissed: true });
