@@ -16,6 +16,7 @@ import {
 } from "./ai.functions";
 import { evictPhoto, readPhotoBytes, storeLocalPhoto } from "./photo-cache";
 import { evictAudio, readAudioBytes, storeLocalAudio } from "./audio-cache";
+import { findExistingByMedia, findExistingByText, findExistingByUrl, normalizeUrl } from "./dedupe";
 
 // ---------------------------------------------------------------------------
 // helpers
