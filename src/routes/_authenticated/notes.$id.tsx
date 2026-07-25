@@ -736,28 +736,6 @@ function NoteDetail() {
           )}
         </p>
 
-        {!media && (
-          <div className="mt-4">
-            <ActionReminderBanner
-              text={[
-                note.heading ?? "",
-                note.summary ?? "",
-                note.transcript ?? "",
-                note.ocr_text ?? "",
-                readerData?.markdown ?? "",
-              ].filter(Boolean).join("\n")}
-              existing={getNoteReminders(note as any)}
-              dismissed={!!note.action_suggestion_dismissed}
-              onAccept={async (iso, title) => {
-                await addNoteReminder(id, iso, title);
-                toast.success(`Reminder set · ${title}`);
-              }}
-              onDismiss={async () => {
-                await patchLocalNote(id, { action_suggestion_dismissed: true });
-              }}
-            />
-          </div>
-        )}
 
 
         {isLink && note.source_url && (
