@@ -1353,7 +1353,7 @@ function BulkPillBtn({
       }`}
     >
       {icon}
-      <span className="hidden xs:inline">{label}</span>
+      <span>{label}</span>
     </button>
   );
 }
