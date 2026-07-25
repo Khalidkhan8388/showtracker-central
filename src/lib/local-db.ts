@@ -72,6 +72,8 @@ export type LocalNote = {
   source_url: string | null;
   tags: string[];
   audio_path: string | null;
+  audio_paths?: string[] | null;
+  key_points?: string[] | null;
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
