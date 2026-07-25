@@ -838,7 +838,7 @@ function NoteDetail() {
 
         {isImage && imageUrls.length > 0 && (
           <section className="mt-5">
-            <div className={imageUrls.length === 1 ? "" : "grid grid-cols-2 gap-2"}>
+            <div className={imageUrls.length === 1 ? "flex justify-center" : "grid grid-cols-2 gap-2"}>
               {imageUrls.map((url, i) => {
                 const path = (note.image_paths ?? [])[i];
                 const isSel = path ? selected.has(path) : false;
@@ -871,13 +871,13 @@ function NoteDetail() {
                         setLightboxIdx(i);
                       }
                     }}
-                    className={`relative block overflow-hidden rounded-2xl bg-muted active:opacity-90 ${isSel ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""}`}
+                    className={`relative block overflow-hidden rounded-2xl bg-muted active:opacity-90 ${imageUrls.length === 1 ? "max-w-full" : ""} ${isSel ? "ring-2 ring-foreground ring-offset-2 ring-offset-background" : ""}`}
                   >
                     <img
                       src={url}
                       alt=""
-                      className="h-full w-full object-cover"
-                      style={imageUrls.length === 1 ? { maxHeight: "70vh" } : { aspectRatio: "1 / 1" }}
+                      className={imageUrls.length === 1 ? "max-h-[70vh] max-w-full object-contain" : "h-full w-full object-cover"}
+                      style={imageUrls.length === 1 ? undefined : { aspectRatio: "1 / 1" }}
                     />
                     {selectMode && (
                       <span className={`absolute right-2 top-2 inline-flex h-6 w-6 items-center justify-center rounded-full border text-[11px] font-semibold ${isSel ? "border-foreground bg-foreground text-background" : "border-white/80 bg-black/40 text-white"}`}>
