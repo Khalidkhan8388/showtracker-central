@@ -25,9 +25,9 @@ function parseFirstFutureDate(text: string): Date | null {
     const diff = d.getTime() - now.getTime();
     if (diff < 60 * 1000) continue; // at least a minute out
     if (diff > 365 * 24 * 3600 * 1000) continue;
-    // Ignore bare-year matches like "2024" (no month/day).
-    const known = r.start.knownValues as Record<string, unknown>;
-    if (!("day" in known) && !("weekday" in known)) continue;
+    // Ignore bare-year matches like "2024" (no month/day/weekday).
+    if (!r.start.isCertain("day") && !r.start.isCertain("weekday")) continue;
+
     return d;
   }
   return null;
