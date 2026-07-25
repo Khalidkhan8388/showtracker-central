@@ -61,6 +61,7 @@ export async function createMediaNote(input: {
 
   const note = newNote({
     audio_path: audioPath,
+    audio_paths: audioPath ? [audioPath] : [],
     image_paths: imagePaths,
     duration_seconds: input.durationSeconds,
     status: "processing",
