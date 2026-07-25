@@ -83,34 +83,34 @@ export function ReminderSuggestionChip({ text, hasReminder, dismissed, onAccept,
 
   return (
     <div
-      className="mt-4 flex items-center gap-2 rounded-2xl border px-3 py-2.5"
+      className="inline-flex max-w-full items-center gap-1.5 rounded-full border px-2.5 py-1 shadow-sm backdrop-blur-md"
       style={{
-        borderColor: "color-mix(in oklab, var(--reminder-strong, #d97706) 30%, transparent)",
-        background: "color-mix(in oklab, var(--reminder-strong, #d97706) 10%, transparent)",
+        borderColor: "color-mix(in oklab, var(--reminder-strong, #d97706) 35%, transparent)",
+        background: "color-mix(in oklab, var(--reminder-strong, #d97706) 12%, var(--background))",
       }}
       role="group"
       aria-label="Reminder suggestion"
     >
-      <Bell className="h-4 w-4 shrink-0" style={{ color: "var(--reminder-strong, #d97706)" }} />
-      <p className="min-w-0 flex-1 text-[13px] leading-tight text-foreground">
-        Remind me <span className="font-semibold">{label}</span>?
+      <Bell className="h-3 w-3 shrink-0" style={{ color: "var(--reminder-strong, #d97706)" }} />
+      <p className="min-w-0 flex-1 truncate text-[11px] leading-tight text-foreground">
+        Remind <span className="font-semibold">{label}</span>?
       </p>
       <button
         type="button"
-        onClick={() => onAccept(parsed.toISOString())}
-        className="inline-flex h-8 items-center gap-1 rounded-full px-3 text-[12px] font-semibold text-white active:opacity-70"
+        onClick={(e) => { e.stopPropagation(); onAccept(parsed.toISOString()); }}
+        className="inline-flex h-6 items-center gap-0.5 rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
         style={{ background: "var(--reminder-strong, #d97706)" }}
         aria-label="Accept reminder suggestion"
       >
-        <Check className="h-3.5 w-3.5" /> Set
+        <Check className="h-3 w-3" /> Set
       </button>
       <button
         type="button"
-        onClick={() => onDismiss()}
-        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground hover:bg-black/5 active:opacity-60 dark:hover:bg-white/10"
+        onClick={(e) => { e.stopPropagation(); onDismiss(); }}
+        className="inline-flex h-6 w-6 items-center justify-center rounded-full text-muted-foreground hover:bg-black/5 active:opacity-60 dark:hover:bg-white/10"
         aria-label="Dismiss reminder suggestion"
       >
-        <X className="h-4 w-4" />
+        <X className="h-3 w-3" />
       </button>
     </div>
   );
