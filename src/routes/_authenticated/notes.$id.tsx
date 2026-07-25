@@ -1234,6 +1234,23 @@ function NoteDetail() {
                 />
               </div>
 
+              {!media && (
+                <ReminderSuggestionChip
+                  text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
+                  hasReminder={!!note.reminder_at}
+                  dismissed={!!note.reminder_suggestion_dismissed}
+                  onAccept={async (iso) => {
+                    await patchLocalNote(id, { reminder_at: iso });
+                    toast.success("Reminder set");
+                  }}
+                  onDismiss={async () => {
+                    await patchLocalNote(id, { reminder_suggestion_dismissed: true });
+                  }}
+                />
+              )}
+
+
+
               {(() => {
                 const m = draftBody.match(/\[\[([^\[\]\n]*)$/);
                 if (!m || allNotes.length === 0) return null;
