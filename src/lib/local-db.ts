@@ -72,6 +72,8 @@ export type LocalNote = {
   source_url: string | null;
   tags: string[];
   audio_path: string | null;
+  audio_paths?: string[] | null;
+  key_points?: string[] | null;
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
@@ -146,6 +148,14 @@ class BraintapeDB extends Dexie {
     });
     // v7: add reminder_at + hidden_episode_reminders. Same schema string; index unchanged.
     this.version(7).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
+    // v8: add audio_paths (multi-clip voice notes) + key_points. No new index.
+    this.version(8).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
       meta: "key",
       photos: "path, cachedAt, size",

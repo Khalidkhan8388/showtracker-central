@@ -61,6 +61,7 @@ export async function createMediaNote(input: {
 
   const note = newNote({
     audio_path: audioPath,
+    audio_paths: audioPath ? [audioPath] : [],
     image_paths: imagePaths,
     duration_seconds: input.durationSeconds,
     status: "processing",
@@ -76,17 +77,38 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
   const note = await getNote(noteId);
   if (!note) return;
   try {
-    let audioInput: { base64: string; mime: string } | null = null;
-    if (note.audio_path) {
-      const a = await readAudioBytes(note.audio_path);
-      if (a) audioInput = { base64: bytesToBase64(a.bytes), mime: a.mime };
+    // Voice notes can now have multiple audio segments (base clip + any
+    // "continue recording" appends). Transcribe each and join.
+    const segmentPaths: string[] =
+      note.audio_paths && note.audio_paths.length > 0
+        ? note.audio_paths
+        : note.audio_path
+          ? [note.audio_path]
+          : [];
+    let firstAudio: { base64: string; mime: string } | null = null;
+    const extraTranscripts: string[] = [];
+    for (let i = 0; i < segmentPaths.length; i++) {
+      const a = await readAudioBytes(segmentPaths[i]);
+      if (!a) continue;
+      if (i === 0) {
+        firstAudio = { base64: bytesToBase64(a.bytes), mime: a.mime };
+      } else {
+        try {
+          const { transcript: t } = await transcribeClipFn({
+            data: { audio: { base64: bytesToBase64(a.bytes), mime: a.mime } },
+          });
+          if (t?.trim()) extraTranscripts.push(t.trim());
+        } catch {
+          /* skip failing segment */
+        }
+      }
     }
     const images: Array<{ base64: string; mime: string }> = [];
     for (const p of note.image_paths) {
       const im = await readPhotoBytes(p);
       if (im) images.push({ base64: bytesToBase64(im.bytes), mime: im.mime });
     }
-    if (!audioInput && images.length === 0) throw new Error("No content to analyze");
+    if (!firstAudio && images.length === 0) throw new Error("No content to analyze");
     await updateNote(noteId, { status: "transcribing" });
     const prior = {
       heading: note.heading ?? "",
@@ -96,10 +118,11 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
     const priorHasContent = prior.heading.trim() || prior.summary.trim() || prior.tasks.length > 0;
     const result = await analyzeMediaFn({
       data: {
-        audio: audioInput,
+        audio: firstAudio,
         images,
         prior: priorHasContent ? prior : null,
         skipTasks: false, // extract tasks from voice and image notes alike
+        extraTranscripts,
       },
     });
     // Preserve done/pending state where task text matches.
@@ -116,6 +139,7 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       transcript: result.transcript ?? note.transcript,
       heading: result.heading,
       summary: result.summary,
+      key_points: result.key_points ?? [],
       tasks: tasksPayload,
       error: null,
     });

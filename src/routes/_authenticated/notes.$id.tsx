@@ -33,6 +33,8 @@ type Note = {
   image_paths: string[] | null;
   source_url: string | null;
   audio_path: string | null;
+  audio_paths?: string[] | null;
+  key_points?: string[] | null;
   reminder_at?: string | null;
 };
 
@@ -419,17 +421,23 @@ function NoteDetail() {
   async function finishContinueRecording(blob: Blob, mime: string) {
     try {
       const path = await storeLocalAudio(blob, mime);
-      const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
-      const clean = (transcript ?? "").trim();
-      if (!clean) throw new Error("Nothing transcribed");
-      const prev = (note?.transcript ?? "").trim();
-      const nextBody = prev ? `${prev}\n\n${clean}` : clean;
-      const heading = note?.heading ?? "";
-      await patchLocalNote(id, { transcript: nextBody });
-      await updateFn({ data: { noteId: id, heading, body: nextBody } });
-      toast.success("Added to note");
+      // Append the new clip to this note's audio_paths so the player can play
+      // the full recording end-to-end.
+      const existing =
+        (note?.audio_paths && note.audio_paths.length > 0
+          ? note.audio_paths
+          : note?.audio_path
+            ? [note.audio_path]
+            : []) as string[];
+      const nextPaths = [...existing, path];
+      await patchLocalNote(id, { audio_paths: nextPaths });
+      toast.loading("Analyzing new clip…", { id });
+      // Re-run AI over ALL segments so summary, key points, tasks, and
+      // transcript reflect the extended recording.
+      await processFn({ data: { noteId: id } });
+      toast.success("Note updated", { id });
     } catch (e: any) {
-      toast.error(e?.message ?? "Transcription failed");
+      toast.error(e?.message ?? "Continue recording failed", { id });
     } finally {
       setContBusy(false);
       setContElapsed(0);
@@ -839,15 +847,47 @@ function NoteDetail() {
           </section>
         )}
 
-        {isVoice && note.audio_path && (
+        {isVoice && (note.audio_path || (note.audio_paths && note.audio_paths.length > 0)) && (
           <section className="mt-5">
             <VoicePlayer
-              audioPath={note.audio_path}
+              audioPaths={
+                note.audio_paths && note.audio_paths.length > 0
+                  ? note.audio_paths
+                  : note.audio_path
+                    ? [note.audio_path]
+                    : []
+              }
               fallbackDuration={note.duration_seconds}
               onTimeUpdate={onPlayerTime}
             />
           </section>
         )}
+
+        {isVoice && note.summary && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Summary
+            </h2>
+            <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
+          </section>
+        )}
+
+        {isVoice && note.key_points && note.key_points.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Key points
+            </h2>
+            <ul className="space-y-1.5">
+              {note.key_points.map((k, i) => (
+                <li key={i} className="flex gap-2 text-[15px] leading-[1.55] text-foreground">
+                  <span className="mt-[9px] inline-block h-1 w-1 shrink-0 rounded-full bg-foreground/60" />
+                  <span>{k}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
 
         {note.transcript && renderedBody && (
           <section className="mt-6">
