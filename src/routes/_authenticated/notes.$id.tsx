@@ -51,9 +51,12 @@ type Note = {
 
   reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
+  ai_reminder_suggestions?: Array<{ iso: string; title: string }>;
+  ai_reminder_scan_key?: string | null;
 
 
 };
+
 
 type LinkTarget = { id: string; heading: string };
 
