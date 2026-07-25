@@ -76,14 +76,18 @@ function cleanFragment(raw: string, dateText?: string): string {
 }
 
 /** Find an action verb / intent phrase near the chrono match and derive a title. */
-function extractTitleAround(text: string, matchStart: number, matchEnd: number): string | null {
-  const before = text.slice(Math.max(0, matchStart - 120), matchStart);
-  const after = text.slice(matchEnd, Math.min(text.length, matchEnd + 120));
-  const lowerBefore = before.toLowerCase();
+function extractTitleAround(
+  text: string,
+  matchStart: number,
+  matchEnd: number,
+  dateText: string,
+): string | null {
+  const before = text.slice(Math.max(0, matchStart - 160), matchStart);
+  const after = text.slice(matchEnd, Math.min(text.length, matchEnd + 160));
   const lowerAfter = after.toLowerCase();
 
-  // Search sentence/clause boundary window in "before" text (preferred).
-  const clauseSplit = /[.!?\n;]/g;
+  // Clause = current segment, split on sentence enders AND commas so multiple items on one line stay separate.
+  const clauseSplit = /[.!?\n;,]/;
   let clauseStart = 0;
   for (let i = before.length - 1; i >= 0; i--) {
     if (clauseSplit.test(before[i])) { clauseStart = i + 1; break; }
@@ -91,42 +95,36 @@ function extractTitleAround(text: string, matchStart: number, matchEnd: number):
   const beforeClause = before.slice(clauseStart);
   const lowerBeforeClause = beforeClause.toLowerCase();
 
-  // 1) Try intent phrase followed by verb+object.
+  // 1) Intent phrase followed by verb+object.
   for (const p of INTENT_PHRASES) {
     const idx = lowerBeforeClause.lastIndexOf(p);
     if (idx >= 0) {
-      const tail = beforeClause.slice(idx + p.length);
-      const cleaned = cleanFragment(tail);
+      const cleaned = cleanFragment(beforeClause.slice(idx + p.length), dateText);
       if (cleaned.length >= 2) return titleCase(cleaned);
     }
   }
 
-  // 2) Try action verb in the same clause (before the date).
+  // 2) Action verb in the same clause (before the date).
   let bestVerbIdx = -1;
   let bestVerb = "";
   for (const v of ACTION_VERBS) {
     const re = new RegExp(`\\b${v.replace(/ /g, "\\s+")}\\b`, "gi");
     let m: RegExpExecArray | null;
     while ((m = re.exec(lowerBeforeClause)) !== null) {
-      if (m.index > bestVerbIdx) {
-        bestVerbIdx = m.index;
-        bestVerb = v;
-      }
+      if (m.index > bestVerbIdx) { bestVerbIdx = m.index; bestVerb = v; }
     }
   }
   if (bestVerbIdx >= 0) {
-    const tail = beforeClause.slice(bestVerbIdx, bestVerbIdx + bestVerb.length + 60);
-    const cleaned = cleanFragment(tail);
+    const cleaned = cleanFragment(beforeClause.slice(bestVerbIdx, bestVerbIdx + bestVerb.length + 80), dateText);
     if (cleaned.length >= 2) return titleCase(cleaned);
   }
 
-  // 3) Try action verb *after* the date ("on Friday, call John").
+  // 3) Action verb after the date ("on Friday, call John").
   for (const v of ACTION_VERBS) {
     const re = new RegExp(`\\b${v.replace(/ /g, "\\s+")}\\b`, "i");
     const m = re.exec(lowerAfter);
     if (m) {
-      const tail = after.slice(m.index, m.index + v.length + 60);
-      const cleaned = cleanFragment(tail);
+      const cleaned = cleanFragment(after.slice(m.index, m.index + v.length + 80), dateText);
       if (cleaned.length >= 2) return titleCase(cleaned);
     }
   }
