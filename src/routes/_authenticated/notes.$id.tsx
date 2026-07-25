@@ -43,6 +43,8 @@ type Note = {
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_at?: string | null;
+  reminder_suggestion_dismissed?: boolean;
+
 };
 
 type LinkTarget = { id: string; heading: string };
