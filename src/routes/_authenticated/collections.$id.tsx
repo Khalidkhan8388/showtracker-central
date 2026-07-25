@@ -412,42 +412,36 @@ function CollectionDetail() {
                     const sel = removeSel.has(n.id);
                     return (
                       <div key={n.id} className="mb-3 break-inside-avoid">
-                        <SwipeReminderCard
-                          noteId={n.id}
-                          reminderAt={(n as any).reminder_at ?? null}
-                          disabled={removing}
-                        >
-                          <FeedNoteCard
-                            note={n as any}
-                            variant="masonry"
-                            fullWidth
-                            thumbUrl={thumbs[n.id]}
-                            selected={sel}
-                            selectMode={removing}
-                            onOpen={() => {
-                              if (removing) {
-                                setRemoveSel((prev) => {
-                                  const next = new Set(prev);
-                                  next.has(n.id) ? next.delete(n.id) : next.add(n.id);
-                                  return next;
-                                });
-                              } else {
-                                navigate({ to: "/notes/$id", params: { id: n.id } });
-                              }
-                            }}
-                            onLongPress={() => {
-                              setRemoving(true);
-                              setRemoveSel(new Set([n.id]));
-                            }}
-                            onToggleSel={() => {
+                        <FeedNoteCard
+                          note={n as any}
+                          variant="masonry"
+                          fullWidth
+                          thumbUrl={thumbs[n.id]}
+                          selected={sel}
+                          selectMode={removing}
+                          onOpen={() => {
+                            if (removing) {
                               setRemoveSel((prev) => {
                                 const next = new Set(prev);
                                 next.has(n.id) ? next.delete(n.id) : next.add(n.id);
                                 return next;
                               });
-                            }}
-                          />
-                        </SwipeReminderCard>
+                            } else {
+                              navigate({ to: "/notes/$id", params: { id: n.id } });
+                            }
+                          }}
+                          onLongPress={() => {
+                            setRemoving(true);
+                            setRemoveSel(new Set([n.id]));
+                          }}
+                          onToggleSel={() => {
+                            setRemoveSel((prev) => {
+                              const next = new Set(prev);
+                              next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                              return next;
+                            });
+                          }}
+                        />
                       </div>
                     );
                   })}
