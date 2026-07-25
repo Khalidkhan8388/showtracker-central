@@ -12,6 +12,7 @@ import {
   generateLinkLabelFn,
   semanticRankFn,
   transcribeClipFn,
+  ocrImagesFn,
 } from "./ai.functions";
 import { evictPhoto, readPhotoBytes, storeLocalPhoto } from "./photo-cache";
 import { evictAudio, readAudioBytes, storeLocalAudio } from "./audio-cache";
