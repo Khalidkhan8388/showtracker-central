@@ -154,6 +154,14 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v8: add audio_paths (multi-clip voice notes) + key_points. No new index.
+    this.version(8).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
   }
 }
 
