@@ -172,15 +172,15 @@ export function SwipeReminderCard({
     <div className="relative">
       <div className="relative overflow-hidden rounded-[15px]">
         <div
+          ref={dragRef}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClickCapture={handleClickCapture}
           style={{
-            transform: `translateX(${dx}px)`,
-            transition: start.current ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
             touchAction: "pan-y",
+            willChange: "transform",
           }}
           className="relative"
         >
@@ -194,17 +194,8 @@ export function SwipeReminderCard({
             </div>
           )}
         </div>
-
-        {/* Hint arrow shown during the drag */}
-        {dx > 8 && !open && (
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-foreground/60"
-            style={{ opacity: Math.min(1, dx / OPEN_PX) }}
-          >
-            <Clock className="h-4 w-4" />
-          </div>
-        )}
       </div>
+
 
       {/* Full-width reminder panel overlays the card when open */}
       {open && (
