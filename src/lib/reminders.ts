@@ -137,7 +137,7 @@ export function deriveReminders(notes: LocalNote[], now: Date = new Date()): Rem
           noteId: n.id,
           when: iso,
           overdue: t <= nowMs,
-          title: n.heading || "Reminder",
+          title: (n.reminder_titles && n.reminder_titles[iso]) || n.heading || "Reminder",
           summary: n.summary,
           taskCount: (n.tasks ?? []).length,
         });
