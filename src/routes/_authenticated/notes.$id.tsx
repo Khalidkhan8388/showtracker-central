@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
 import { BlockEditor } from "@/components/BlockEditor";
+import { VoicePlayer, HighlightedTranscript } from "@/components/VoicePlayer";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
