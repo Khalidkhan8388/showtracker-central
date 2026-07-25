@@ -326,9 +326,21 @@ export async function processVoiceNote({ data }: { data: { noteId: string } }) {
 
 export async function saveWebLink({ data }: { data: { url: string } }) {
   const url = /^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`;
-  const note = newNote({ source_url: url, status: "processing" });
+  // Dedupe by normalized URL (strips utm_*, fbclid, trailing slash, www., etc).
+  const existing = await findExistingByUrl(url);
+  if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
+  const note = newNote({ source_url: normalizeUrl(url), status: "processing" });
   await db.notes.put(note);
   // 1) Try TMDB detection first — movies/TV get a dedicated card + detail page.
+  try {
+    const { lookupTmdbFn } = await import("./tmdb.functions");
+    const media = await lookupTmdbFn({ data: { url } });
+    if (media) {
+      const existingMedia = await findExistingByMedia(media.type, media.tmdb_id);
+      if (existingMedia && existingMedia !== note.id) {
+        await db.notes.delete(note.id);
+        return { ok: true as const, noteId: existingMedia, media: true as const, duplicate: true as const };
+      }
   try {
     const { lookupTmdbFn } = await import("./tmdb.functions");
     const media = await lookupTmdbFn({ data: { url } });
