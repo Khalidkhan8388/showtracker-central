@@ -78,12 +78,14 @@ export type LocalNote = {
   deleted_at: string | null;
   media?: LocalMedia | null;
   reminder_at?: string | null;
+  reminders?: string[];
   hidden_episode_reminders?: string[];
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_suggestion_dismissed?: boolean;
 
 };
+
 
 export type MetaRow = { key: string; value: string };
 
