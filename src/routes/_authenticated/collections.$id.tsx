@@ -551,20 +551,21 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1.5 text-foreground shadow-xl backdrop-blur-xl">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
-              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground"
             >
               Cancel
             </button>
-            <span className="px-1 text-[12px] tabular-nums opacity-70">{removeSel.size}</span>
+            <span className="px-1 text-[12px] tabular-nums text-muted-foreground">{removeSel.size}</span>
             {hasMedia ? (
               <>
                 <BulkPillBtn
                   icon={<Eye className="h-3.5 w-3.5" />}
                   label="Watched"
+                  tone="watched"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "watched");
@@ -574,6 +575,7 @@ function CollectionDetail() {
                 <BulkPillBtn
                   icon={<PlayCircle className="h-3.5 w-3.5" />}
                   label="Watching"
+                  tone="watching"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "watching");
@@ -583,6 +585,7 @@ function CollectionDetail() {
                 <BulkPillBtn
                   icon={<XCircle className="h-3.5 w-3.5" />}
                   label="Dropped"
+                  tone="dropped"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "dropped");
