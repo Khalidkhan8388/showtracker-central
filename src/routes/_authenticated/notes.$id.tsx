@@ -841,15 +841,47 @@ function NoteDetail() {
           </section>
         )}
 
-        {isVoice && note.audio_path && (
+        {isVoice && (note.audio_path || (note.audio_paths && note.audio_paths.length > 0)) && (
           <section className="mt-5">
             <VoicePlayer
-              audioPath={note.audio_path}
+              audioPaths={
+                note.audio_paths && note.audio_paths.length > 0
+                  ? note.audio_paths
+                  : note.audio_path
+                    ? [note.audio_path]
+                    : []
+              }
               fallbackDuration={note.duration_seconds}
               onTimeUpdate={onPlayerTime}
             />
           </section>
         )}
+
+        {isVoice && note.summary && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Summary
+            </h2>
+            <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
+          </section>
+        )}
+
+        {isVoice && note.key_points && note.key_points.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Key points
+            </h2>
+            <ul className="space-y-1.5">
+              {note.key_points.map((k, i) => (
+                <li key={i} className="flex gap-2 text-[15px] leading-[1.55] text-foreground">
+                  <span className="mt-[9px] inline-block h-1 w-1 shrink-0 rounded-full bg-foreground/60" />
+                  <span>{k}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
 
         {note.transcript && renderedBody && (
           <section className="mt-6">
