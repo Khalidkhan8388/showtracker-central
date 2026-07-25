@@ -70,19 +70,31 @@ export function SwipeReminderCard({
   disabled?: boolean;
   children: React.ReactNode;
 }) {
-  const [dx, setDx] = useState(0);
   const [open, setOpen] = useState(false);
   const [flash, setFlash] = useState<string | null>(null);
+  const dragRef = useRef<HTMLDivElement | null>(null);
+  const dxRef = useRef(0);
+  const rafRef = useRef<number | null>(null);
   const start = useRef<{ x: number; y: number; id: number } | null>(null);
   const locked = useRef<"h" | "v" | null>(null);
   const swiped = useRef(false);
 
+  const applyTransform = useCallback((x: number, animate: boolean) => {
+    const el = dragRef.current;
+    if (!el) return;
+    el.style.transition = animate
+      ? "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)"
+      : "none";
+    el.style.transform = x === 0 ? "" : `translate3d(${x}px,0,0)`;
+  }, []);
+
   const reset = useCallback(() => {
-    setDx(0);
+    dxRef.current = 0;
+    applyTransform(0, true);
     setOpen(false);
     locked.current = null;
     start.current = null;
-  }, []);
+  }, [applyTransform]);
 
   const onPointerDown = (e: React.PointerEvent) => {
     if (disabled || open) return;
@@ -96,7 +108,7 @@ export function SwipeReminderCard({
     const rawDx = e.clientX - start.current.x;
     const rawDy = e.clientY - start.current.y;
     if (locked.current === null) {
-      if (Math.abs(rawDx) < 8 && Math.abs(rawDy) < 8) return;
+      if (Math.abs(rawDx) < 6 && Math.abs(rawDy) < 6) return;
       if (Math.abs(rawDx) > Math.abs(rawDy) * H_LOCK_RATIO) {
         locked.current = "h";
         (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
@@ -105,24 +117,34 @@ export function SwipeReminderCard({
       }
     }
     if (locked.current !== "h") return;
-    const next = Math.max(0, Math.min(MAX_PX, rawDx));
+    // Rubber-band beyond MAX_PX for a natural feel.
+    let next = Math.max(0, rawDx);
+    if (next > MAX_PX) next = MAX_PX + (next - MAX_PX) * 0.25;
     if (next > 4) swiped.current = true;
-    setDx(next);
-    e.preventDefault();
+    dxRef.current = next;
+    if (rafRef.current == null) {
+      rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = null;
+        applyTransform(dxRef.current, false);
+      });
+    }
   };
   const onPointerUp = (e: React.PointerEvent) => {
     if (!start.current || start.current.id !== e.pointerId) return;
-    if (locked.current === "h") {
-      if (dx >= OPEN_PX) {
-        setOpen(true);
-        setDx(0);
-      } else {
-        reset();
-      }
-    } else {
-      reset();
-    }
+    const wasH = locked.current === "h";
+    const finalDx = dxRef.current;
     start.current = null;
+    locked.current = null;
+    if (wasH) {
+      if (finalDx >= OPEN_PX) {
+        dxRef.current = 0;
+        applyTransform(0, true);
+        setOpen(true);
+      } else {
+        dxRef.current = 0;
+        applyTransform(0, true);
+      }
+    }
     setTimeout(() => (swiped.current = false), 300);
   };
 
@@ -132,6 +154,8 @@ export function SwipeReminderCard({
       e.stopPropagation();
     }
   };
+
+
 
   const pickChip = async (chip: Chip) => {
     setFlash(chip.label);
@@ -148,15 +172,15 @@ export function SwipeReminderCard({
     <div className="relative">
       <div className="relative overflow-hidden rounded-[15px]">
         <div
+          ref={dragRef}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
           onClickCapture={handleClickCapture}
           style={{
-            transform: `translateX(${dx}px)`,
-            transition: start.current ? "none" : "transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1)",
             touchAction: "pan-y",
+            willChange: "transform",
           }}
           className="relative"
         >
@@ -170,17 +194,8 @@ export function SwipeReminderCard({
             </div>
           )}
         </div>
-
-        {/* Hint arrow shown during the drag */}
-        {dx > 8 && !open && (
-          <div
-            className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3 text-foreground/60"
-            style={{ opacity: Math.min(1, dx / OPEN_PX) }}
-          >
-            <Clock className="h-4 w-4" />
-          </div>
-        )}
       </div>
+
 
       {/* Full-width reminder panel overlays the card when open */}
       {open && (
