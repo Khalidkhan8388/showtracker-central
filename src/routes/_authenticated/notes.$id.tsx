@@ -37,6 +37,7 @@ type Note = {
   audio_paths?: string[] | null;
   key_points?: string[] | null;
   ocr_text?: string | null;
+  ocr_hidden?: boolean;
   reminder_at?: string | null;
 };
 
@@ -893,10 +894,14 @@ function NoteDetail() {
                   type="button"
                   disabled={ocrBusy}
                   onClick={async () => {
+                    if (note.ocr_text && note.ocr_hidden) {
+                      await patchLocalNote(note.id, { ocr_hidden: false });
+                      return;
+                    }
                     setOcrBusy(true);
                     try {
                       const { text } = await extractOcrForNote({ data: { noteId: note.id } });
-                      await patchLocalNote(note.id, { ocr_text: text || null });
+                      await patchLocalNote(note.id, { ocr_text: text || null, ocr_hidden: false });
                       toast.success(text ? "Text extracted" : "No text found");
                     } catch (e: any) {
                       toast.error(e?.message ?? "OCR failed");
@@ -905,14 +910,16 @@ function NoteDetail() {
                   className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
                 >
                   {ocrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
-                  {note.ocr_text ? "Re-extract text" : "Extract text"}
+                  {note.ocr_text
+                    ? (note.ocr_hidden ? "Show extracted text" : "Re-extract text")
+                    : "Extract text"}
                 </button>
               </div>
             )}
           </section>
         )}
 
-        {isImage && note.ocr_text && (
+        {isImage && note.ocr_text && !note.ocr_hidden && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -921,7 +928,7 @@ function NoteDetail() {
               <button
                 type="button"
                 onClick={async () => {
-                  await patchLocalNote(note.id, { ocr_text: null });
+                  await patchLocalNote(note.id, { ocr_hidden: true });
                 }}
                 className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground active:opacity-70"
               >
