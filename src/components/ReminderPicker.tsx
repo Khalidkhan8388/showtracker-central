@@ -1,7 +1,10 @@
-import { useMemo, useState } from "react";
-import { Bell, BellOff, ChevronLeft, ChevronRight, Check, Trash2, Plus } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Bell, BellOff, ChevronLeft, ChevronRight, Check, Trash2, Plus, Sparkles, Loader2, Zap } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+import { suggestSmartTimesFn } from "@/lib/ai.functions";
+import { getActivityProfile, describeProfile } from "@/lib/activity";
+
 
 
 type Preset = { key: string; label: string; sub: string; date: Date };
@@ -136,14 +139,21 @@ function formatReminderRow(iso: string): string {
   });
 }
 
+type SmartSuggestion = { iso: string | null; id: string | null; label: string; reason: string };
+
 type PickerProps = {
   values: string[];
   onAdd: (iso: string) => void | Promise<void>;
   onRemove: (iso: string) => void | Promise<void>;
   onClearAll?: () => void | Promise<void>;
+  /** Note text used to power AI smart suggestions. Optional. */
+  noteContext?: string;
+  /** Called when the user picks a contextual reminder (e.g. "next-open"). */
+  onAddContextual?: (id: string, title: string) => void | Promise<void>;
 };
 
-export function ReminderPicker({ values, onAdd, onRemove, onClearAll }: PickerProps) {
+export function ReminderPicker({ values, onAdd, onRemove, onClearAll, noteContext, onAddContextual }: PickerProps) {
+
   const [open, setOpen] = useState(false);
   const [showAdd, setShowAdd] = useState(false);
   const presets = useMemo(buildPresets, [open, showAdd]);
