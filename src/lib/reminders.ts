@@ -227,6 +227,30 @@ export async function setNoteReminder(noteId: string, iso: string | null) {
   return addNoteReminder(noteId, iso);
 }
 
+// ---- contextual reminders (behavior-based, no fixed time) ----------------
+
+/** Add a contextual reminder like "next-open" — fires on next app open in active hours. */
+export async function addContextualReminder(noteId: string, id: string, title: string) {
+  const n = await db.notes.get(noteId);
+  const list = Array.from(new Set([...(n?.contextual_reminders ?? []), id]));
+  const meta = { ...(n?.contextual_meta ?? {}) };
+  meta[id] = { title: (title || "Reminder").trim(), created_at: new Date().toISOString() };
+  await patchLocalNote(noteId, {
+    contextual_reminders: list,
+    contextual_meta: meta,
+    reminder_suggestion_dismissed: false,
+  });
+}
+
+export async function removeContextualReminder(noteId: string, id: string) {
+  const n = await db.notes.get(noteId);
+  if (!n) return;
+  const list = (n.contextual_reminders ?? []).filter((x) => x !== id);
+  const meta = { ...(n.contextual_meta ?? {}) };
+  delete meta[id];
+  await patchLocalNote(noteId, { contextual_reminders: list, contextual_meta: meta });
+}
+
 export async function dismissEpisodeReminder(noteId: string, key: string) {
 
   const n = await db.notes.get(noteId);
@@ -242,6 +266,7 @@ export async function markEpisodeWatchedAndClear(noteId: string, season: number,
 export async function markMovieWatched(noteId: string) {
   await setWatchStatus(noteId, "watched");
 }
+
 
 // ---- notifications ----
 const shown = new Set<string>();
@@ -292,11 +317,54 @@ async function fireNotification(r: Reminder) {
   } catch {}
 }
 
+/** Fire pending contextual reminders that are due based on user activity. */
+async function fireContextualReminders(now: Date) {
+  const { getActivityProfile } = await import("./activity");
+  const profile = getActivityProfile();
+  const h = now.getHours();
+  const [wakeStart, wakeEnd] = profile.wakeWindow;
+  // Only fire during the user's active window.
+  if (h < Math.max(8, wakeStart) || h >= wakeEnd) return;
+
+  const notes = (await db.notes.toArray()).filter(
+    (n) => !n.deleted_at && (n.contextual_reminders?.length ?? 0) > 0,
+  );
+  for (const n of notes) {
+    for (const id of n.contextual_reminders ?? []) {
+      if (id !== "next-open") continue;
+      const key = `ctx:${n.id}:${id}`;
+      if (shown.has(key)) continue;
+      const meta = n.contextual_meta?.[id];
+      const title = meta?.title || n.heading || "Reminder";
+      try {
+        const reg = await navigator.serviceWorker?.ready;
+        if (reg) {
+          await reg.showNotification(title, {
+            body: "You opened the app — here's what you saved.",
+            icon: "/icon-192.png",
+            badge: "/icon-192.png",
+            tag: key,
+            data: { noteId: n.id },
+          });
+        } else if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+          new Notification(title, { body: "You opened the app — here's what you saved.", icon: "/icon-192.png", tag: key });
+        }
+        shown.add(key);
+        persistShown();
+      } catch {}
+      // Auto-consume so it doesn't nag on every future open.
+      await removeContextualReminder(n.id, id);
+    }
+  }
+}
+
 let started = false;
 export function startReminderScheduler() {
   if (started || typeof window === "undefined") return;
   started = true;
   loadShown();
+  // Record this app open for the behavioral profile.
+  void import("./activity").then((m) => m.recordActivityPing());
   const tick = async () => {
     try {
       const notes = (await db.notes.toArray()).filter((n) => !n.deleted_at);
@@ -306,8 +374,10 @@ export function startReminderScheduler() {
         const due = new Date(r.when).getTime() <= now.getTime();
         if (due) void fireNotification(r);
       }
+      void fireContextualReminders(now);
     } catch {}
   };
   void tick();
   setInterval(tick, 60_000); // every minute
 }
+

@@ -19,7 +19,7 @@ import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
-import { getNoteReminders, addNoteReminder, removeNoteReminder, clearNoteReminders } from "@/lib/reminders";
+import { getNoteReminders, addNoteReminder, removeNoteReminder, clearNoteReminders, addContextualReminder } from "@/lib/reminders";
 
 
 
@@ -1450,6 +1450,15 @@ function NoteDetail() {
             </button>
             <ReminderPicker
               values={getNoteReminders(note as any)}
+              noteContext={[
+                (note as any).heading,
+                (note as any).summary,
+                (note as any).body,
+                (note as any).content,
+                (note as any).transcript,
+                (note as any).ocr_text,
+                (note as any).reader_markdown,
+              ].filter(Boolean).join("\n\n")}
               onAdd={async (iso) => {
                 await addNoteReminder(id, iso);
                 toast.success("Reminder added");
@@ -1462,7 +1471,12 @@ function NoteDetail() {
                 await clearNoteReminders(id);
                 toast.success("Reminders cleared");
               }}
+              onAddContextual={async (cid, title) => {
+                await addContextualReminder(id, cid, title);
+                toast.success("Smart reminder set");
+              }}
             />
+
 
             <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
             <button

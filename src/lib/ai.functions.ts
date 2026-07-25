@@ -633,3 +633,112 @@ ${JSON.stringify(data.candidates)}`;
     return { reminders: out };
   });
 
+// ---------- smart reminder time suggestions -------------------------------
+
+const SmartTimesInput = z.object({
+  text: z.string().max(6000),
+  nowIso: z.string(),
+  timeZone: z.string().max(80).optional().default("UTC"),
+  profileSummary: z.string().max(600),
+  avoidWeekends: z.boolean().optional().default(true),
+  existing: z.array(z.string()).max(30).optional().default([]),
+});
+
+export const suggestSmartTimesFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => SmartTimesInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const sys = `You suggest smart reminder times based on the user's note and their behavioral profile.
+
+Return 3 candidate reminder times that respect the user's typical active hours and avoid quiet windows (late night, and weekends unless the profile says otherwise).
+
+Rules:
+- Times must be in the FUTURE relative to "now".
+- Prefer times within the user's active window; never propose times outside their wake window.
+- Vary the horizons: one soon (later today or tomorrow), one in a few days, one longer-term — but every one must fit the note's apparent urgency.
+- Skip times that duplicate an existing reminder (same day + hour).
+- Each suggestion has:
+  - iso: full ISO 8601 timestamp WITH timezone offset matching the user's timezone
+  - label: short friendly label ("Tomorrow morning", "Sunday evening", "Next Tuesday")
+  - reason: one short sentence explaining WHY this time fits (e.g. "You're usually free around 9am on weekdays")
+- Also return ONE optional contextual suggestion with iso set to null and id set to "next-open" meaning "the next time you open the app during your active hours". Include it only if the note isn't strongly tied to a specific date.
+
+Return ONE JSON object: { "suggestions": [ { "iso": string|null, "id": string|null, "label": string, "reason": string } ] }.
+Max 4 items. No prose, no code fences.`;
+
+    const user = `Now: ${data.nowIso}
+User timezone: ${data.timeZone}
+Behavioral profile: ${data.profileSummary}
+Avoid weekends by default: ${data.avoidWeekends}
+
+Existing reminders on this note (skip duplicates):
+${data.existing.length ? data.existing.join("\n") : "(none)"}
+
+Note content:
+"""
+${data.text}
+"""`;
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 30_000);
+    if (!res.ok) throw new Error(`Smart times failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+    const nowMs = new Date(data.nowIso).getTime();
+    const existingKeys = new Set(
+      data.existing
+        .map((iso) => new Date(iso).getTime())
+        .filter((t) => !isNaN(t))
+        .map((t) => Math.floor(t / (30 * 60 * 1000))),
+    );
+
+    const out: Array<{ iso: string | null; id: string | null; label: string; reason: string }> = [];
+    const items: any[] = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+    const seenKeys = new Set<number>();
+    let seenNextOpen = false;
+
+    for (const it of items) {
+      const label = String(it?.label ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+      const reason = String(it?.reason ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
+      if (!label) continue;
+
+      const rawId = typeof it?.id === "string" ? it.id.trim() : "";
+      const isoRaw = it?.iso;
+
+      if (rawId === "next-open" || (isoRaw == null && !seenNextOpen)) {
+        if (seenNextOpen) continue;
+        seenNextOpen = true;
+        out.push({ iso: null, id: "next-open", label: label || "Next time you open the app", reason });
+        continue;
+      }
+
+      if (typeof isoRaw !== "string") continue;
+      const t = new Date(isoRaw).getTime();
+      if (isNaN(t) || t <= nowMs + 60 * 1000) continue;
+      if (t > nowMs + 365 * 24 * 3600 * 1000) continue;
+      const key = Math.floor(t / (30 * 60 * 1000));
+      if (existingKeys.has(key) || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      out.push({ iso: new Date(t).toISOString(), id: null, label, reason });
+      if (out.length >= 4) break;
+    }
+
+    return { suggestions: out };
+  });
+
+

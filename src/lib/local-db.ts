@@ -85,6 +85,12 @@ export type LocalNote = {
   reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
   reminder_titles?: Record<string, string>;
+  /** Contextual reminders — fire based on behavior rather than a fixed time.
+   *  Supported ids: "next-open" (fires on next app open during active hours). */
+  contextual_reminders?: string[];
+  /** Metadata for contextual reminders (title + creation time), keyed by id above. */
+  contextual_meta?: Record<string, { title: string; created_at: string }>;
+
 
 
 
