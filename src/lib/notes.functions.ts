@@ -16,6 +16,7 @@ import {
 } from "./ai.functions";
 import { evictPhoto, readPhotoBytes, storeLocalPhoto } from "./photo-cache";
 import { evictAudio, readAudioBytes, storeLocalAudio } from "./audio-cache";
+import { findExistingByMedia, findExistingByText, findExistingByUrl, normalizeUrl } from "./dedupe";
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -59,6 +60,27 @@ export async function createMediaNote(input: {
   }
   let audioPath: string | null = null;
   if (input.audioBlob) audioPath = await storeLocalAudio(input.audioBlob, input.audioMime ?? undefined);
+
+  // Dedupe by blob hash so accidental double-saves (e.g. multi-fire share
+  // targets) collapse to the existing note instead of creating a twin.
+  try {
+    const { fingerprintForNote } = await import("./dedupe");
+    const provisional = newNote({
+      audio_path: audioPath,
+      audio_paths: audioPath ? [audioPath] : [],
+      image_paths: imagePaths,
+      duration_seconds: input.durationSeconds,
+      status: "processing",
+    });
+    const fp = await fingerprintForNote(provisional);
+    if (fp.startsWith("blobs:")) {
+      const candidates = await db.notes.filter((n) => !n.deleted_at && (n.image_paths?.length ?? 0) + (n.audio_paths?.length ?? (n.audio_path ? 1 : 0)) > 0).toArray();
+      for (const c of candidates) {
+        const otherFp = await fingerprintForNote(c);
+        if (otherFp === fp) return { noteId: c.id };
+      }
+    }
+  } catch {}
 
   const note = newNote({
     audio_path: audioPath,
@@ -325,13 +347,21 @@ export async function processVoiceNote({ data }: { data: { noteId: string } }) {
 
 export async function saveWebLink({ data }: { data: { url: string } }) {
   const url = /^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`;
-  const note = newNote({ source_url: url, status: "processing" });
+  // Dedupe by normalized URL (strips utm_*, fbclid, trailing slash, www., etc).
+  const existing = await findExistingByUrl(url);
+  if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
+  const note = newNote({ source_url: normalizeUrl(url), status: "processing" });
   await db.notes.put(note);
   // 1) Try TMDB detection first — movies/TV get a dedicated card + detail page.
   try {
     const { lookupTmdbFn } = await import("./tmdb.functions");
     const media = await lookupTmdbFn({ data: { url } });
     if (media) {
+      const existingMedia = await findExistingByMedia(media.type, media.tmdb_id);
+      if (existingMedia && existingMedia !== note.id) {
+        await db.notes.delete(note.id);
+        return { ok: true as const, noteId: existingMedia, media: true as const, duplicate: true as const };
+      }
       await updateNote(note.id, {
         status: "ready",
         heading: media.title,
@@ -407,6 +437,12 @@ export async function saveTextNote({
   if (!heading) {
     const fallback = body.split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
     heading = fallback || "Untitled note";
+  }
+  // Dedupe: identical heading + body (and no images/url/audio) collapses to
+  // the existing entry so accidental re-saves never create a twin.
+  if (!data.imagePaths?.length && !data.sourceUrl) {
+    const existing = await findExistingByText(heading, body);
+    if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
   }
   const note = newNote({
     heading,
