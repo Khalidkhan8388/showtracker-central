@@ -839,6 +839,16 @@ function NoteDetail() {
           </section>
         )}
 
+        {isVoice && note.audio_path && (
+          <section className="mt-5">
+            <VoicePlayer
+              audioPath={note.audio_path}
+              fallbackDuration={note.duration_seconds}
+              onTimeUpdate={onPlayerTime}
+            />
+          </section>
+        )}
+
         {note.transcript && renderedBody && (
           <section className="mt-6">
             {isVoice && (
@@ -855,9 +865,49 @@ function NoteDetail() {
                 </button>
               </div>
             )}
-            <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
+            {isVoice ? (
+              <HighlightedTranscript
+                text={transcriptForRender}
+                currentTime={playerTime}
+                duration={playerDuration || (note.duration_seconds ?? 0)}
+                playing={playerPlaying}
+              />
+            ) : (
+              <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
+            )}
           </section>
         )}
+
+        {isVoice && !editing && (
+          <section className="mt-5">
+            <button
+              type="button"
+              onClick={contRecording ? stopContinueRecording : startContinueRecording}
+              disabled={contBusy}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold shadow-sm active:opacity-70 disabled:opacity-50 ${
+                contRecording
+                  ? "bg-red-500 text-white"
+                  : "bg-card text-foreground ring-1 ring-border"
+              }`}
+            >
+              {contBusy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Transcribing…
+                </>
+              ) : contRecording ? (
+                <>
+                  <Square className="h-4 w-4 fill-current" /> Stop · {contElapsed}s
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" /> Continue recording
+                </>
+              )}
+            </button>
+          </section>
+        )}
+
+
 
       </div>
 
