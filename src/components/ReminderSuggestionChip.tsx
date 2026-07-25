@@ -72,18 +72,30 @@ function formatChipTime(d: Date): string {
   return `${dateStr} · ${time}`;
 }
 
+const CACHE_PREFIX = "braintape.reminderVerify.v1:";
+function loadCache(key: string): Suggestion[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_PREFIX + key);
+    if (!raw) return null;
+    return JSON.parse(raw) as Suggestion[];
+  } catch { return null; }
+}
+function saveCache(key: string, val: Suggestion[]) {
+  try { localStorage.setItem(CACHE_PREFIX + key, JSON.stringify(val)); } catch {}
+}
+
 export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, onDismiss }: Props) {
   const [debounced, setDebounced] = useState(text);
   const [addedLocal, setAddedLocal] = useState<Set<number>>(new Set());
   const [verified, setVerified] = useState<Suggestion[]>([]);
   const [verifying, setVerifying] = useState(false);
   const verifyReqId = useRef(0);
-  const cacheRef = useRef<Map<string, Suggestion[]>>(new Map());
 
   useEffect(() => {
     const t = setTimeout(() => setDebounced(text), 200);
     return () => clearTimeout(t);
   }, [text]);
+
 
   const existingKeys = useMemo(() => {
     const s = new Set<number>();
