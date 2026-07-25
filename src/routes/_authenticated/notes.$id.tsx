@@ -358,6 +358,90 @@ function NoteDetail() {
     voiceStreamRef.current?.getTracks().forEach((t) => t.stop());
   }, []);
 
+  // Playback-synced transcript highlight
+  const [playerTime, setPlayerTime] = useState(0);
+  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playerPlaying, setPlayerPlaying] = useState(false);
+  const onPlayerTime = useCallback((t: number, d: number, p: boolean) => {
+    setPlayerTime(t);
+    setPlayerDuration(d);
+    setPlayerPlaying(p);
+  }, []);
+
+  // "Continue recording" — append a new clip's transcript to this saved note.
+  const [contRecording, setContRecording] = useState(false);
+  const [contBusy, setContBusy] = useState(false);
+  const [contElapsed, setContElapsed] = useState(0);
+  const contRecRef = useRef<MediaRecorder | null>(null);
+  const contChunksRef = useRef<Blob[]>([]);
+  const contStreamRef = useRef<MediaStream | null>(null);
+  const contTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const contStartRef = useRef<number>(0);
+
+  async function startContinueRecording() {
+    if (contRecording || contBusy) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      contStreamRef.current = stream;
+      const mime = pickAudioMime();
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      contRecRef.current = rec;
+      contChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) contChunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        const blob = new Blob(contChunksRef.current, { type: mime });
+        contChunksRef.current = [];
+        stream.getTracks().forEach((t) => t.stop());
+        contStreamRef.current = null;
+        await finishContinueRecording(blob, mime);
+      };
+      rec.start();
+      contStartRef.current = Date.now();
+      setContElapsed(0);
+      contTimerRef.current = setInterval(() => {
+        setContElapsed(Math.floor((Date.now() - contStartRef.current) / 1000));
+      }, 250);
+      setContRecording(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Microphone unavailable");
+    }
+  }
+
+  function stopContinueRecording() {
+    const rec = contRecRef.current;
+    if (!rec) return;
+    if (contTimerRef.current) { clearInterval(contTimerRef.current); contTimerRef.current = null; }
+    setContRecording(false);
+    setContBusy(true);
+    rec.stop();
+  }
+
+  async function finishContinueRecording(blob: Blob, mime: string) {
+    try {
+      const path = await storeLocalAudio(blob, mime);
+      const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
+      const clean = (transcript ?? "").trim();
+      if (!clean) throw new Error("Nothing transcribed");
+      const prev = (note?.transcript ?? "").trim();
+      const nextBody = prev ? `${prev}\n\n${clean}` : clean;
+      const heading = note?.heading ?? "";
+      await patchLocalNote(id, { transcript: nextBody });
+      await updateFn({ data: { noteId: id, heading, body: nextBody } });
+      toast.success("Added to note");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Transcription failed");
+    } finally {
+      setContBusy(false);
+      setContElapsed(0);
+    }
+  }
+
+  useEffect(() => () => {
+    if (contTimerRef.current) clearInterval(contTimerRef.current);
+    contStreamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
+
   async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
     e.target.value = "";
