@@ -184,6 +184,68 @@ export function ReminderPicker({ values, onAdd, onRemove, onClearAll, noteContex
     await add(d);
   };
 
+  // ----- Smart AI suggestions -----
+  const [smart, setSmart] = useState<SmartSuggestion[] | null>(null);
+  const [smartLoading, setSmartLoading] = useState(false);
+  const [smartError, setSmartError] = useState<string | null>(null);
+  const [addedContext, setAddedContext] = useState<Set<string>>(new Set());
+  const reqRef = useRef(0);
+
+  const canSmart = (noteContext?.trim().length ?? 0) > 0;
+  const shouldLoadSmart = open && (showAdd || !hasAny) && canSmart;
+
+  useEffect(() => {
+    if (!shouldLoadSmart) return;
+    if (smart !== null || smartLoading) return;
+    const id = ++reqRef.current;
+    setSmartLoading(true);
+    setSmartError(null);
+    (async () => {
+      try {
+        const profile = getActivityProfile();
+        const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+        const res = await suggestSmartTimesFn({
+          data: {
+            text: (noteContext ?? "").slice(0, 6000),
+            nowIso: new Date().toISOString(),
+            timeZone: tz,
+            profileSummary: describeProfile(profile),
+            avoidWeekends: !profile.activeWeekends,
+            existing: values,
+          },
+        });
+        if (id !== reqRef.current) return;
+        setSmart(res?.suggestions ?? []);
+      } catch (e: any) {
+        if (id !== reqRef.current) return;
+        setSmartError(e?.message ?? "Failed to load suggestions");
+        setSmart([]);
+      } finally {
+        if (id === reqRef.current) setSmartLoading(false);
+      }
+    })();
+  }, [shouldLoadSmart, smart, smartLoading, noteContext, values]);
+
+  // Reset AI results when the picker closes so it re-computes next time.
+  useEffect(() => {
+    if (!open) {
+      setSmart(null);
+      setSmartLoading(false);
+      setSmartError(null);
+      setAddedContext(new Set());
+    }
+  }, [open]);
+
+  const smartVisible = smart?.filter((s) => {
+    if (s.iso) {
+      const t = new Date(s.iso).getTime();
+      return !values.some((v) => Math.abs(new Date(v).getTime() - t) < 30 * 60 * 1000);
+    }
+    if (s.id) return !addedContext.has(s.id);
+    return true;
+  }) ?? [];
+
+
   return (
     <>
       <button
