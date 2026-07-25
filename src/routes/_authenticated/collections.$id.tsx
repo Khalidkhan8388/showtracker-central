@@ -1344,15 +1344,20 @@ function BulkPillBtn({
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-40 ${
-        danger ? "bg-red-500 text-white" : "bg-background text-foreground"
+      title={label}
+      aria-label={label}
+      className={`inline-flex h-9 shrink-0 items-center gap-1.5 whitespace-nowrap rounded-xl px-2.5 text-[12px] font-semibold transition-colors disabled:opacity-40 ${
+        danger
+          ? "bg-red-500/95 text-white hover:bg-red-500"
+          : "bg-background text-foreground hover:bg-background/90"
       }`}
     >
       {icon}
-      {label}
+      <span className="hidden xs:inline">{label}</span>
     </button>
   );
 }
+
 
 function MediaListRow({
   note,
