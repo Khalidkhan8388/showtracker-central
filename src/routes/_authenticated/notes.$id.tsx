@@ -9,7 +9,7 @@ import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 
 
 
-import { fetchReaderViewFn } from "@/lib/ai.functions";
+import { fetchReaderViewFn, extractRemindersFn } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
