@@ -417,6 +417,12 @@ export async function saveTextNote({
     const fallback = body.split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
     heading = fallback || "Untitled note";
   }
+  // Dedupe: identical heading + body (and no images/url/audio) collapses to
+  // the existing entry so accidental re-saves never create a twin.
+  if (!data.imagePaths?.length && !data.sourceUrl) {
+    const existing = await findExistingByText(heading, body);
+    if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
+  }
   const note = newNote({
     heading,
     transcript: body || null,
