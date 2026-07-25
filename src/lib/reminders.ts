@@ -32,7 +32,7 @@ export type MovieReminder = {
 
 export type NoteReminder = {
   kind: "note";
-  id: string; // noteId
+  id: string; // `${noteId}:${iso}`
   noteId: string;
   when: string;
   overdue: boolean;
@@ -42,6 +42,15 @@ export type NoteReminder = {
 };
 
 export type Reminder = EpisodeReminder | MovieReminder | NoteReminder;
+
+/** Read a note's reminders as a sorted, deduped array (merges legacy reminder_at). */
+export function getNoteReminders(n: { reminders?: string[] | null; reminder_at?: string | null }): string[] {
+  const set = new Set<string>();
+  for (const r of n.reminders ?? []) if (r) set.add(r);
+  if (n.reminder_at) set.add(n.reminder_at);
+  return Array.from(set).sort();
+}
+
 
 const DAY = 24 * 60 * 60 * 1000;
 
