@@ -227,6 +227,30 @@ export async function setNoteReminder(noteId: string, iso: string | null) {
   return addNoteReminder(noteId, iso);
 }
 
+// ---- contextual reminders (behavior-based, no fixed time) ----------------
+
+/** Add a contextual reminder like "next-open" — fires on next app open in active hours. */
+export async function addContextualReminder(noteId: string, id: string, title: string) {
+  const n = await db.notes.get(noteId);
+  const list = Array.from(new Set([...(n?.contextual_reminders ?? []), id]));
+  const meta = { ...(n?.contextual_meta ?? {}) };
+  meta[id] = { title: (title || "Reminder").trim(), created_at: new Date().toISOString() };
+  await patchLocalNote(noteId, {
+    contextual_reminders: list,
+    contextual_meta: meta,
+    reminder_suggestion_dismissed: false,
+  });
+}
+
+export async function removeContextualReminder(noteId: string, id: string) {
+  const n = await db.notes.get(noteId);
+  if (!n) return;
+  const list = (n.contextual_reminders ?? []).filter((x) => x !== id);
+  const meta = { ...(n.contextual_meta ?? {}) };
+  delete meta[id];
+  await patchLocalNote(noteId, { contextual_reminders: list, contextual_meta: meta });
+}
+
 export async function dismissEpisodeReminder(noteId: string, key: string) {
 
   const n = await db.notes.get(noteId);
@@ -242,6 +266,7 @@ export async function markEpisodeWatchedAndClear(noteId: string, season: number,
 export async function markMovieWatched(noteId: string) {
   await setWatchStatus(noteId, "watched");
 }
+
 
 // ---- notifications ----
 const shown = new Set<string>();
