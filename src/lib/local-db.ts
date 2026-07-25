@@ -79,6 +79,7 @@ export type LocalNote = {
   media?: LocalMedia | null;
   reminder_at?: string | null;
   hidden_episode_reminders?: string[];
+  ocr_text?: string | null;
 };
 
 export type MetaRow = { key: string; value: string };
