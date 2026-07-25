@@ -1374,14 +1374,7 @@ function NoteDetail() {
         <div className="pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-5">
           <div className="pointer-events-auto max-w-full">
             <ReminderSuggestionChip
-              text={[
-                note.heading ?? "",
-                note.transcript ?? "",
-                note.summary ?? "",
-                note.ocr_text ?? "",
-                readerData?.markdown ?? "",
-              ].filter(Boolean).join("\n")}
-              existing={getNoteReminders(note as any)}
+              suggestions={aiReminderSuggestions}
               dismissed={!!note.reminder_suggestion_dismissed}
               onAccept={async (iso, title) => {
                 await addNoteReminder(id, iso, title);
@@ -1391,10 +1384,10 @@ function NoteDetail() {
                 await patchLocalNote(id, { reminder_suggestion_dismissed: true });
               }}
             />
-
           </div>
         </div>
       )}
+
 
       {!editing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
