@@ -186,7 +186,7 @@ self.addEventListener('fetch', (event) => {
       // Background status via a native notification. This is the assurance that
       // the entry was captured; it is not a prompt to open the app.
       try {
-        if (self.registration?.showNotification && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+        if (req.method === 'POST' && self.registration?.showNotification && typeof Notification !== 'undefined' && Notification.permission === 'granted') {
           const title = ok ? (added ? 'Saved in Braintape' : 'Already saved') : 'Nothing to save';
           const body = ok
             ? (added ? 'Your entry was saved in the background.' : 'This share was already captured.')
