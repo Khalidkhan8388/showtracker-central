@@ -159,8 +159,8 @@ self.addEventListener('fetch', (event) => {
           title: String(form.get('title') || ''),
           files: fileRecords,
         };
-        const hasPayload = rec.url.trim() || rec.text.trim() || rec.title.trim() || rec.files.length > 0;
-        if (!hasPayload) throw new Error('empty share');
+        hadPayload = !!(rec.url.trim() || rec.text.trim() || rec.title.trim() || rec.files.length > 0);
+        if (!hadPayload) throw new Error('empty share');
 
         rec.fingerprint = await shareFingerprint(rec);
         const saved = await putShare(rec);
@@ -169,6 +169,7 @@ self.addEventListener('fetch', (event) => {
       } catch (err) {
         ok = false;
       }
+      } // end POST branch
 
       // Nudge any open Braintape client to drain the inbox in background.
       let hasClient = false;
