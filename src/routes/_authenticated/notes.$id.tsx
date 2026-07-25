@@ -921,7 +921,6 @@ function NoteDetail() {
               <button
                 type="button"
                 onClick={async () => {
-                  await updateTextNote({ data: { noteId: note.id, patch: { ocr_text: null } } });
                   await patchLocalNote(note.id, { ocr_text: null });
                 }}
                 className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground active:opacity-70"
