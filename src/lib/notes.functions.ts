@@ -461,6 +461,36 @@ export async function appendImagesToNote({
   return { ok: true as const, imagePaths: merged };
 }
 
+export async function extractOcrForNote({ data }: { data: { noteId: string } }) {
+  const note = await getNote(data.noteId);
+  if (!note) throw new Error("Note not found");
+  const paths = note.image_paths ?? [];
+  if (paths.length === 0) throw new Error("No images to scan");
+  const images: Array<{ base64: string; mime: string }> = [];
+  for (const p of paths) {
+    const b = await readPhotoBytes(p);
+    if (b) images.push({ base64: bytesToBase64(b.bytes), mime: b.mime });
+  }
+  if (images.length === 0) throw new Error("Images unavailable");
+  const { text } = await ocrImagesFn({ data: { images } });
+  await updateNote(data.noteId, { ocr_text: text || null });
+  return { ok: true as const, text };
+}
+
+export async function updateImagePaths({
+  data,
+}: {
+  data: { noteId: string; imagePaths: string[] };
+}) {
+  const note = await getNote(data.noteId);
+  if (!note) return { ok: true as const };
+  // Evict removed photos from local blob store.
+  const removed = (note.image_paths ?? []).filter((p) => !data.imagePaths.includes(p));
+  for (const p of removed) await evictPhoto(p);
+  await updateNote(data.noteId, { image_paths: data.imagePaths });
+  return { ok: true as const };
+}
+
 export async function transcribeAudioClip({ data }: { data: { audioPath: string } }) {
   const a = await readAudioBytes(data.audioPath);
   if (!a) throw new Error("Audio clip not found");
