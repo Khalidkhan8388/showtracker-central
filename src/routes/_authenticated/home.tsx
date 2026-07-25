@@ -14,7 +14,6 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { SwipeReminderCard } from "@/components/SwipeReminderCard";
 import { ReminderHero } from "@/components/ReminderHero";
 import { useReminders } from "@/lib/reminders";
 
@@ -547,22 +546,16 @@ function Home() {
               <div className="columns-2 gap-3 [column-fill:_balance]">
                 {[...derived.strip, ...derived.grid].map((n) => (
                   <div key={n.id} className="mb-3 break-inside-avoid">
-                    <SwipeReminderCard
-                      noteId={n.id}
-                      reminderAt={(n as any).reminder_at ?? null}
-                      disabled={noteSelectMode}
-                    >
-                      <NoteCard
-                        note={n}
-                        variant="masonry"
-                        thumbUrl={thumbs[n.id]}
-                        selected={selectedNotes.has(n.id)}
-                        selectMode={noteSelectMode}
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => toggleNoteSel(n.id)}
-                        onToggleSel={() => toggleNoteSel(n.id)}
-                      />
-                    </SwipeReminderCard>
+                    <NoteCard
+                      note={n}
+                      variant="masonry"
+                      thumbUrl={thumbs[n.id]}
+                      selected={selectedNotes.has(n.id)}
+                      selectMode={noteSelectMode}
+                      onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                      onLongPress={() => toggleNoteSel(n.id)}
+                      onToggleSel={() => toggleNoteSel(n.id)}
+                    />
                   </div>
                 ))}
               </div>
