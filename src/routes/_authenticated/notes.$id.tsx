@@ -723,24 +723,23 @@ function NoteDetail() {
           )}
         </p>
 
-        {note.source_url && (
-          <a
-            href={note.source_url}
-            target="_blank"
-            rel="noreferrer"
-            className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-yellow-400/20 px-2.5 py-1 text-[13px] font-medium text-yellow-700 no-underline active:opacity-60"
-          >
-            {linkHost ? (
+        {isLink && note.source_url && (
+          <div className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
+            {linkHost && (
               <img
-                src={`https://www.google.com/s2/favicons?domain=${linkHost}&sz=32`}
+                src={`https://www.google.com/s2/favicons?domain=${linkHost}&sz=64`}
                 alt=""
-                className="h-3.5 w-3.5 flex-shrink-0 rounded-sm"
+                className="h-4 w-4 flex-shrink-0 rounded-sm"
               />
-            ) : (
-              <Link2 className="h-3.5 w-3.5 shrink-0" />
             )}
             <span className="truncate">{linkHost ?? note.source_url}</span>
-          </a>
+            {readerData && (
+              <>
+                <span>·</span>
+                <span className="whitespace-nowrap">{readerData.readingMinutes} min read</span>
+              </>
+            )}
+          </div>
         )}
 
         <input
@@ -751,9 +750,6 @@ function NoteDetail() {
           hidden
           onChange={onAddImagesToSaved}
         />
-
-
-
 
         {isLink && imageUrls.length > 0 && (
           <section className="mt-5">
@@ -773,6 +769,46 @@ function NoteDetail() {
           </section>
         )}
 
+        {isLink && note.source_url && (
+          <section className="mt-5 flex gap-2">
+            <a
+              href={note.source_url}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-[15px] font-semibold text-primary-foreground no-underline active:opacity-70"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open original
+            </a>
+            <button
+              type="button"
+              disabled={readerBusy}
+              onClick={async () => {
+                if (readerData) {
+                  setReaderOpen((v) => !v);
+                  return;
+                }
+                setReaderBusy(true);
+                setReaderError(null);
+                try {
+                  const r = await fetchReaderViewFn({ data: { url: note.source_url! } });
+                  setReaderData({ markdown: r.markdown, readingMinutes: r.readingMinutes, words: r.words });
+                  setReaderOpen(true);
+                } catch (e: any) {
+                  setReaderError(e?.message ?? "Reader failed");
+                  toast.error(e?.message ?? "Reader failed");
+                } finally {
+                  setReaderBusy(false);
+                }
+              }}
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground active:opacity-70 disabled:opacity-50"
+            >
+              {readerBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
+              {readerData ? (readerOpen ? "Hide reader" : "Reader view") : "Reader view"}
+            </button>
+          </section>
+        )}
+
         {isLink && note.summary && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
@@ -781,6 +817,23 @@ function NoteDetail() {
             <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
           </section>
         )}
+
+        {isLink && readerData && readerOpen && (
+          <section className="mt-6">
+            <div className="mb-2 flex items-center justify-between px-1">
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Reader view
+              </h2>
+              <span className="text-[11px] text-muted-foreground">
+                {readerData.readingMinutes} min · {readerData.words.toLocaleString()} words
+              </span>
+            </div>
+            <article className="prose prose-neutral dark:prose-invert max-w-none rounded-2xl bg-muted/40 p-5 text-[16px] leading-[1.7]">
+              <Markdown>{readerData.markdown}</Markdown>
+            </article>
+          </section>
+        )}
+
 
         {isImage && imageUrls.length > 0 && (
           <section className="mt-5">
