@@ -551,20 +551,21 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full bg-foreground px-2 py-1.5 text-background shadow-lg">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1.5 text-foreground shadow-xl backdrop-blur-xl">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
-              className="rounded-full px-3 py-1.5 text-[12px] font-medium"
+              className="rounded-full px-3 py-1.5 text-[12px] font-medium text-muted-foreground hover:text-foreground"
             >
               Cancel
             </button>
-            <span className="px-1 text-[12px] tabular-nums opacity-70">{removeSel.size}</span>
+            <span className="px-1 text-[12px] tabular-nums text-muted-foreground">{removeSel.size}</span>
             {hasMedia ? (
               <>
                 <BulkPillBtn
                   icon={<Eye className="h-3.5 w-3.5" />}
                   label="Watched"
+                  tone="watched"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "watched");
@@ -574,6 +575,7 @@ function CollectionDetail() {
                 <BulkPillBtn
                   icon={<PlayCircle className="h-3.5 w-3.5" />}
                   label="Watching"
+                  tone="watching"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "watching");
@@ -583,6 +585,7 @@ function CollectionDetail() {
                 <BulkPillBtn
                   icon={<XCircle className="h-3.5 w-3.5" />}
                   label="Dropped"
+                  tone="dropped"
                   disabled={removeSel.size === 0}
                   onClick={async () => {
                     for (const nid of removeSel) await setWatchStatus(nid, "dropped");
@@ -1321,27 +1324,37 @@ function BulkPillBtn({
   onClick,
   disabled,
   danger,
+  tone,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick: () => void;
   disabled?: boolean;
   danger?: boolean;
+  tone?: "watched" | "watching" | "dropped";
 }) {
+  const toneClass = danger
+    ? "bg-red-500 text-white hover:bg-red-600"
+    : tone === "watched"
+      ? "bg-emerald-500 text-white hover:bg-emerald-600"
+      : tone === "watching"
+        ? "bg-sky-500 text-white hover:bg-sky-600"
+        : tone === "dropped"
+          ? "bg-neutral-500 text-white hover:bg-neutral-600 dark:bg-neutral-600 dark:hover:bg-neutral-500"
+          : "bg-muted text-foreground hover:bg-muted/80";
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold disabled:opacity-40 ${
-        danger ? "bg-red-500 text-white" : "bg-background text-foreground"
-      }`}
+      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1.5 text-[12px] font-semibold shadow-sm transition-colors disabled:opacity-40 ${toneClass}`}
     >
       {icon}
       {label}
     </button>
   );
 }
+
 
 function MediaListRow({
   note,
