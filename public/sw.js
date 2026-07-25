@@ -129,6 +129,8 @@ self.addEventListener('fetch', (event) => {
     event.respondWith((async () => {
       let ok = false;
       let added = false;
+      let hadPayload = false;
+      if (req.method === 'POST') {
       try {
         const form = await req.formData();
         const files = [];
