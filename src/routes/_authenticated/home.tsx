@@ -15,6 +15,7 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { ReminderHero } from "@/components/ReminderHero";
+import { useReminders } from "@/lib/reminders";
 
 
 
@@ -49,16 +50,15 @@ function Home() {
   const localNotes = useLocalNotes();
   const notes = (localNotes ?? null) as Note[] | null;
   const [hideMedia, setHideMedia] = useState(false);
-  const [heroMode, setHeroMode] = useState<"latest" | "reminders">("latest");
+  const reminders = useReminders();
+  const hasReminders = reminders.length > 0;
   useEffect(() => {
     const read = () => {
       setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
-      const m = localStorage.getItem("home-hero-mode");
-      setHeroMode(m === "reminders" ? "reminders" : "latest");
     };
     read();
     const onStorage = (e: StorageEvent) => {
-      if (e.key === "hide-media-on-home" || e.key === "home-hero-mode") read();
+      if (e.key === "hide-media-on-home") read();
     };
     const onCustom = () => read();
     window.addEventListener("storage", onStorage);
@@ -309,9 +309,9 @@ function Home() {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
     const [latest, ...rest] = displayNotes;
-    // In "reminders" hero mode the latest note is not pulled out as a hero,
-    // it just flows into the strip like any other card.
-    const stripSource = heroMode === "reminders" ? displayNotes : rest;
+    // If reminders exist, the reminder hero replaces the latest-note hero,
+    // so the latest note flows into the strip like any other card.
+    const stripSource = hasReminders ? displayNotes : rest;
     const pinnedRest = stripSource.filter((n) => n.pinned);
     const unpinnedRest = stripSource.filter((n) => !n.pinned);
     const stripIds = new Set<string>();
@@ -349,7 +349,7 @@ function Home() {
       doneCount: doneT.length,
       hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
     };
-  }, [notes, hideMedia, heroMode]);
+  }, [notes, hideMedia, hasReminders]);
 
 
 
@@ -421,7 +421,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            {heroMode === "reminders" ? (
+            {hasReminders ? (
               <ReminderHero />
             ) : (
               derived.latest && (
