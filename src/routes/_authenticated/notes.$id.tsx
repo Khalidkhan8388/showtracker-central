@@ -3,7 +3,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, Bell, BellOff, ExternalLink, BookOpen } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
+import { ReminderPicker } from "@/components/ReminderPicker";
 import { fetchReaderViewFn } from "@/lib/ai.functions";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -1386,39 +1387,13 @@ function NoteDetail() {
             >
               <Pin aria-hidden="true" className={`h-5 w-5 ${note.pinned ? "fill-current" : ""}`} />
             </button>
-            <label
-              aria-label={note.reminder_at ? "Change reminder" : "Set reminder"}
-              className={`relative inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5 active:scale-90 dark:hover:bg-white/10 ${note.reminder_at ? "" : "text-neutral-700 dark:text-white/80"}`}
-              style={note.reminder_at ? { color: "var(--reminder-strong)" } : undefined}
-            >
-              <Bell aria-hidden="true" className={`h-5 w-5 ${note.reminder_at ? "fill-current" : ""}`} />
-              <input
-                type="datetime-local"
-                className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
-                value={note.reminder_at ? note.reminder_at.slice(0, 16) : ""}
-                onChange={async (e) => {
-                  const v = e.currentTarget.value;
-                  const iso = v ? new Date(v).toISOString() : null;
-                  await patchLocalNote(id, { reminder_at: iso });
-                  if (iso && "Notification" in window && Notification.permission === "default") {
-                    Notification.requestPermission().catch(() => {});
-                  }
-                  toast.success(iso ? "Reminder set" : "Reminder cleared");
-                }}
-              />
-            </label>
-            {note.reminder_at && (
-              <button
-                onClick={async () => {
-                  await patchLocalNote(id, { reminder_at: null });
-                  toast.success("Reminder cleared");
-                }}
-                aria-label="Clear reminder"
-                className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 active:scale-90 dark:text-white/80 dark:hover:bg-white/10"
-              >
-                <BellOff aria-hidden="true" className="h-5 w-5" />
-              </button>
-            )}
+            <ReminderPicker
+              value={note.reminder_at}
+              onChange={async (iso) => {
+                await patchLocalNote(id, { reminder_at: iso });
+                toast.success(iso ? "Reminder set" : "Reminder cleared");
+              }}
+            />
             <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
             <button
               onClick={onDelete}
