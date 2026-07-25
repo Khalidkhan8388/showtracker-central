@@ -6,6 +6,8 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
+import { ActionReminderBanner } from "@/components/ActionReminderBanner";
+
 
 import { fetchReaderViewFn } from "@/lib/ai.functions";
 import { toast } from "sonner";
@@ -48,6 +50,8 @@ type Note = {
   reminders?: string[];
 
   reminder_suggestion_dismissed?: boolean;
+  action_suggestion_dismissed?: boolean;
+
 
 };
 
@@ -731,6 +735,30 @@ function NoteDetail() {
             <> · {readingMinutes} min read</>
           )}
         </p>
+
+        {!media && (
+          <div className="mt-4">
+            <ActionReminderBanner
+              text={[
+                note.heading ?? "",
+                note.summary ?? "",
+                note.transcript ?? "",
+                note.ocr_text ?? "",
+                readerData?.markdown ?? "",
+              ].filter(Boolean).join("\n")}
+              existing={getNoteReminders(note as any)}
+              dismissed={!!note.action_suggestion_dismissed}
+              onAccept={async (iso, title) => {
+                await addNoteReminder(id, iso, title);
+                toast.success(`Reminder set · ${title}`);
+              }}
+              onDismiss={async () => {
+                await patchLocalNote(id, { action_suggestion_dismissed: true });
+              }}
+            />
+          </div>
+        )}
+
 
         {isLink && note.source_url && (
           <div className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">

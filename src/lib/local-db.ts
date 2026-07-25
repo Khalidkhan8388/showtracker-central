@@ -83,6 +83,10 @@ export type LocalNote = {
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_suggestion_dismissed?: boolean;
+  action_suggestion_dismissed?: boolean;
+  reminder_titles?: Record<string, string>;
+
+
 
 };
 

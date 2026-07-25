@@ -137,7 +137,7 @@ export function deriveReminders(notes: LocalNote[], now: Date = new Date()): Rem
           noteId: n.id,
           when: iso,
           overdue: t <= nowMs,
-          title: n.heading || "Reminder",
+          title: (n.reminder_titles && n.reminder_titles[iso]) || n.heading || "Reminder",
           summary: n.summary,
           taskCount: (n.tasks ?? []).length,
         });
@@ -168,11 +168,17 @@ async function writeReminders(noteId: string, isos: string[]) {
   });
 }
 
-export async function addNoteReminder(noteId: string, iso: string) {
+export async function addNoteReminder(noteId: string, iso: string, title?: string) {
   const n = await db.notes.get(noteId);
   const current = n ? getNoteReminders(n) : [];
   await writeReminders(noteId, [...current, iso]);
+  if (title && title.trim()) {
+    const map = { ...(n?.reminder_titles ?? {}) };
+    map[iso] = title.trim();
+    await patchLocalNote(noteId, { reminder_titles: map });
+  }
 }
+
 
 export async function removeNoteReminder(noteId: string, iso: string) {
   const n = await db.notes.get(noteId);
