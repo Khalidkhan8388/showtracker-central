@@ -289,6 +289,10 @@ function NoteDetail() {
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [ocrBusy, setOcrBusy] = useState(false);
   const [reorderBusy, setReorderBusy] = useState(false);
+  const [readerOpen, setReaderOpen] = useState(false);
+  const [readerBusy, setReaderBusy] = useState(false);
+  const [readerData, setReaderData] = useState<{ markdown: string; readingMinutes: number; words: number } | null>(null);
+  const [readerError, setReaderError] = useState<string | null>(null);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
