@@ -124,7 +124,8 @@ self.addEventListener('fetch', (event) => {
   // Stash the payload in IndexedDB, notify any open Braintape client so it
   // can drain silently in the background, then respond with a tiny self-closing
   // page so the full app UI is not opened for every share.
-  if (req.method === 'POST' && url.pathname === '/share') {
+  const isShareSink = url.pathname === '/share-sink' || url.pathname === '/share-sink/' || url.pathname === '/share' || url.pathname === '/share/';
+  if (isShareSink && (req.method === 'POST' || req.method === 'GET')) {
     event.respondWith((async () => {
       let ok = false;
       let added = false;
