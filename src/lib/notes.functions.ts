@@ -61,6 +61,27 @@ export async function createMediaNote(input: {
   let audioPath: string | null = null;
   if (input.audioBlob) audioPath = await storeLocalAudio(input.audioBlob, input.audioMime ?? undefined);
 
+  // Dedupe by blob hash so accidental double-saves (e.g. multi-fire share
+  // targets) collapse to the existing note instead of creating a twin.
+  try {
+    const { fingerprintForNote } = await import("./dedupe");
+    const provisional = newNote({
+      audio_path: audioPath,
+      audio_paths: audioPath ? [audioPath] : [],
+      image_paths: imagePaths,
+      duration_seconds: input.durationSeconds,
+      status: "processing",
+    });
+    const fp = await fingerprintForNote(provisional);
+    if (fp.startsWith("blobs:")) {
+      const candidates = await db.notes.filter((n) => !n.deleted_at && (n.image_paths?.length ?? 0) + (n.audio_paths?.length ?? (n.audio_path ? 1 : 0)) > 0).toArray();
+      for (const c of candidates) {
+        const otherFp = await fingerprintForNote(c);
+        if (otherFp === fp) return { noteId: c.id };
+      }
+    }
+  } catch {}
+
   const note = newNote({
     audio_path: audioPath,
     audio_paths: audioPath ? [audioPath] : [],
