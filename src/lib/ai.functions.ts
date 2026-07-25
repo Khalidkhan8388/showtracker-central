@@ -131,8 +131,10 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       : Promise.resolve(null);
 
     // Await transcription before building the structuring prompt (it needs the text).
-    const transcript = await transcribePromise;
-    if (data.audio && !transcript) throw new Error("Empty transcription");
+    const firstTranscript = await transcribePromise;
+    if (data.audio && !firstTranscript) throw new Error("Empty transcription");
+    const extras = (data.extraTranscripts ?? []).filter((t) => t && t.trim().length > 0);
+    const transcript = [firstTranscript, ...extras].filter(Boolean).join("\n\n") || null;
 
     const userBlocks: Array<Record<string, unknown>> = [];
     if (priorHasContent) {
