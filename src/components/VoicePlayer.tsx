@@ -3,73 +3,113 @@ import { Play, Pause } from "lucide-react";
 import { getAudioUrl } from "@/lib/audio-cache";
 
 const SPEEDS = [1, 1.5, 2] as const;
-const BAR_COUNT = 56;
+const BAR_COUNT = 64;
 
 type Props = {
-  audioPath: string;
+  /** Single-clip convenience prop. Ignored if `audioPaths` is provided. */
+  audioPath?: string;
+  /** Multi-clip: base clip + any "continue recording" appends, played in order. */
+  audioPaths?: string[];
   fallbackDuration?: number | null;
   onTimeUpdate?: (currentTime: number, duration: number, playing: boolean) => void;
 };
 
-export function VoicePlayer({ audioPath, fallbackDuration, onTimeUpdate }: Props) {
+export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpdate }: Props) {
+  const segments = useMemo(() => {
+    const arr = (audioPaths && audioPaths.length > 0 ? audioPaths : audioPath ? [audioPath] : []).filter(Boolean);
+    return arr;
+  }, [audioPath, audioPaths]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [url, setUrl] = useState<string>("");
+  const [urls, setUrls] = useState<string[]>([]);
+  const [segIdx, setSegIdx] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [current, setCurrent] = useState(0);
-  const [duration, setDuration] = useState<number>(fallbackDuration ?? 0);
+  const [current, setCurrent] = useState(0); // running total across segments
+  const [segCurrent, setSegCurrent] = useState(0); // within active segment
+  const [durations, setDurations] = useState<number[]>([]);
   const [speedIdx, setSpeedIdx] = useState(0);
   const [peaks, setPeaks] = useState<number[]>(() =>
-    Array.from({ length: BAR_COUNT }, () => 0.35 + Math.random() * 0.45),
+    Array.from({ length: BAR_COUNT }, () => 0.35 + Math.random() * 0.5),
   );
+  const [decoded, setDecoded] = useState(false);
   const barRef = useRef<HTMLDivElement | null>(null);
+  const wasPlayingRef = useRef(false);
 
+  // Load object URLs for each segment.
   useEffect(() => {
     let alive = true;
     void (async () => {
-      const u = await getAudioUrl(audioPath);
-      if (alive) setUrl(u);
+      const resolved = await Promise.all(segments.map((p) => getAudioUrl(p)));
+      if (alive) setUrls(resolved);
     })();
     return () => { alive = false; };
-  }, [audioPath]);
+  }, [segments]);
 
-  // Decode a lightweight waveform once (60-ish bars). Best-effort — silently
-  // falls back to the placeholder bars if decode isn't supported.
+  // Decode all segments to build one concatenated waveform and per-segment durations.
   useEffect(() => {
-    if (!url) return;
+    if (urls.length === 0 || urls.some((u) => !u)) return;
     let cancelled = false;
     void (async () => {
       try {
-        const buf = await fetch(url).then((r) => r.arrayBuffer());
         const AC: typeof AudioContext =
           window.AudioContext || (window as any).webkitAudioContext;
         if (!AC) return;
         const ctx = new AC();
-        const audio = await ctx.decodeAudioData(buf.slice(0));
-        const channel = audio.getChannelData(0);
-        const bucket = Math.max(1, Math.floor(channel.length / BAR_COUNT));
+        const allSamples: number[] = [];
+        const segDurations: number[] = [];
+        for (const u of urls) {
+          try {
+            const buf = await fetch(u).then((r) => r.arrayBuffer());
+            const audio = await ctx.decodeAudioData(buf.slice(0));
+            const ch = audio.getChannelData(0);
+            segDurations.push(audio.duration);
+            // downsample to ~2000 samples per segment to keep memory small
+            const targetLen = Math.min(ch.length, 2000);
+            const step = Math.max(1, Math.floor(ch.length / targetLen));
+            for (let i = 0; i < ch.length; i += step) allSamples.push(Math.abs(ch[i]));
+          } catch {
+            segDurations.push(0);
+          }
+        }
+        void ctx.close();
+        if (cancelled) return;
+        // Bucket to BAR_COUNT bars.
+        const bucket = Math.max(1, Math.floor(allSamples.length / BAR_COUNT));
         const out: number[] = [];
         let max = 0;
         for (let i = 0; i < BAR_COUNT; i++) {
           let sum = 0;
           const start = i * bucket;
-          const end = Math.min(channel.length, start + bucket);
-          for (let j = start; j < end; j++) sum += Math.abs(channel[j]);
-          const v = sum / (end - start);
+          const end = Math.min(allSamples.length, start + bucket);
+          for (let j = start; j < end; j++) sum += allSamples[j];
+          const v = sum / Math.max(1, end - start);
           out.push(v);
           if (v > max) max = v;
         }
-        const normed = out.map((v) => (max > 0 ? Math.max(0.08, v / max) : 0.2));
-        if (!cancelled) {
-          setPeaks(normed);
-          if (!fallbackDuration) setDuration(audio.duration);
-        }
-        void ctx.close();
+        const normed = out.map((v) => (max > 0 ? Math.max(0.15, v / max) : 0.25));
+        setPeaks(normed);
+        setDurations(segDurations);
+        setDecoded(true);
       } catch {
         /* keep placeholder bars */
       }
     })();
     return () => { cancelled = true; };
-  }, [url, fallbackDuration]);
+  }, [urls]);
+
+  const totalDuration = useMemo(() => {
+    if (durations.length > 0) {
+      const s = durations.reduce((a, b) => a + b, 0);
+      if (s > 0) return s;
+    }
+    return fallbackDuration ?? 0;
+  }, [durations, fallbackDuration]);
+
+  const priorSum = useCallback((idx: number) => {
+    let s = 0;
+    for (let i = 0; i < idx && i < durations.length; i++) s += durations[i];
+    return s;
+  }, [durations]);
 
   const toggle = useCallback(() => {
     const a = audioRef.current;
@@ -86,21 +126,57 @@ export function VoicePlayer({ audioPath, fallbackDuration, onTimeUpdate }: Props
     });
   }, []);
 
+  // Seek: figure out which segment target time lands in, swap src if needed.
+  const seekTo = useCallback(
+    (t: number) => {
+      if (segments.length === 0) return;
+      let remaining = Math.max(0, Math.min(totalDuration, t));
+      let target = 0;
+      for (let i = 0; i < segments.length; i++) {
+        const d = durations[i] ?? 0;
+        if (remaining <= d || i === segments.length - 1) {
+          target = i;
+          break;
+        }
+        remaining -= d;
+      }
+      const a = audioRef.current;
+      if (!a) return;
+      const wasPlaying = !a.paused;
+      if (target !== segIdx) {
+        setSegIdx(target);
+        a.src = urls[target] ?? "";
+        a.load();
+        const start = () => {
+          try { a.currentTime = remaining; } catch {}
+          a.playbackRate = SPEEDS[speedIdx];
+          if (wasPlaying) void a.play();
+          a.removeEventListener("loadedmetadata", start);
+        };
+        a.addEventListener("loadedmetadata", start);
+      } else {
+        try { a.currentTime = remaining; } catch {}
+      }
+      setSegCurrent(remaining);
+      setCurrent(priorSum(target) + remaining);
+    },
+    [segments.length, durations, urls, segIdx, speedIdx, totalDuration, priorSum],
+  );
+
   const seekFromClientX = useCallback(
     (clientX: number) => {
       const el = barRef.current;
-      const a = audioRef.current;
-      if (!el || !a || !duration) return;
+      if (!el || !totalDuration) return;
       const rect = el.getBoundingClientRect();
       const ratio = Math.min(1, Math.max(0, (clientX - rect.left) / rect.width));
-      a.currentTime = ratio * duration;
-      setCurrent(a.currentTime);
+      seekTo(ratio * totalDuration);
     },
-    [duration],
+    [totalDuration, seekTo],
   );
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    wasPlayingRef.current = playing;
     seekFromClientX(e.clientX);
   };
   const onPointerMove = (e: React.PointerEvent) => {
@@ -109,26 +185,53 @@ export function VoicePlayer({ audioPath, fallbackDuration, onTimeUpdate }: Props
   };
 
   useEffect(() => {
-    onTimeUpdate?.(current, duration, playing);
-  }, [current, duration, playing, onTimeUpdate]);
+    onTimeUpdate?.(current, totalDuration, playing);
+  }, [current, totalDuration, playing, onTimeUpdate]);
 
-  const progress = duration > 0 ? Math.min(1, current / duration) : 0;
-  const timeLabel = useMemo(() => `${fmt(current)} / ${fmt(duration)}`, [current, duration]);
+  // When a segment ends, if there's another queued, advance to it and keep playing.
+  const onSegEnded = useCallback(() => {
+    if (segIdx < segments.length - 1) {
+      const nextIdx = segIdx + 1;
+      setSegIdx(nextIdx);
+      const a = audioRef.current;
+      if (a) {
+        a.src = urls[nextIdx] ?? "";
+        a.playbackRate = SPEEDS[speedIdx];
+        a.load();
+        void a.play();
+      }
+    } else {
+      setPlaying(false);
+    }
+  }, [segIdx, segments.length, urls, speedIdx]);
+
+  const progress = totalDuration > 0 ? Math.min(1, current / totalDuration) : 0;
+  const timeLabel = useMemo(() => `${fmt(current)} / ${fmt(totalDuration)}`, [current, totalDuration]);
 
   return (
     <div className="rounded-2xl bg-card p-4 shadow-sm">
       <audio
         ref={audioRef}
-        src={url || undefined}
+        src={urls[segIdx] || undefined}
         preload="metadata"
         onLoadedMetadata={(e) => {
           const d = (e.currentTarget as HTMLAudioElement).duration;
-          if (Number.isFinite(d) && d > 0) setDuration(d);
+          if (Number.isFinite(d) && d > 0 && !decoded) {
+            setDurations((prev) => {
+              const next = prev.slice();
+              next[segIdx] = d;
+              return next;
+            });
+          }
         }}
-        onTimeUpdate={(e) => setCurrent((e.currentTarget as HTMLAudioElement).currentTime)}
+        onTimeUpdate={(e) => {
+          const t = (e.currentTarget as HTMLAudioElement).currentTime;
+          setSegCurrent(t);
+          setCurrent(priorSum(segIdx) + t);
+        }}
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
+        onEnded={onSegEnded}
       />
       <div className="flex items-center gap-3">
         <button
@@ -151,13 +254,13 @@ export function VoicePlayer({ audioPath, fallbackDuration, onTimeUpdate }: Props
             return (
               <div
                 key={i}
-                className="flex-1 rounded-full transition-colors"
+                className="flex-1 rounded-full"
                 style={{
                   height: `${Math.round(p * 100)}%`,
-                  minHeight: 3,
+                  minHeight: 4,
                   background: active
                     ? "hsl(var(--foreground))"
-                    : "hsl(var(--muted-foreground) / 0.35)",
+                    : "hsl(var(--foreground) / 0.28)",
                 }}
               />
             );
@@ -173,8 +276,13 @@ export function VoicePlayer({ audioPath, fallbackDuration, onTimeUpdate }: Props
           {SPEEDS[speedIdx]}×
         </button>
       </div>
-      <div className="mt-2 px-1 text-[11px] font-medium tabular-nums text-muted-foreground">
-        {timeLabel}
+      <div className="mt-2 flex items-center justify-between px-1 text-[11px] font-medium tabular-nums text-muted-foreground">
+        <span>{timeLabel}</span>
+        {segments.length > 1 && (
+          <span className="uppercase tracking-wider">
+            Clip {segIdx + 1} / {segments.length}
+          </span>
+        )}
       </div>
     </div>
   );
