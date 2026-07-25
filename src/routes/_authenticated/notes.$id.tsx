@@ -421,17 +421,23 @@ function NoteDetail() {
   async function finishContinueRecording(blob: Blob, mime: string) {
     try {
       const path = await storeLocalAudio(blob, mime);
-      const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
-      const clean = (transcript ?? "").trim();
-      if (!clean) throw new Error("Nothing transcribed");
-      const prev = (note?.transcript ?? "").trim();
-      const nextBody = prev ? `${prev}\n\n${clean}` : clean;
-      const heading = note?.heading ?? "";
-      await patchLocalNote(id, { transcript: nextBody });
-      await updateFn({ data: { noteId: id, heading, body: nextBody } });
-      toast.success("Added to note");
+      // Append the new clip to this note's audio_paths so the player can play
+      // the full recording end-to-end.
+      const existing =
+        (note?.audio_paths && note.audio_paths.length > 0
+          ? note.audio_paths
+          : note?.audio_path
+            ? [note.audio_path]
+            : []) as string[];
+      const nextPaths = [...existing, path];
+      await patchLocalNote(id, { audio_paths: nextPaths });
+      toast.loading("Analyzing new clip…", { id });
+      // Re-run AI over ALL segments so summary, key points, tasks, and
+      // transcript reflect the extended recording.
+      await processFn({ data: { noteId: id } });
+      toast.success("Note updated", { id });
     } catch (e: any) {
-      toast.error(e?.message ?? "Transcription failed");
+      toast.error(e?.message ?? "Continue recording failed", { id });
     } finally {
       setContBusy(false);
       setContElapsed(0);
