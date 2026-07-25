@@ -544,3 +544,92 @@ export const fetchReaderViewFn = createServerFn({ method: "POST" })
     }
   });
 
+// ---------- reminder verification ----------------------------------------
+
+const VerifyRemindersInput = z.object({
+  text: z.string().max(20000),
+  nowIso: z.string(),
+  candidates: z
+    .array(z.object({ iso: z.string(), title: z.string().optional() }))
+    .max(20),
+  existing: z.array(z.string()).max(50).optional().default([]),
+});
+
+export const verifyRemindersFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => VerifyRemindersInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    if (data.candidates.length === 0) return { reminders: [] as Array<{ iso: string; title: string }> };
+
+    const sys = `You verify reminder suggestions parsed from a user's note.
+
+For each candidate, decide if the date/time is a genuine future reminder the user would want, then return a clean, complete task title.
+
+Rules:
+- Drop candidates that are not real reminders (metadata, quoted dates, past events, ambiguous references, or duplicates of another candidate that refer to the same event).
+- Drop candidates whose date is essentially the same as an item in "existing" (same event, same time).
+- Titles MUST be full, human-readable task phrases (e.g. "Call Sarah about the brief", "Submit tax return"). Never use ellipses (no "…"), never truncate mid-word, never leave dangling prepositions. If you can't derive a clear title from the note, use a short natural phrase describing the event (e.g. "Meeting", "Deadline", "Reminder").
+- Preserve the exact ISO date from the candidate — do NOT change the time.
+- Return items in chronological order. Max 6 items.
+
+Return ONE JSON object: { "reminders": [ { "iso": string, "title": string } ] }. No prose, no code fences.`;
+
+    const user = `Now: ${data.nowIso}
+
+Existing reminders on this note (skip anything that duplicates these):
+${data.existing.length ? data.existing.join("\n") : "(none)"}
+
+Note text:
+"""
+${data.text}
+"""
+
+Candidates parsed locally:
+${JSON.stringify(data.candidates)}`;
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 30_000);
+    if (!res.ok) throw new Error(`Verify failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const allowedIsos = new Set(data.candidates.map((c) => c.iso));
+    const existingKeys = new Set(
+      data.existing
+        .map((iso) => new Date(iso).getTime())
+        .filter((t) => !isNaN(t))
+        .map((t) => Math.floor(t / 60000) * 60000),
+    );
+    const seen = new Set<number>();
+    const out: Array<{ iso: string; title: string }> = [];
+    const items: any[] = Array.isArray(parsed.reminders) ? parsed.reminders : [];
+    for (const r of items) {
+      const iso = String(r?.iso ?? "");
+      if (!allowedIsos.has(iso)) continue;
+      const t = new Date(iso).getTime();
+      if (isNaN(t)) continue;
+      const key = Math.floor(t / 60000) * 60000;
+      if (existingKeys.has(key) || seen.has(key)) continue;
+      let title = String(r?.title ?? "").replace(/[…]+/g, "").replace(/\s+/g, " ").trim();
+      if (!title) title = "Reminder";
+      if (title.length > 80) title = title.slice(0, 80).trim();
+      seen.add(key);
+      out.push({ iso, title });
+      if (out.length >= 6) break;
+    }
+    out.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+    return { reminders: out };
+  });
+
