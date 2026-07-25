@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
 import { MediaDetail } from "@/components/MediaDetail";
 import { BlockEditor } from "@/components/BlockEditor";
+import { VoicePlayer, HighlightedTranscript } from "@/components/VoicePlayer";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
@@ -31,6 +32,7 @@ type Note = {
   pinned: boolean;
   image_paths: string[] | null;
   source_url: string | null;
+  audio_path: string | null;
   reminder_at?: string | null;
 };
 
@@ -355,6 +357,90 @@ function NoteDetail() {
     if (voiceTimerRef.current) clearInterval(voiceTimerRef.current);
     voiceStreamRef.current?.getTracks().forEach((t) => t.stop());
   }, []);
+
+  // Playback-synced transcript highlight
+  const [playerTime, setPlayerTime] = useState(0);
+  const [playerDuration, setPlayerDuration] = useState(0);
+  const [playerPlaying, setPlayerPlaying] = useState(false);
+  const onPlayerTime = useCallback((t: number, d: number, p: boolean) => {
+    setPlayerTime(t);
+    setPlayerDuration(d);
+    setPlayerPlaying(p);
+  }, []);
+
+  // "Continue recording" — append a new clip's transcript to this saved note.
+  const [contRecording, setContRecording] = useState(false);
+  const [contBusy, setContBusy] = useState(false);
+  const [contElapsed, setContElapsed] = useState(0);
+  const contRecRef = useRef<MediaRecorder | null>(null);
+  const contChunksRef = useRef<Blob[]>([]);
+  const contStreamRef = useRef<MediaStream | null>(null);
+  const contTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const contStartRef = useRef<number>(0);
+
+  async function startContinueRecording() {
+    if (contRecording || contBusy) return;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      contStreamRef.current = stream;
+      const mime = pickAudioMime();
+      const rec = new MediaRecorder(stream, { mimeType: mime });
+      contRecRef.current = rec;
+      contChunksRef.current = [];
+      rec.ondataavailable = (e) => { if (e.data.size > 0) contChunksRef.current.push(e.data); };
+      rec.onstop = async () => {
+        const blob = new Blob(contChunksRef.current, { type: mime });
+        contChunksRef.current = [];
+        stream.getTracks().forEach((t) => t.stop());
+        contStreamRef.current = null;
+        await finishContinueRecording(blob, mime);
+      };
+      rec.start();
+      contStartRef.current = Date.now();
+      setContElapsed(0);
+      contTimerRef.current = setInterval(() => {
+        setContElapsed(Math.floor((Date.now() - contStartRef.current) / 1000));
+      }, 250);
+      setContRecording(true);
+    } catch (e: any) {
+      toast.error(e?.message ?? "Microphone unavailable");
+    }
+  }
+
+  function stopContinueRecording() {
+    const rec = contRecRef.current;
+    if (!rec) return;
+    if (contTimerRef.current) { clearInterval(contTimerRef.current); contTimerRef.current = null; }
+    setContRecording(false);
+    setContBusy(true);
+    rec.stop();
+  }
+
+  async function finishContinueRecording(blob: Blob, mime: string) {
+    try {
+      const path = await storeLocalAudio(blob, mime);
+      const { transcript } = await transcribeClipFn({ data: { audioPath: path } });
+      const clean = (transcript ?? "").trim();
+      if (!clean) throw new Error("Nothing transcribed");
+      const prev = (note?.transcript ?? "").trim();
+      const nextBody = prev ? `${prev}\n\n${clean}` : clean;
+      const heading = note?.heading ?? "";
+      await patchLocalNote(id, { transcript: nextBody });
+      await updateFn({ data: { noteId: id, heading, body: nextBody } });
+      toast.success("Added to note");
+    } catch (e: any) {
+      toast.error(e?.message ?? "Transcription failed");
+    } finally {
+      setContBusy(false);
+      setContElapsed(0);
+    }
+  }
+
+  useEffect(() => () => {
+    if (contTimerRef.current) clearInterval(contTimerRef.current);
+    contStreamRef.current?.getTracks().forEach((t) => t.stop());
+  }, []);
+
 
   async function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -753,6 +839,16 @@ function NoteDetail() {
           </section>
         )}
 
+        {isVoice && note.audio_path && (
+          <section className="mt-5">
+            <VoicePlayer
+              audioPath={note.audio_path}
+              fallbackDuration={note.duration_seconds}
+              onTimeUpdate={onPlayerTime}
+            />
+          </section>
+        )}
+
         {note.transcript && renderedBody && (
           <section className="mt-6">
             {isVoice && (
@@ -769,9 +865,49 @@ function NoteDetail() {
                 </button>
               </div>
             )}
-            <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
+            {isVoice ? (
+              <HighlightedTranscript
+                text={transcriptForRender}
+                currentTime={playerTime}
+                duration={playerDuration || (note.duration_seconds ?? 0)}
+                playing={playerPlaying}
+              />
+            ) : (
+              <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
+            )}
           </section>
         )}
+
+        {isVoice && !editing && (
+          <section className="mt-5">
+            <button
+              type="button"
+              onClick={contRecording ? stopContinueRecording : startContinueRecording}
+              disabled={contBusy}
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold shadow-sm active:opacity-70 disabled:opacity-50 ${
+                contRecording
+                  ? "bg-red-500 text-white"
+                  : "bg-card text-foreground ring-1 ring-border"
+              }`}
+            >
+              {contBusy ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" /> Transcribing…
+                </>
+              ) : contRecording ? (
+                <>
+                  <Square className="h-4 w-4 fill-current" /> Stop · {contElapsed}s
+                </>
+              ) : (
+                <>
+                  <Mic className="h-4 w-4" /> Continue recording
+                </>
+              )}
+            </button>
+          </section>
+        )}
+
+
 
       </div>
 
