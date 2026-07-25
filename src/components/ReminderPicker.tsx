@@ -1,7 +1,8 @@
 import { useMemo, useState } from "react";
-import { Bell, BellOff, ChevronLeft, ChevronRight, Check } from "lucide-react";
+import { Bell, BellOff, ChevronLeft, ChevronRight, Check, Trash2, Plus } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
+
 
 type Preset = { key: string; label: string; sub: string; date: Date };
 
@@ -124,34 +125,45 @@ function MiniCalendar({
   );
 }
 
-export function ReminderPicker({
-  value,
-  onChange,
-}: {
-  value: string | null | undefined;
-  onChange: (iso: string | null) => void | Promise<void>;
-}) {
-  const [open, setOpen] = useState(false);
-  const presets = useMemo(buildPresets, [open]);
-  const current = value ? new Date(value) : null;
-  const [customDate, setCustomDate] = useState<Date | null>(current);
-  const [customTime, setCustomTime] = useState<string>(
-    current
-      ? `${String(current.getHours()).padStart(2, "0")}:${String(current.getMinutes()).padStart(2, "0")}`
-      : "09:00",
-  );
+function formatReminderRow(iso: string): string {
+  const d = new Date(iso);
+  return d.toLocaleString(undefined, {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
 
-  const set = async (d: Date) => {
-    await onChange(d.toISOString());
+type PickerProps = {
+  values: string[];
+  onAdd: (iso: string) => void | Promise<void>;
+  onRemove: (iso: string) => void | Promise<void>;
+  onClearAll?: () => void | Promise<void>;
+};
+
+export function ReminderPicker({ values, onAdd, onRemove, onClearAll }: PickerProps) {
+  const [open, setOpen] = useState(false);
+  const [showAdd, setShowAdd] = useState(false);
+  const presets = useMemo(buildPresets, [open, showAdd]);
+  const [customDate, setCustomDate] = useState<Date | null>(null);
+  const [customTime, setCustomTime] = useState<string>("09:00");
+
+  const sorted = useMemo(
+    () => [...values].sort((a, b) => new Date(a).getTime() - new Date(b).getTime()),
+    [values],
+  );
+  const hasAny = sorted.length > 0;
+
+  const add = async (d: Date) => {
+    await onAdd(d.toISOString());
     if ("Notification" in window && Notification.permission === "default") {
       Notification.requestPermission().catch(() => {});
     }
-    setOpen(false);
-  };
-
-  const clear = async () => {
-    await onChange(null);
-    setOpen(false);
+    setShowAdd(false);
+    setCustomDate(null);
+    setCustomTime("09:00");
   };
 
   const applyCustom = async () => {
@@ -159,22 +171,33 @@ export function ReminderPicker({
     const [h, m] = customTime.split(":").map((n) => parseInt(n, 10));
     const d = new Date(customDate);
     d.setHours(h || 0, m || 0, 0, 0);
-    await set(d);
+    await add(d);
   };
 
   return (
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        aria-label={value ? "Change reminder" : "Set reminder"}
+        onClick={() => {
+          setOpen(true);
+          setShowAdd(!hasAny);
+        }}
+        aria-label={hasAny ? "Edit reminders" : "Set reminder"}
         className={cn(
           "relative inline-flex h-11 w-11 items-center justify-center rounded-full hover:bg-black/5 active:scale-90 dark:hover:bg-white/10",
-          !value && "text-neutral-700 dark:text-white/80",
+          !hasAny && "text-neutral-700 dark:text-white/80",
         )}
-        style={value ? { color: "var(--reminder-strong)" } : undefined}
+        style={hasAny ? { color: "var(--reminder-strong)" } : undefined}
       >
-        <Bell aria-hidden="true" className={cn("h-5 w-5", value && "fill-current")} />
+        <Bell aria-hidden="true" className={cn("h-5 w-5", hasAny && "fill-current")} />
+        {sorted.length > 1 && (
+          <span
+            className="absolute -right-0.5 -top-0.5 inline-flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[9px] font-semibold text-white"
+            style={{ background: "var(--reminder-strong)" }}
+          >
+            {sorted.length}
+          </span>
+        )}
       </button>
 
       <Sheet open={open} onOpenChange={setOpen}>
@@ -182,7 +205,6 @@ export function ReminderPicker({
           side="bottom"
           className="max-h-[92vh] overflow-y-auto rounded-t-3xl border-t border-black/10 bg-background p-0 dark:border-white/10"
         >
-          {/* grabber */}
           <div className="flex justify-center pt-2.5 pb-1">
             <div className="h-1 w-10 rounded-full bg-black/15 dark:bg-white/20" />
           </div>
@@ -190,75 +212,117 @@ export function ReminderPicker({
           <div className="px-5 pb-[max(env(safe-area-inset-bottom),1rem)]">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-[17px] font-semibold text-neutral-900 dark:text-white">
-                Remind me
+                Reminders
               </h2>
-              {value && (
+              {hasAny && onClearAll && (
                 <button
-                  onClick={clear}
+                  onClick={async () => {
+                    await onClearAll();
+                    setShowAdd(false);
+                  }}
                   className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] text-neutral-600 hover:bg-black/5 dark:text-white/70 dark:hover:bg-white/10"
                 >
-                  <BellOff className="h-3.5 w-3.5" /> Clear
+                  <BellOff className="h-3.5 w-3.5" /> Clear all
                 </button>
               )}
             </div>
 
-            {/* Quick chips */}
-            <div className="grid grid-cols-2 gap-2">
-              {presets.map((p) => (
-                <button
-                  key={p.key}
-                  onClick={() => set(p.date)}
-                  className="flex flex-col items-start gap-0.5 rounded-2xl border border-black/8 bg-white px-4 py-3 text-left transition active:scale-[0.98] dark:border-white/10 dark:bg-white/[0.04]"
-                >
-                  <span className="text-[14px] font-medium text-neutral-900 dark:text-white">
-                    {p.label}
-                  </span>
-                  <span className="text-[11px] text-neutral-500 dark:text-white/50">{p.sub}</span>
-                </button>
-              ))}
-            </div>
-
-            {/* Divider */}
-            <div className="my-5 flex items-center gap-3">
-              <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
-              <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400 dark:text-white/40">
-                Pick a date
-              </span>
-              <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
-            </div>
-
-            <MiniCalendar value={customDate} onChange={setCustomDate} />
-
-            {/* Time + apply */}
-            <div className="mt-4 flex items-center gap-2">
-              <div className="relative flex-1">
-                <input
-                  type="time"
-                  value={customTime}
-                  onChange={(e) => setCustomTime(e.currentTarget.value)}
-                  className="h-12 w-full rounded-2xl border border-black/8 bg-white px-4 text-[14px] tabular-nums text-neutral-900 outline-none focus:border-black/40 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/40"
-                />
-              </div>
-              <button
-                onClick={applyCustom}
-                disabled={!customDate}
-                className="inline-flex h-12 items-center gap-1.5 rounded-2xl bg-neutral-900 px-5 text-[14px] font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
-              >
-                <Check className="h-4 w-4" /> Set
-              </button>
-            </div>
-
-            {value && (
-              <div className="mt-3 rounded-2xl bg-black/5 px-4 py-3 text-[12px] text-neutral-700 dark:bg-white/[0.06] dark:text-white/70">
-                Reminds{" "}
-                {new Date(value).toLocaleString(undefined, {
-                  weekday: "short",
-                  month: "short",
-                  day: "numeric",
-                  hour: "numeric",
-                  minute: "2-digit",
+            {/* Existing reminders list */}
+            {hasAny && (
+              <ul className="mb-3 space-y-1.5">
+                {sorted.map((iso) => {
+                  const overdue = new Date(iso).getTime() < Date.now();
+                  return (
+                    <li
+                      key={iso}
+                      className="flex items-center justify-between rounded-2xl border border-black/8 bg-white px-4 py-3 dark:border-white/10 dark:bg-white/[0.04]"
+                    >
+                      <div className="flex min-w-0 items-center gap-2.5">
+                        <Bell
+                          className="h-4 w-4 shrink-0"
+                          style={{ color: "var(--reminder-strong)" }}
+                        />
+                        <div className="min-w-0">
+                          <div className="truncate text-[13.5px] font-medium text-neutral-900 dark:text-white">
+                            {formatReminderRow(iso)}
+                          </div>
+                          {overdue && (
+                            <div className="text-[11px] text-neutral-500 dark:text-white/50">
+                              Overdue
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => onRemove(iso)}
+                        aria-label="Remove reminder"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full text-neutral-500 hover:bg-black/5 active:opacity-60 dark:text-white/60 dark:hover:bg-white/10"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </li>
+                  );
                 })}
-              </div>
+              </ul>
+            )}
+
+            {/* Add another */}
+            {hasAny && !showAdd && (
+              <button
+                onClick={() => setShowAdd(true)}
+                className="mb-1 inline-flex w-full items-center justify-center gap-1.5 rounded-2xl border border-dashed border-black/15 px-4 py-3 text-[13px] font-medium text-neutral-700 hover:bg-black/5 dark:border-white/15 dark:text-white/80 dark:hover:bg-white/10"
+              >
+                <Plus className="h-4 w-4" /> Add another reminder
+              </button>
+            )}
+
+            {(showAdd || !hasAny) && (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  {presets.map((p) => (
+                    <button
+                      key={p.key}
+                      onClick={() => add(p.date)}
+                      className="flex flex-col items-start gap-0.5 rounded-2xl border border-black/8 bg-white px-4 py-3 text-left transition active:scale-[0.98] dark:border-white/10 dark:bg-white/[0.04]"
+                    >
+                      <span className="text-[14px] font-medium text-neutral-900 dark:text-white">
+                        {p.label}
+                      </span>
+                      <span className="text-[11px] text-neutral-500 dark:text-white/50">
+                        {p.sub}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="my-5 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
+                  <span className="text-[10px] font-medium uppercase tracking-[0.12em] text-neutral-400 dark:text-white/40">
+                    Pick a date
+                  </span>
+                  <div className="h-px flex-1 bg-black/8 dark:bg-white/10" />
+                </div>
+
+                <MiniCalendar value={customDate} onChange={setCustomDate} />
+
+                <div className="mt-4 flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <input
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => setCustomTime(e.currentTarget.value)}
+                      className="h-12 w-full rounded-2xl border border-black/8 bg-white px-4 text-[14px] tabular-nums text-neutral-900 outline-none focus:border-black/40 dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:focus:border-white/40"
+                    />
+                  </div>
+                  <button
+                    onClick={applyCustom}
+                    disabled={!customDate}
+                    className="inline-flex h-12 items-center gap-1.5 rounded-2xl bg-neutral-900 px-5 text-[14px] font-medium text-white disabled:opacity-40 dark:bg-white dark:text-neutral-900"
+                  >
+                    <Check className="h-4 w-4" /> Add
+                  </button>
+                </div>
+              </>
             )}
           </div>
         </SheetContent>
@@ -266,3 +330,4 @@ export function ReminderPicker({
     </>
   );
 }
+

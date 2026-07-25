@@ -17,6 +17,8 @@ import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
+import { getNoteReminders, addNoteReminder, removeNoteReminder, clearNoteReminders } from "@/lib/reminders";
+
 
 
 export const Route = createFileRoute("/_authenticated/notes/$id")({
@@ -43,6 +45,8 @@ type Note = {
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_at?: string | null;
+  reminders?: string[];
+
   reminder_suggestion_dismissed?: boolean;
 
 };
@@ -1221,7 +1225,7 @@ function NoteDetail() {
                   hasReminder={!!note.reminder_at}
                   dismissed={!!note.reminder_suggestion_dismissed}
                   onAccept={async (iso) => {
-                    await patchLocalNote(id, { reminder_at: iso });
+                    await addNoteReminder(id, iso);
                     toast.success("Reminder set");
                   }}
                   onDismiss={async () => {
@@ -1386,7 +1390,7 @@ function NoteDetail() {
               hasReminder={!!note.reminder_at}
               dismissed={!!note.reminder_suggestion_dismissed}
               onAccept={async (iso) => {
-                await patchLocalNote(id, { reminder_at: iso });
+                await addNoteReminder(id, iso);
                 toast.success("Reminder set");
               }}
               onDismiss={async () => {
@@ -1437,12 +1441,21 @@ function NoteDetail() {
               <Pin aria-hidden="true" className={`h-5 w-5 ${note.pinned ? "fill-current" : ""}`} />
             </button>
             <ReminderPicker
-              value={note.reminder_at}
-              onChange={async (iso) => {
-                await patchLocalNote(id, { reminder_at: iso });
-                toast.success(iso ? "Reminder set" : "Reminder cleared");
+              values={getNoteReminders(note as any)}
+              onAdd={async (iso) => {
+                await addNoteReminder(id, iso);
+                toast.success("Reminder added");
+              }}
+              onRemove={async (iso) => {
+                await removeNoteReminder(id, iso);
+                toast.success("Reminder removed");
+              }}
+              onClearAll={async () => {
+                await clearNoteReminders(id);
+                toast.success("Reminders cleared");
               }}
             />
+
             <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
             <button
               onClick={onDelete}

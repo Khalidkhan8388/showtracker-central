@@ -32,7 +32,7 @@ export type MovieReminder = {
 
 export type NoteReminder = {
   kind: "note";
-  id: string; // noteId
+  id: string; // `${noteId}:${iso}`
   noteId: string;
   when: string;
   overdue: boolean;
@@ -42,6 +42,15 @@ export type NoteReminder = {
 };
 
 export type Reminder = EpisodeReminder | MovieReminder | NoteReminder;
+
+/** Read a note's reminders as a sorted, deduped array (merges legacy reminder_at). */
+export function getNoteReminders(n: { reminders?: string[] | null; reminder_at?: string | null }): string[] {
+  const set = new Set<string>();
+  for (const r of n.reminders ?? []) if (r) set.add(r);
+  if (n.reminder_at) set.add(n.reminder_at);
+  return Array.from(set).sort();
+}
+
 
 const DAY = 24 * 60 * 60 * 1000;
 
@@ -117,15 +126,16 @@ export function deriveReminders(notes: LocalNote[], now: Date = new Date()): Rem
       }
     }
 
-    // User-set note reminder
-    if (n.reminder_at) {
-      const t = new Date(n.reminder_at).getTime();
+    // User-set note reminders (multi)
+    const isos = getNoteReminders(n);
+    for (const iso of isos) {
+      const t = new Date(iso).getTime();
       if (!isNaN(t) && t <= nowMs + 7 * DAY) {
         out.push({
           kind: "note",
-          id: n.id,
+          id: `${n.id}:${iso}`,
           noteId: n.id,
-          when: n.reminder_at,
+          when: iso,
           overdue: t <= nowMs,
           title: n.heading || "Reminder",
           summary: n.summary,
@@ -149,11 +159,40 @@ export function useReminders(): Reminder[] {
 }
 
 // ---- actions ----
+async function writeReminders(noteId: string, isos: string[]) {
+  const uniq = Array.from(new Set(isos.filter(Boolean))).sort();
+  await patchLocalNote(noteId, {
+    reminders: uniq,
+    reminder_at: uniq[0] ?? null,
+    reminder_suggestion_dismissed: false,
+  });
+}
+
+export async function addNoteReminder(noteId: string, iso: string) {
+  const n = await db.notes.get(noteId);
+  const current = n ? getNoteReminders(n) : [];
+  await writeReminders(noteId, [...current, iso]);
+}
+
+export async function removeNoteReminder(noteId: string, iso: string) {
+  const n = await db.notes.get(noteId);
+  if (!n) return;
+  const current = getNoteReminders(n).filter((x) => x !== iso);
+  await writeReminders(noteId, current);
+}
+
+export async function clearNoteReminders(noteId: string) {
+  await patchLocalNote(noteId, { reminders: [], reminder_at: null });
+}
+
+/** Legacy single-set (used by suggestion chip / hero) — appends. */
 export async function setNoteReminder(noteId: string, iso: string | null) {
-  await patchLocalNote(noteId, { reminder_at: iso });
+  if (iso == null) return clearNoteReminders(noteId);
+  return addNoteReminder(noteId, iso);
 }
 
 export async function dismissEpisodeReminder(noteId: string, key: string) {
+
   const n = await db.notes.get(noteId);
   if (!n) return;
   const next = Array.from(new Set([...(n.hidden_episode_reminders ?? []), key]));

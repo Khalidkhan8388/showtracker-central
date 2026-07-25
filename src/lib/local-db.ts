@@ -78,12 +78,14 @@ export type LocalNote = {
   deleted_at: string | null;
   media?: LocalMedia | null;
   reminder_at?: string | null;
+  reminders?: string[];
   hidden_episode_reminders?: string[];
   ocr_text?: string | null;
   ocr_hidden?: boolean;
   reminder_suggestion_dismissed?: boolean;
 
 };
+
 
 export type MetaRow = { key: string; value: string };
 
@@ -174,8 +176,23 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v10: multiple reminders per note (reminders: string[]). No new index.
+    this.version(10).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    }).upgrade(async (tx) => {
+      await tx.table("notes").toCollection().modify((n: any) => {
+        if (!Array.isArray(n.reminders)) {
+          n.reminders = n.reminder_at ? [n.reminder_at] : [];
+        }
+      });
+    });
   }
 }
+
 
 
 export const db = new BraintapeDB();
