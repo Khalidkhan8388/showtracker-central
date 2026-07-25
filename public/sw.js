@@ -3,7 +3,7 @@
 //   in IndexedDB so the app can turn them into notes silently.
 // - Runtime caches static assets for fast reloads.
 
-const CACHE = 'braintape-v7';
+const CACHE = 'braintape-v8';
 const DB_NAME = 'braintape-share';
 const DB_VERSION = 3;
 const STORE = 'inbox';
