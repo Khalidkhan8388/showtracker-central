@@ -1225,21 +1225,8 @@ function NoteDetail() {
                 />
               </div>
 
-              {!media && (
-                <ReminderSuggestionChip
-                  text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
-                  existing={getNoteReminders(note as any)}
-                  dismissed={!!note.reminder_suggestion_dismissed}
-                  onAccept={async (iso, title) => {
-                    await addNoteReminder(id, iso, title);
-                    toast.success(title ? `Reminder set · ${title}` : "Reminder set");
-                  }}
-                  onDismiss={async () => {
-                    await patchLocalNote(id, { reminder_suggestion_dismissed: true });
-                  }}
-                />
+              {/* Reminder suggestions are shown after saving, not while editing. */}
 
-              )}
 
 
 
