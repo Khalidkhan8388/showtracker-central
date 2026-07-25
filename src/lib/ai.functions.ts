@@ -85,12 +85,11 @@ function tasksFromRaw(input: unknown): string[] {
 // ---------- media analysis -------------------------------------------------
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 sentences. If images are attached, describe what's visible and weave that into the summary.
 - tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
-- tags: 3-6 short lowercase kebab-case tags. No #, no duplicates.
 
 Respond with ONLY the JSON object.`;
 
@@ -180,7 +179,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       heading: String(parsed.heading ?? "Untitled note").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
       tasks: data.skipTasks ? [] : tasksFromRaw(parsed.tasks),
-      tags: parseTags(parsed.tags),
+      tags: [] as string[],
     };
   });
 
@@ -200,12 +199,11 @@ export const transcribeClipFn = createServerFn({ method: "POST" })
 // ---------- web link ------------------------------------------------------
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
 - summary: 2-5 sentences capturing the key takeaways.
 - tasks: concrete, actionable to-dos plausibly triggered by saving this page. Skip "Read this later". Cap at 8. Return [] if nothing is actionable.
-- tags: 3-6 short kebab-case tags.
 
 Respond with ONLY the JSON object.`;
 
@@ -290,7 +288,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
       heading: String(parsed.heading ?? title ?? "Saved link").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
       tasks: tasksFromRaw(parsed.tasks),
-      tags: parseTags(parsed.tags),
+      tags: [] as string[],
       imageUrl: imageUrl ?? null,
     };
   });
@@ -325,12 +323,11 @@ export const fetchLinkImageFn = createServerFn({ method: "POST" })
 // ---------- text note enrichment ------------------------------------------
 
 const TEXT_SYSTEM_PROMPT = `You analyze a user's written note.
-Return ONE JSON object with keys: heading, summary, tasks, tags. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case. If a heading is provided, refine it rather than replacing.
 - summary: 1-3 sentence recap. Leave "" if too short.
 - tasks: clear actionable to-dos. Cap at 8. Return [] if nothing actionable.
-- tags: 3-6 kebab-case tags.
 
 Respond with ONLY the JSON object.`;
 
@@ -370,7 +367,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
       heading: String(parsed.heading ?? data.heading ?? "").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
       tasks: tasksFromRaw(parsed.tasks),
-      tags: parseTags(parsed.tags),
+      tags: [] as string[],
     };
   });
 
