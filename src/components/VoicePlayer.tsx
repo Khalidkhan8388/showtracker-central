@@ -192,14 +192,16 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
   const onSegEnded = useCallback(() => {
     if (segIdx < segments.length - 1) {
       const nextIdx = segIdx + 1;
-      setSegIdx(nextIdx);
       const a = audioRef.current;
       if (a) {
         a.src = urls[nextIdx] ?? "";
         a.playbackRate = SPEEDS[speedIdx];
-        a.load();
-        void a.play();
+        // Play immediately without waiting on load event for tight continuity.
+        const p = a.play();
+        if (p && typeof p.catch === "function") p.catch(() => {});
       }
+      setSegIdx(nextIdx);
+      setSegCurrent(0);
     } else {
       setPlaying(false);
     }
@@ -233,6 +235,9 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
         onPause={() => setPlaying(false)}
         onEnded={onSegEnded}
       />
+      {urls[segIdx + 1] && (
+        <audio src={urls[segIdx + 1]} preload="auto" style={{ display: "none" }} />
+      )}
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -259,8 +264,8 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
                   height: `${Math.round(p * 100)}%`,
                   minHeight: 4,
                   background: active
-                    ? "hsl(var(--foreground))"
-                    : "hsl(var(--foreground) / 0.28)",
+                    ? "var(--foreground)"
+                    : "color-mix(in oklab, var(--foreground) 35%, transparent)",
                 }}
               />
             );
