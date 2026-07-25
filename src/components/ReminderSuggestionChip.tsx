@@ -120,6 +120,7 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
   }, [debounced, dismissed]);
 
   // AI verification pass — corrects titles, drops overlaps, ensures full text.
+  // Cache key ignores `existing` so accepting a suggestion doesn't invalidate cached AI results.
   useEffect(() => {
     if (dismissed) { setVerified([]); setVerifying(false); return; }
     const candidates = localCandidates.filter((c) => !existingKeys.has(c.key));
@@ -127,10 +128,9 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
 
     const cacheKey = JSON.stringify({
       c: candidates.map((c) => [c.iso, c.title ?? ""]),
-      e: Array.from(existingKeys).sort(),
       t: debounced.slice(0, 4000),
     });
-    const cached = cacheRef.current.get(cacheKey);
+    const cached = loadCache(cacheKey);
     if (cached) { setVerified(cached); setVerifying(false); return; }
 
     const reqId = ++verifyReqId.current;
@@ -147,13 +147,11 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
         });
         if (reqId !== verifyReqId.current) return;
         const items: Suggestion[] = (res?.reminders ?? [])
-          .filter((r) => !existingKeys.has(Math.floor(new Date(r.iso).getTime() / 60000) * 60000))
           .map((r) => ({ key: new Date(r.iso).getTime(), iso: r.iso, title: r.title }));
-        cacheRef.current.set(cacheKey, items);
+        saveCache(cacheKey, items);
         setVerified(items);
       } catch {
         if (reqId !== verifyReqId.current) return;
-        // Fallback: show local candidates with best-effort titles, no truncation ellipsis.
         const fallback: Suggestion[] = candidates.map((c) => ({
           key: c.key,
           iso: c.iso,
@@ -166,6 +164,7 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
     }, 400);
     return () => clearTimeout(timer);
   }, [localCandidates, existingKeys, existing, debounced, dismissed]);
+
 
   const suggestions = useMemo(
     () => verified.filter((s) => !addedLocal.has(s.key) && !existingKeys.has(s.key)),
