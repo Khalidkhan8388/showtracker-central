@@ -168,11 +168,17 @@ async function writeReminders(noteId: string, isos: string[]) {
   });
 }
 
-export async function addNoteReminder(noteId: string, iso: string) {
+export async function addNoteReminder(noteId: string, iso: string, title?: string) {
   const n = await db.notes.get(noteId);
   const current = n ? getNoteReminders(n) : [];
   await writeReminders(noteId, [...current, iso]);
+  if (title && title.trim()) {
+    const map = { ...(n?.reminder_titles ?? {}) };
+    map[iso] = title.trim();
+    await patchLocalNote(noteId, { reminder_titles: map });
+  }
 }
+
 
 export async function removeNoteReminder(noteId: string, iso: string) {
   const n = await db.notes.get(noteId);
