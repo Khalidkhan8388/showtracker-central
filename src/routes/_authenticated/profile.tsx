@@ -34,15 +34,6 @@ function ProfilePage() {
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
-  const [heroMode, setHeroMode] = useState<"latest" | "reminders">(() => {
-    if (typeof window === "undefined") return "latest";
-    return (localStorage.getItem("home-hero-mode") as "latest" | "reminders") ?? "latest";
-  });
-  function updateHeroMode(next: "latest" | "reminders") {
-    setHeroMode(next);
-    localStorage.setItem("home-hero-mode", next);
-    window.dispatchEvent(new Event("braintape:pref-changed"));
-  }
 
 
   async function confirmDelete() {
@@ -171,31 +162,7 @@ function ProfilePage() {
       <section className="px-4 pt-8">
         <SectionTitle>Home page</SectionTitle>
 
-        {/* Hero: latest vs reminders */}
-        <button
-          type="button"
-          onClick={() => updateHeroMode(heroMode === "reminders" ? "latest" : "reminders")}
-          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
-        >
-          <div className="min-w-0 flex-1">
-            <div className="text-[15px]">Reminders as hero</div>
-            <div className="mt-0.5 text-[12px] text-muted-foreground">
-              {heroMode === "reminders"
-                ? "Home opens with reminders and follow-ups."
-                : "Home opens with your most recent note."}
-            </div>
-          </div>
-          <span
-            role="switch"
-            aria-checked={heroMode === "reminders"}
-            className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${heroMode === "reminders" ? "bg-primary" : "bg-muted"}`}
-          >
-            <span
-              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
-              style={{ transform: heroMode === "reminders" ? "translateX(20px)" : "translateX(0)" }}
-            />
-          </span>
-        </button>
+
 
 
         <button

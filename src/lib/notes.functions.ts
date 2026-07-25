@@ -117,7 +117,6 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       heading: result.heading,
       summary: result.summary,
       tasks: tasksPayload,
-      tags: result.tags,
       error: null,
     });
   } catch (err: any) {
@@ -359,7 +358,6 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       heading: result.heading,
       summary: result.summary,
       tasks: tasksPayload,
-      tags: result.tags,
       image_paths: imagePaths,
     });
   } catch (err: any) {
@@ -403,7 +401,6 @@ export async function saveTextNote({
         await updateNote(note.id, {
           heading: enriched.heading || heading,
           summary: enriched.summary,
-          tags: enriched.tags,
         });
       } catch {
         /* ignore */
