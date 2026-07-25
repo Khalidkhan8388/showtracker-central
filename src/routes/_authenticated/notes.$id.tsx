@@ -50,6 +50,8 @@ type Note = {
   reminders?: string[];
 
   reminder_suggestion_dismissed?: boolean;
+  action_suggestion_dismissed?: boolean;
+
 
 };
 
