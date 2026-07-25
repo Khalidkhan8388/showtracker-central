@@ -1480,7 +1480,7 @@ function MediaGridTile({
         onClick={(e) => { if (lp.wasLongPress()) { e.preventDefault(); return; } onOpen(); }}
         {...lp.handlers}
         style={isMedia ? { borderRadius: 15 } : undefined}
-        className={`relative flex w-full ${isMedia ? "aspect-[2/3]" : "aspect-square rounded-2xl"} flex-col justify-between overflow-hidden bg-card shadow-sm ring-1 ring-border/60 active:opacity-80 ${
+          className={`relative flex w-full ${isMedia ? "aspect-[2/3]" : "aspect-square rounded-2xl"} flex-col justify-between overflow-hidden bg-card text-left shadow-sm ring-1 ring-border/60 active:opacity-80 ${
           selected ? "ring-2 ring-foreground" : ""
         }`}
       >
@@ -1492,13 +1492,13 @@ function MediaGridTile({
               loading="lazy"
               className={`absolute inset-0 h-full w-full object-cover ${isDropped ? "grayscale" : ""}`}
             />
-            <div className="absolute inset-x-0 bottom-0 scrim-t p-2.5 pt-8">
+            <div className="absolute inset-x-0 bottom-0 flex flex-col items-start scrim-t p-2.5 pt-8 text-left">
               {media?.watch_status && (
-                <span className={`mb-1 inline-block rounded-full px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
+                <span className={`mb-1 inline-flex max-w-full self-start rounded-full px-1.5 py-0.5 text-left text-[9px] font-semibold uppercase tracking-wide shadow-sm ${WATCH_COLORS[media.watch_status]}`}>
                   {WATCH_LABEL[media.watch_status]}
                 </span>
               )}
-              <p className="line-clamp-2 text-[12px] font-semibold scrim-fg">
+              <p className="w-full line-clamp-2 text-left text-[12px] font-semibold scrim-fg">
                 {media?.title ?? note.heading ?? "Untitled"}
               </p>
               {isTvMedia && tvTotal > 0 && (
