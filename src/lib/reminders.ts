@@ -172,10 +172,33 @@ export async function addNoteReminder(noteId: string, iso: string, title?: strin
   const n = await db.notes.get(noteId);
   const current = n ? getNoteReminders(n) : [];
   await writeReminders(noteId, [...current, iso]);
-  if (title && title.trim()) {
+  const cleanTitle = (title || "").trim();
+  if (cleanTitle) {
     const map = { ...(n?.reminder_titles ?? {}) };
-    map[iso] = title.trim();
+    map[iso] = cleanTitle;
     await patchLocalNote(noteId, { reminder_titles: map });
+  }
+  // Mirror the reminder as a trackable task so completion can be checked off.
+  const fresh = await db.notes.get(noteId);
+  if (fresh) {
+    const tasks = fresh.tasks ?? [];
+    if (!tasks.some((t) => t.reminder_at === iso)) {
+      const text =
+        cleanTitle ||
+        (fresh.reminder_titles && fresh.reminder_titles[iso]) ||
+        fresh.heading ||
+        "Reminder";
+      const newTask = {
+        id:
+          typeof crypto !== "undefined" && "randomUUID" in crypto
+            ? crypto.randomUUID()
+            : `t_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        text,
+        done: false,
+        reminder_at: iso,
+      };
+      await patchLocalNote(noteId, { tasks: [...tasks, newTask] });
+    }
   }
 }
 
@@ -185,10 +208,17 @@ export async function removeNoteReminder(noteId: string, iso: string) {
   if (!n) return;
   const current = getNoteReminders(n).filter((x) => x !== iso);
   await writeReminders(noteId, current);
+  // Drop the mirrored task if it hasn't been completed yet.
+  const tasks = (n.tasks ?? []).filter((t) => !(t.reminder_at === iso && !t.done));
+  if (tasks.length !== (n.tasks ?? []).length) {
+    await patchLocalNote(noteId, { tasks });
+  }
 }
 
 export async function clearNoteReminders(noteId: string) {
-  await patchLocalNote(noteId, { reminders: [], reminder_at: null });
+  const n = await db.notes.get(noteId);
+  const tasks = (n?.tasks ?? []).filter((t) => !(t.reminder_at && !t.done));
+  await patchLocalNote(noteId, { reminders: [], reminder_at: null, tasks });
 }
 
 /** Legacy single-set (used by suggestion chip / hero) — appends. */
