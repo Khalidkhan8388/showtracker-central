@@ -106,6 +106,7 @@ const AnalyzeInput = z.object({
     .nullable()
     .optional(),
   skipTasks: z.boolean().optional().default(false),
+  extraTranscripts: z.array(z.string()).optional().default([]),
 });
 
 
