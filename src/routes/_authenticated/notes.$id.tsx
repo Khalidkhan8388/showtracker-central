@@ -1222,7 +1222,7 @@ function NoteDetail() {
               {!media && (
                 <ReminderSuggestionChip
                   text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
-                  hasReminder={!!note.reminder_at}
+                  existing={getNoteReminders(note as any)}
                   dismissed={!!note.reminder_suggestion_dismissed}
                   onAccept={async (iso) => {
                     await addNoteReminder(id, iso);
@@ -1232,6 +1232,7 @@ function NoteDetail() {
                     await patchLocalNote(id, { reminder_suggestion_dismissed: true });
                   }}
                 />
+
               )}
 
 
@@ -1387,7 +1388,7 @@ function NoteDetail() {
                 note.ocr_text ?? "",
                 readerData?.markdown ?? "",
               ].filter(Boolean).join("\n")}
-              hasReminder={!!note.reminder_at}
+              existing={getNoteReminders(note as any)}
               dismissed={!!note.reminder_suggestion_dismissed}
               onAccept={async (iso) => {
                 await addNoteReminder(id, iso);
@@ -1397,6 +1398,7 @@ function NoteDetail() {
                 await patchLocalNote(id, { reminder_suggestion_dismissed: true });
               }}
             />
+
           </div>
         </div>
       )}
