@@ -189,6 +189,10 @@ function RootComponent() {
         const { drainAndSaveShares } = await import("@/lib/share-inbox");
         await drainAndSaveShares();
       } catch {}
+      try {
+        const { pruneDuplicateNotes } = await import("@/lib/dedupe");
+        await pruneDuplicateNotes();
+      } catch {}
     })();
 
     return () => navigator.serviceWorker.removeEventListener("message", onMessage);
