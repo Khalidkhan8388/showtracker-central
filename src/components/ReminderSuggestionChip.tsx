@@ -16,17 +16,24 @@ type Props = {
 function parseFirstFutureDate(text: string): Date | null {
   if (!text || text.trim().length === 0) return null;
   const now = new Date();
-  // forwardDate=true nudges bare weekdays / months to the next occurrence.
   const results = chrono.parse(text, now, { forwardDate: true });
   for (const r of results) {
-    const d = r.start?.date();
+    let d = r.start?.date();
     if (!d) continue;
-    // Must be in the future and within a year — avoid absurd or historical matches.
-    const diff = d.getTime() - now.getTime();
-    if (diff < 60 * 1000) continue; // at least a minute out
-    if (diff > 365 * 24 * 3600 * 1000) continue;
+
     // Ignore bare-year matches like "2024" (no month/day/weekday).
     if (!r.start.isCertain("day") && !r.start.isCertain("weekday")) continue;
+
+    // If chrono resolved to a past time today (e.g. "midnight", "9pm" after 9pm),
+    // roll forward one day so the suggestion still makes sense.
+    let diff = d.getTime() - now.getTime();
+    if (diff < 60 * 1000 && diff > -24 * 3600 * 1000) {
+      d = new Date(d.getTime() + 24 * 3600 * 1000);
+      diff = d.getTime() - now.getTime();
+    }
+
+    if (diff < 60 * 1000) continue;
+    if (diff > 365 * 24 * 3600 * 1000) continue;
 
     return d;
   }
