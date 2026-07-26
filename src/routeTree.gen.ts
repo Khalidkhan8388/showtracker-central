@@ -21,6 +21,7 @@ import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenti
 import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
+import { Route as AuthenticatedCastPersonIdRouteImport } from './routes/_authenticated/cast.$personId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -85,6 +86,12 @@ const AuthenticatedCollectionsIdRoute =
     path: '/collections/$id',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedCastPersonIdRoute =
+  AuthenticatedCastPersonIdRouteImport.update({
+    id: '/cast/$personId',
+    path: '/cast/$personId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -92,6 +99,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
@@ -105,6 +113,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
@@ -120,6 +129,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
+  '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
@@ -135,6 +145,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
@@ -148,6 +159,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
@@ -162,6 +174,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/share'
+    | '/_authenticated/cast/$personId'
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
     | '/_authenticated/profile_/trash'
@@ -261,6 +274,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCollectionsIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/cast/$personId': {
+      id: '/_authenticated/cast/$personId'
+      path: '/cast/$personId'
+      fullPath: '/cast/$personId'
+      preLoaderRoute: typeof AuthenticatedCastPersonIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -269,6 +289,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
+  AuthenticatedCastPersonIdRoute: typeof AuthenticatedCastPersonIdRoute
   AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
   AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
@@ -282,6 +303,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
+  AuthenticatedCastPersonIdRoute: AuthenticatedCastPersonIdRoute,
   AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
   AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
