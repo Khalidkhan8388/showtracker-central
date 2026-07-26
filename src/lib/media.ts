@@ -7,6 +7,8 @@ export const backdrop = (path: string | null, size: "w780" | "w1280" | "original
   path ? `${TMDB_IMG}/${size}${path}` : null;
 export const still = (path: string | null, size: "w185" | "w300" = "w300") =>
   path ? `${TMDB_IMG}/${size}${path}` : null;
+export const profile = (path: string | null, size: "w185" | "h632" = "w185") =>
+  path ? `${TMDB_IMG}/${size}${path}` : null;
 
 export const epKey = (s: number, e: number) => `S${s}E${e}`;
 
