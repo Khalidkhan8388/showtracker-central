@@ -916,7 +916,7 @@ function NoteDetail() {
           onChange={onAddImagesToSaved}
         />
 
-        {isLink && imageUrls.length > 0 && (
+        {isLink && imageUrls.length > 0 && !yt && (
           <section className="mt-5">
             <a
               href={note.source_url!}
@@ -934,7 +934,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.source_url && (
+        {isLink && note.source_url && !yt && (
           <section className="mt-5 flex gap-2">
             <a
               href={note.source_url}
@@ -974,7 +974,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.summary && (
+        {isLink && note.summary && !yt && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
@@ -983,7 +983,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && readerData && readerOpen && (
+        {isLink && readerData && readerOpen && !yt && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
