@@ -24,7 +24,6 @@ function formatDate(date: string | null) {
 
 function CastDetail() {
   const { personId } = Route.useParams();
-  const navigate = useNavigate();
   const id = Number(personId);
 
   const { data: person, isLoading } = useQuery({
