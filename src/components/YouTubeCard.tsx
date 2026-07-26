@@ -20,7 +20,7 @@ export type YouTubeCardVariant = "grid" | "row" | "hero" | "compact";
 function ChannelBadge({ name }: { name: string | null }) {
   const initial = (name?.trim() ?? "?").slice(0, 1).toUpperCase();
   return (
-    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white dark:bg-white dark:text-neutral-900">
+    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[9px] font-bold text-white dark:bg-white dark:text-neutral-900">
       {initial}
     </div>
   );
@@ -30,10 +30,10 @@ function PlayGlyph({ small = false }: { small?: boolean }) {
   return (
     <div
       className={`flex items-center justify-center rounded-full bg-[#FF0033] text-white shadow-lg ${
-        small ? "h-9 w-9" : "h-14 w-14"
+        small ? "h-7 w-7" : "h-10 w-10"
       }`}
     >
-      <Play className={small ? "h-4 w-4 fill-white" : "h-6 w-6 fill-white"} strokeWidth={0} />
+      <Play className={small ? "h-3 w-3 fill-white" : "h-4 w-4 fill-white"} strokeWidth={0} />
     </div>
   );
 }
@@ -100,11 +100,11 @@ export const YouTubeCard = memo(function YouTubeCard({
           <PlayGlyph small={!big} />
         </div>
         {duration && (
-          <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+          <div className="absolute bottom-1.5 right-1.5 rounded-md bg-black/85 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-white">
             {duration}
           </div>
         )}
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+        <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-md bg-black/70 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white">
           <span className="text-[#FF0033]">▶</span> YouTube
         </div>
       </div>
@@ -116,13 +116,13 @@ export const YouTubeCard = memo(function YouTubeCard({
       <div className={cardCls} style={{ backgroundColor: bg }}>
         <Overlay />
         <Thumb big={false} />
-        <div className="flex flex-col gap-1 p-3">
-          <h3 className="text-[12.5px] font-semibold leading-snug line-clamp-2 text-foreground">
+        <div className="flex flex-col gap-0.5 p-2">
+          <h3 className="text-[11.5px] font-semibold leading-snug line-clamp-2 text-foreground">
             {title}
           </h3>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <ChannelBadge name={channel} />
-            <span className="truncate text-[10.5px] text-muted-foreground">{channel}</span>
+            <span className="truncate text-[10px] text-muted-foreground">{channel}</span>
           </div>
         </div>
       </div>
@@ -133,28 +133,28 @@ export const YouTubeCard = memo(function YouTubeCard({
     return (
       <div className={cardCls} style={{ backgroundColor: bg }}>
         <Overlay />
-        <div className="flex items-stretch gap-3 p-3">
-          <div className="relative shrink-0 overflow-hidden rounded-xl bg-black" style={{ width: "42%", maxWidth: 200 }}>
+        <div className="flex items-stretch gap-2 p-2">
+          <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: "38%", maxWidth: 160 }}>
             <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
               <img src={thumb} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <PlayGlyph small />
               </div>
               {duration && (
-                <div className="absolute bottom-1 right-1 rounded bg-black/85 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-white">
+                <div className="absolute bottom-1 right-1 rounded bg-black/85 px-1 py-0.5 text-[8px] font-semibold tabular-nums text-white">
                   {duration}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#FF0033]">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-[#FF0033]">
               <span>▶</span> YouTube
             </div>
-            <h3 className="text-[14px] font-semibold leading-snug line-clamp-3 text-foreground">{title}</h3>
-            <div className="mt-auto flex items-center gap-1.5 pt-1">
+            <h3 className="text-[12.5px] font-semibold leading-snug line-clamp-3 text-foreground">{title}</h3>
+            <div className="mt-auto flex items-center gap-1 pt-0.5">
               <ChannelBadge name={channel} />
-              <span className="truncate text-[11px] text-muted-foreground">{channel}</span>
+              <span className="truncate text-[10px] text-muted-foreground">{channel}</span>
             </div>
           </div>
         </div>
@@ -167,24 +167,24 @@ export const YouTubeCard = memo(function YouTubeCard({
     <div className={cardCls} style={{ backgroundColor: bg }}>
       <Overlay />
       <Thumb big />
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-1 p-2.5">
         <h3
           className={`font-semibold leading-snug text-foreground ${
-            variant === "hero" ? "text-[17px] line-clamp-3" : "text-[14px] line-clamp-2"
+            variant === "hero" ? "text-[14px] line-clamp-3" : "text-[12.5px] line-clamp-2"
           }`}
         >
           {title}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ChannelBadge name={channel} />
-          <span className="truncate text-[12px] text-muted-foreground">{channel}</span>
+          <span className="truncate text-[10.5px] text-muted-foreground">{channel}</span>
         </div>
         {note.summary && variant === "hero" && (
-          <p className="line-clamp-3 text-[13px] leading-snug text-muted-foreground">{note.summary}</p>
+          <p className="line-clamp-2 text-[11.5px] leading-snug text-muted-foreground">{note.summary}</p>
         )}
-        <div className="mt-1 flex items-center gap-3 text-[10.5px] text-muted-foreground">
+        <div className="mt-0.5 flex items-center gap-2 text-[9.5px] text-muted-foreground">
           <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-          {yt.captions_available && <span className="rounded bg-muted px-1.5 py-0.5 font-medium">CC</span>}
+          {yt.captions_available && <span className="rounded bg-muted px-1 py-0.5 font-medium">CC</span>}
           {note.tasks && note.tasks.length > 0 && (
             <span className="flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
