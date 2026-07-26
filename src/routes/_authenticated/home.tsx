@@ -433,6 +433,7 @@ function Home() {
                   thumbUrl={thumbs[derived.latest.id]}
                   selected={selectedNotes.has(derived.latest.id)}
                   selectMode={noteSelectMode}
+                  hideYouTubeThumb
                   onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
                   onLongPress={() => toggleNoteSel(derived.latest.id)}
                   onToggleSel={() => toggleNoteSel(derived.latest.id)}
@@ -555,6 +556,7 @@ function Home() {
                       thumbUrl={thumbs[n.id]}
                       selected={selectedNotes.has(n.id)}
                       selectMode={noteSelectMode}
+                      hideYouTubeThumb
                       onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
