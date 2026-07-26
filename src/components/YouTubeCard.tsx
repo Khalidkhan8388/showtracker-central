@@ -58,7 +58,7 @@ export const YouTubeCard = memo(function YouTubeCard({
 
   const bg = isDark ? "#1c1c1e" : "#ffffff";
   const ring = selected ? "ring-2 ring-foreground" : "";
-  const cardCls = `relative flex w-full flex-col overflow-hidden rounded-[15px] ${ring}`;
+  const cardCls = `relative flex w-full overflow-hidden rounded-[15px] ${ring}`;
 
   const Overlay = () => (
     <>
