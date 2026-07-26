@@ -3,9 +3,10 @@ import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
+import { YouTubeCard } from "@/components/YouTubeCard";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
-import type { LocalMedia } from "@/lib/local-db";
+import type { LocalMedia, LocalYouTube } from "@/lib/local-db";
 
 export type FeedNote = {
   id: string;
@@ -20,6 +21,7 @@ export type FeedNote = {
   source_url: string | null;
   transcript: string | null;
   media?: LocalMedia | null;
+  youtube?: LocalYouTube | null;
 };
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
@@ -114,6 +116,32 @@ export const FeedNoteCard = memo(function FeedNoteCard({
       </div>
     );
   }
+
+  // YouTube — dedicated card
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  if (yt) {
+    const isHeroY = variant === "hero";
+    const ytVariant = isHeroY
+      ? "hero"
+      : variant === "wide"
+        ? "row"
+        : variant === "square" && !fullWidth
+          ? "compact"
+          : "grid";
+    const sizing = variant === "square" && !fullWidth ? "w-40 shrink-0" : "w-full";
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        {...lp.handlers}
+        className={`${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97]`}
+      >
+        <YouTubeCard note={note as any} variant={ytVariant as any} selectMode={selectMode} selected={selected} />
+      </div>
+    );
+  }
+
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
   const hasImage = imageCount > 0 && !!thumbUrl;
