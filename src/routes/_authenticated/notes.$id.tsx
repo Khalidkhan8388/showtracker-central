@@ -720,10 +720,17 @@ function NoteDetail() {
         )}
 
         {/* Kind pill */}
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-          <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
-        </div>
+        {yt ? (
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#FF0033]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#FF0033]">
+            <YoutubeIcon className="h-3 w-3" />
+            <span>YouTube</span>
+          </div>
+        ) : (
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+            <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
+          </div>
+        )}
 
         <h1 className="text-[30px] font-bold leading-[1.1] tracking-tight">
           {note.heading ?? (processing ? "Processing…" : "Untitled")}
