@@ -116,13 +116,13 @@ export const YouTubeCard = memo(function YouTubeCard({
       <div className={cardCls} style={{ backgroundColor: bg }}>
         <Overlay />
         <Thumb big={false} />
-        <div className="flex flex-col gap-1 p-3">
-          <h3 className="text-[12.5px] font-semibold leading-snug line-clamp-2 text-foreground">
+        <div className="flex flex-col gap-0.5 p-2">
+          <h3 className="text-[11.5px] font-semibold leading-snug line-clamp-2 text-foreground">
             {title}
           </h3>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <ChannelBadge name={channel} />
-            <span className="truncate text-[10.5px] text-muted-foreground">{channel}</span>
+            <span className="truncate text-[10px] text-muted-foreground">{channel}</span>
           </div>
         </div>
       </div>
