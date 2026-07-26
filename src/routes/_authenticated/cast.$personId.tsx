@@ -1,8 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star } from "lucide-react";
-import { fetchTmdbPersonFn, type TmdbPersonDetail } from "@/lib/tmdb.functions";
+import { useMemo, useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star, Plus, Check, Loader2 } from "lucide-react";
+import { fetchTmdbPersonFn } from "@/lib/tmdb.functions";
 import { profile, poster } from "@/lib/media";
+import { addTmdbMedia } from "@/lib/notes.functions";
+import { db } from "@/lib/local-db";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cast/$personId")({
   head: () => ({ meta: [{ title: "Cast — Braintape" }] }),
