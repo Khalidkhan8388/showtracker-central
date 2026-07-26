@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2, User } from "lucide-react";
