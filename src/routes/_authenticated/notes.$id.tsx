@@ -555,6 +555,37 @@ function NoteDetail() {
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
   })();
 
+  // Auto-refresh YouTube description if it was previously fetched truncated (og:description caps at ~160 chars).
+  const ytRefreshedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!yt || !yt.canonical_url) return;
+    const desc = yt.description ?? "";
+    if (desc.length >= 300) return;
+    const key = yt.video_id ?? yt.canonical_url;
+    if (ytRefreshedRef.current.has(key)) return;
+    ytRefreshedRef.current.add(key);
+    (async () => {
+      try {
+        const { fetchYouTubeFn } = await import("@/lib/youtube.functions");
+        const fresh = await fetchYouTubeFn({ data: { url: yt.canonical_url } });
+        if (!fresh?.description || fresh.description.length <= desc.length) return;
+        await patchLocalNote(note.id, {
+          youtube: {
+            ...yt,
+            description: fresh.description,
+            keywords: fresh.keywords ?? yt.keywords ?? [],
+            duration_seconds: fresh.durationSeconds ?? yt.duration_seconds,
+            view_count: fresh.viewCount ?? yt.view_count,
+            published_at: fresh.publishedAt ?? yt.published_at,
+          } as LocalYouTube,
+        } as any);
+      } catch (err) {
+        console.warn("[youtube] description refresh failed", err);
+      }
+    })();
+  }, [yt?.video_id, yt?.canonical_url, yt?.description, note.id]);
+
+
   function formatDuration(sec: number) {
     const m = Math.floor(sec / 60);
     const s = Math.round(sec % 60);
