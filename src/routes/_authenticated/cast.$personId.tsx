@@ -193,15 +193,17 @@ function CastDetail() {
               <div className="flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {person.credits.map((c) => {
                   const img = poster(c.poster_path, "w342");
+                  const key = `${c.type}:${c.id}`;
+                  const isSaved = savedMap?.has(key) ?? false;
+                  const isBusy = busy === key;
                   return (
-                    <a
+                    <button
                       key={`${c.id}-${c.type}`}
-                      href={`https://www.themoviedb.org/${c.type}/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group w-28 shrink-0 active:opacity-60"
+                      type="button"
+                      onClick={() => openCredit(c.type, c.id)}
+                      className="group w-28 shrink-0 text-left active:opacity-60"
                     >
-                      <div className="aspect-[2/3] w-28 overflow-hidden rounded-2xl bg-muted ring-1 ring-black/5">
+                      <div className="relative aspect-[2/3] w-28 overflow-hidden rounded-2xl bg-muted ring-1 ring-black/5">
                         {img ? (
                           <img
                             src={img}
@@ -214,6 +216,26 @@ function CastDetail() {
                             {c.type === "movie" ? <Film className="h-6 w-6" /> : <Tv className="h-6 w-6" />}
                           </div>
                         )}
+                        {/* Add pill — bottom center */}
+                        <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+                          <span
+                            role={isSaved ? undefined : "button"}
+                            onClick={isSaved ? undefined : (e) => addCredit(e, c.type, c.id, c.title)}
+                            className={`pointer-events-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-md backdrop-blur ${
+                              isSaved
+                                ? "bg-emerald-500/90 text-white"
+                                : "bg-background/90 text-foreground active:scale-95"
+                            }`}
+                          >
+                            {isSaved ? (
+                              <><Check className="h-3 w-3" /> Added</>
+                            ) : isBusy ? (
+                              <><Loader2 className="h-3 w-3 animate-spin" /> Adding</>
+                            ) : (
+                              <><Plus className="h-3 w-3" /> Add</>
+                            )}
+                          </span>
+                        </div>
                       </div>
                       <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-foreground">
                         {c.title}
@@ -230,7 +252,7 @@ function CastDetail() {
                           </span>
                         )}
                       </div>
-                    </a>
+                    </button>
                   );
                 })}
               </div>
