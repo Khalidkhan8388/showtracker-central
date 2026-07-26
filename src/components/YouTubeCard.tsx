@@ -167,24 +167,24 @@ export const YouTubeCard = memo(function YouTubeCard({
     <div className={cardCls} style={{ backgroundColor: bg }}>
       <Overlay />
       <Thumb big />
-      <div className="flex flex-col gap-2 p-4">
+      <div className="flex flex-col gap-1 p-2.5">
         <h3
           className={`font-semibold leading-snug text-foreground ${
-            variant === "hero" ? "text-[17px] line-clamp-3" : "text-[14px] line-clamp-2"
+            variant === "hero" ? "text-[14px] line-clamp-3" : "text-[12.5px] line-clamp-2"
           }`}
         >
           {title}
         </h3>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           <ChannelBadge name={channel} />
-          <span className="truncate text-[12px] text-muted-foreground">{channel}</span>
+          <span className="truncate text-[10.5px] text-muted-foreground">{channel}</span>
         </div>
         {note.summary && variant === "hero" && (
-          <p className="line-clamp-3 text-[13px] leading-snug text-muted-foreground">{note.summary}</p>
+          <p className="line-clamp-2 text-[11.5px] leading-snug text-muted-foreground">{note.summary}</p>
         )}
-        <div className="mt-1 flex items-center gap-3 text-[10.5px] text-muted-foreground">
+        <div className="mt-0.5 flex items-center gap-2 text-[9.5px] text-muted-foreground">
           <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-          {yt.captions_available && <span className="rounded bg-muted px-1.5 py-0.5 font-medium">CC</span>}
+          {yt.captions_available && <span className="rounded bg-muted px-1 py-0.5 font-medium">CC</span>}
           {note.tasks && note.tasks.length > 0 && (
             <span className="flex items-center gap-1">
               <CheckCircle2 className="h-3 w-3" />
