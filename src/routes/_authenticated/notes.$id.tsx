@@ -571,6 +571,12 @@ function NoteDetail() {
     if (days < 7) return `${days}d ago`;
     return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
   }
+  function formatViews(n: number) {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
+  }
   const readingMinutes = note.transcript
     ? Math.max(1, Math.round(note.transcript.trim().split(/\s+/).length / 220))
     : 0;
