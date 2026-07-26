@@ -6,6 +6,7 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon } from "lucide-react";
 import type { LocalYouTube } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
+import { YouTubeThumbImg } from "@/components/YouTubeCard";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 
@@ -809,14 +810,10 @@ function NoteDetail() {
                     className="group absolute inset-0 block"
                     aria-label="Play video"
                   >
-                    <img
-                      src={yt.thumbnail_url ?? `https://i.ytimg.com/vi/${yt.video_id}/maxresdefault.jpg`}
+                    <YouTubeThumbImg
+                      videoId={yt.video_id}
                       alt=""
-                      className="absolute inset-0 h-full w-full object-cover"
-                      onError={(e) => {
-                        const el = e.currentTarget;
-                        if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
-                      }}
+                      className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
                     <div className="absolute inset-0 flex items-center justify-center">

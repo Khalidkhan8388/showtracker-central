@@ -1,7 +1,7 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Play, CheckCircle2, Pin, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { formatYtDuration } from "@/lib/youtube";
+import { formatYtDuration, youtubeThumb } from "@/lib/youtube";
 import type { LocalYouTube } from "@/lib/local-db";
 import { useTheme } from "@/lib/theme";
 
@@ -38,6 +38,33 @@ function PlayGlyph({ small = false }: { small?: boolean }) {
   );
 }
 
+const QUALITIES: Array<"max" | "mq" | "hq"> = ["max", "mq", "hq"];
+
+export function YouTubeThumbImg({
+  videoId,
+  alt,
+  className,
+}: {
+  videoId: string;
+  alt?: string;
+  className?: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const url = youtubeThumb(videoId, QUALITIES[index]);
+  return (
+    <img
+      src={url}
+      alt={alt ?? ""}
+      loading="lazy"
+      decoding="async"
+      className={className}
+      onError={() => {
+        if (index < QUALITIES.length - 1) setIndex((i) => i + 1);
+      }}
+    />
+  );
+}
+
 export const YouTubeCard = memo(function YouTubeCard({
   note,
   variant,
@@ -51,7 +78,6 @@ export const YouTubeCard = memo(function YouTubeCard({
 }) {
   const yt = note.youtube!;
   const { isDark } = useTheme();
-  const thumb = yt.thumbnail_url ?? `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
   const duration = formatYtDuration(yt.duration_seconds);
   const channel = yt.channel_name ?? "YouTube";
   const title = note.heading ?? yt.title ?? "YouTube video";
@@ -84,16 +110,10 @@ export const YouTubeCard = memo(function YouTubeCard({
   const Thumb = ({ big = true }: { big?: boolean }) => (
     <div className="relative w-full overflow-hidden bg-black">
       <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-        <img
-          src={thumb}
+        <YouTubeThumbImg
+          videoId={yt.video_id}
           alt=""
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(e) => {
-            const el = e.currentTarget;
-            if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
-          }}
+          className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center">
@@ -136,7 +156,11 @@ export const YouTubeCard = memo(function YouTubeCard({
         <div className="flex items-stretch gap-2 p-2">
           <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: "38%", maxWidth: 160 }}>
             <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-              <img src={thumb} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+              <YouTubeThumbImg
+                videoId={yt.video_id}
+                alt=""
+                className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
+              />
               <div className="absolute inset-0 flex items-center justify-center">
                 <PlayGlyph small />
               </div>
@@ -170,16 +194,10 @@ export const YouTubeCard = memo(function YouTubeCard({
       <div className="flex items-stretch gap-2.5 p-2.5">
         <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: isHero ? "44%" : "36%", maxWidth: isHero ? 200 : 150 }}>
           <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-            <img
-              src={thumb}
+            <YouTubeThumbImg
+              videoId={yt.video_id}
               alt=""
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-              onError={(e) => {
-                const el = e.currentTarget;
-                if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
-              }}
+              className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <PlayGlyph small />
