@@ -132,6 +132,37 @@ export const YouTubeCard = memo(function YouTubeCard({
     </div>
   );
 
+  if (hideThumb) {
+    return (
+      <div className={cardCls} style={{ backgroundColor: bg }}>
+        <Overlay />
+        <div className="flex flex-col gap-1 p-3">
+          <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-[#FF0033]">
+            <span>▶</span> YouTube
+          </div>
+          <h3 className={`font-semibold leading-snug text-foreground ${variant === "hero" ? "text-[13px] line-clamp-3" : "text-[12px] line-clamp-2"}`}>
+            {title}
+          </h3>
+          <div className="flex items-center gap-1">
+            <ChannelBadge name={channel} />
+            <span className="truncate text-[10px] text-muted-foreground">{channel}</span>
+          </div>
+          <div className="mt-auto flex items-center gap-2 pt-0.5 text-[9px] text-muted-foreground">
+            {duration && <span className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-medium tabular-nums">{duration}</span>}
+            <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
+            {yt.captions_available && <span className="rounded bg-muted px-1 py-0.5 font-medium">CC</span>}
+            {note.tasks && note.tasks.length > 0 && (
+              <span className="flex items-center gap-1">
+                <CheckCircle2 className="h-3 w-3" />
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (variant === "compact") {
     return (
       <div className={cardCls} style={{ backgroundColor: bg }}>
