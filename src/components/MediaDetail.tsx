@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2, User } from "lucide-react";
@@ -218,11 +219,10 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
               : cast.map((c) => {
                   const img = profile(c.profile_path, "w185");
                   return (
-                    <a
+                  <Link
                       key={c.id}
-                      href={`https://www.themoviedb.org/person/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
+                      to="/cast/$personId"
+                      params={{ personId: String(c.id) }}
                       className="group w-20 shrink-0 text-center active:opacity-60"
                     >
                       <div className="mx-auto aspect-square w-20 overflow-hidden rounded-[15px] bg-muted ring-1 ring-black/5">
@@ -245,7 +245,7 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                       {c.character && (
                         <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{c.character}</p>
                       )}
-                    </a>
+                    </Link>
                   );
                 })}
           </div>
