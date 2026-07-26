@@ -50,6 +50,7 @@ type Note = {
   ocr_hidden?: boolean;
   reminder_at?: string | null;
   reminders?: string[];
+  youtube?: LocalYouTube | null;
 
   reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
@@ -547,6 +548,7 @@ function NoteDetail() {
   const hasBody = typeof note.transcript === "string" && note.transcript.trim().length > 0;
   const isImage = !isVoice && !isLink && !hasBody && Array.isArray(note.image_paths) && note.image_paths.length > 0;
   const isText = !isVoice && !isLink && !isImage;
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
