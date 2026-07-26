@@ -40,7 +40,7 @@ function PlayGlyph({ small = false }: { small?: boolean }) {
 
 const QUALITIES: Array<"max" | "mq" | "hq"> = ["max", "mq", "hq"];
 
-function YouTubeThumbImg({
+export function YouTubeThumbImg({
   videoId,
   alt,
   className,
