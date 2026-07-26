@@ -38,6 +38,33 @@ function PlayGlyph({ small = false }: { small?: boolean }) {
   );
 }
 
+const QUALITIES: Array<"max" | "mq" | "hq"> = ["max", "mq", "hq"];
+
+function YouTubeThumbImg({
+  videoId,
+  alt,
+  className,
+}: {
+  videoId: string;
+  alt?: string;
+  className?: string;
+}) {
+  const [index, setIndex] = useState(0);
+  const url = youtubeThumb(videoId, QUALITIES[index]);
+  return (
+    <img
+      src={url}
+      alt={alt ?? ""}
+      loading="lazy"
+      decoding="async"
+      className={className}
+      onError={() => {
+        if (index < QUALITIES.length - 1) setIndex((i) => i + 1);
+      }}
+    />
+  );
+}
+
 export const YouTubeCard = memo(function YouTubeCard({
   note,
   variant,
