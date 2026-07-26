@@ -133,28 +133,28 @@ export const YouTubeCard = memo(function YouTubeCard({
     return (
       <div className={cardCls} style={{ backgroundColor: bg }}>
         <Overlay />
-        <div className="flex items-stretch gap-3 p-3">
-          <div className="relative shrink-0 overflow-hidden rounded-xl bg-black" style={{ width: "42%", maxWidth: 200 }}>
+        <div className="flex items-stretch gap-2 p-2">
+          <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: "38%", maxWidth: 160 }}>
             <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
               <img src={thumb} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
               <div className="absolute inset-0 flex items-center justify-center">
                 <PlayGlyph small />
               </div>
               {duration && (
-                <div className="absolute bottom-1 right-1 rounded bg-black/85 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-white">
+                <div className="absolute bottom-1 right-1 rounded bg-black/85 px-1 py-0.5 text-[8px] font-semibold tabular-nums text-white">
                   {duration}
                 </div>
               )}
             </div>
           </div>
-          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-            <div className="flex items-center gap-1 text-[9px] font-bold uppercase tracking-wider text-[#FF0033]">
+          <div className="flex min-w-0 flex-1 flex-col gap-0.5">
+            <div className="flex items-center gap-1 text-[8px] font-bold uppercase tracking-wider text-[#FF0033]">
               <span>▶</span> YouTube
             </div>
-            <h3 className="text-[14px] font-semibold leading-snug line-clamp-3 text-foreground">{title}</h3>
-            <div className="mt-auto flex items-center gap-1.5 pt-1">
+            <h3 className="text-[12.5px] font-semibold leading-snug line-clamp-3 text-foreground">{title}</h3>
+            <div className="mt-auto flex items-center gap-1 pt-0.5">
               <ChannelBadge name={channel} />
-              <span className="truncate text-[11px] text-muted-foreground">{channel}</span>
+              <span className="truncate text-[10px] text-muted-foreground">{channel}</span>
             </div>
           </div>
         </div>
