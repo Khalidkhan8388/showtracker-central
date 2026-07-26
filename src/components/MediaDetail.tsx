@@ -1,10 +1,13 @@
 import { useMemo, useState } from "react";
-import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2 } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2, User } from "lucide-react";
 import type { LocalMedia, WatchStatus } from "@/lib/local-db";
+import { fetchTmdbCreditsFn } from "@/lib/tmdb.functions";
 import {
   backdrop,
   epKey,
   poster,
+  profile,
   setWatchStatus,
   still,
   toggleEpisodeWatched,
