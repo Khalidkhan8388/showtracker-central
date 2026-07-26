@@ -407,20 +407,20 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40">
       {/* Ancillary pills stack ABOVE the main pill without pushing it */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[124px] flex flex-col items-center gap-2 px-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-[108px] flex flex-col items-center gap-1.5 px-4">
 
       {pending.length > 0 && (
-        <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10">
+        <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-1.5 overflow-x-auto rounded-xl bg-white/85 p-1.5 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10">
           {pending.map((p, i) => (
             <div key={i} role="listitem" className="relative shrink-0">
               <img
                 src={p.previewUrl}
                 alt=""
-                className="h-12 w-12 rounded-lg object-cover ring-1 ring-black/10 dark:ring-white/10"
+                className="h-10 w-10 rounded-lg object-cover ring-1 ring-black/10 dark:ring-white/10"
               />
               <button
                 onClick={() => removePending(i)}
-                className="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-white shadow dark:bg-white dark:text-neutral-900"
+                className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-neutral-900 text-white shadow dark:bg-white dark:text-neutral-900"
                 aria-label={`Remove image ${i + 1}`}
               >
                 <X aria-hidden="true" className="h-2.5 w-2.5" strokeWidth={3} />
@@ -431,8 +431,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {linkOpen && (
-        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full bg-white/90 p-1 pl-4 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
-          <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-600 dark:text-white/70" />
+        <div className="pointer-events-auto flex w-full max-w-sm items-center gap-1 rounded-full bg-white/90 p-1 pl-3 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+          <Link2 aria-hidden="true" className="h-3.5 w-3.5 shrink-0 text-neutral-600 dark:text-white/70" />
           <label htmlFor="recorder-link-input" className="sr-only">Web link</label>
           <input
             id="recorder-link-input"
@@ -449,7 +449,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                 setLinkUrl("");
               }
             }}
-            className="flex-1 bg-transparent px-2 py-1.5 text-sm text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/50"
+            className="flex-1 bg-transparent px-1.5 py-1 text-sm text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/50"
           />
           <button
             onClick={() => {
@@ -457,15 +457,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               setLinkUrl("");
             }}
             aria-label="Cancel link entry"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 dark:text-white/80 dark:hover:bg-white/10"
+            className="inline-flex h-7 w-7 items-center justify-center rounded-full text-neutral-700 hover:bg-black/5 dark:text-white/80 dark:hover:bg-white/10"
           >
-            <X aria-hidden="true" className="h-4 w-4" />
+            <X aria-hidden="true" className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={submitLink}
             disabled={!linkUrl.trim()}
             aria-label="Save link"
-            className="inline-flex items-center rounded-full bg-neutral-900 px-3 py-1.5 text-xs font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
+            className="inline-flex items-center rounded-full bg-neutral-900 px-2.5 py-1 text-xs font-semibold text-white disabled:opacity-50 dark:bg-white dark:text-neutral-900"
           >
             Save
           </button>
