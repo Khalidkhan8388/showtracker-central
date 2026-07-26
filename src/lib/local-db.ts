@@ -56,6 +56,22 @@ export type LocalMedia = {
   watched_episodes: string[];
 };
 
+export type LocalYouTube = {
+  video_id: string;
+  canonical_url: string;
+  title: string | null;
+  channel_name: string | null;
+  channel_url: string | null;
+  channel_id: string | null;
+  thumbnail_url: string | null;
+  description: string | null;
+  published_at: string | null;
+  duration_seconds: number | null;
+  view_count: number | null;
+  keywords: string[];
+  captions_available: boolean;
+};
+
 export type LocalNote = {
   id: string;
   user_id: string;
