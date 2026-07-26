@@ -383,3 +383,86 @@ export const fetchTmdbCreditsFn = createServerFn({ method: "POST" })
     }
   });
 
+// -- Person detail -----------------------------------------------------------
+
+export type TmdbPersonCredit = {
+  id: number;
+  type: "movie" | "tv";
+  title: string;
+  character: string;
+  release_date: string | null;
+  poster_path: string | null;
+  vote_average: number | null;
+};
+
+export type TmdbPersonDetail = {
+  id: number;
+  name: string;
+  biography: string;
+  known_for_department: string;
+  profile_path: string | null;
+  birthday: string | null;
+  deathday: string | null;
+  place_of_birth: string | null;
+  also_known_as: string[];
+  credits: TmdbPersonCredit[];
+};
+
+const PersonIdInput = z.object({ person_id: z.number().int().positive() });
+
+export const fetchTmdbPersonFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => PersonIdInput.parse(d))
+  .handler(async ({ data }): Promise<TmdbPersonDetail | null> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    try {
+      const [person, credits] = await Promise.all([
+        tmdbGet(`/person/${data.person_id}`, key),
+        tmdbGet(`/person/${data.person_id}/combined_credits`, key),
+      ]);
+
+      const raw: any[] = Array.isArray(credits.cast) ? credits.cast : [];
+      const mapped: TmdbPersonCredit[] = raw
+        .filter((x) => x.media_type === "movie" || x.media_type === "tv")
+        .map((x) => {
+          const type = x.media_type as "movie" | "tv";
+          const date = (type === "movie" ? x.release_date : x.first_air_date) || null;
+          return {
+            id: Number(x.id),
+            type,
+            title:
+              type === "movie"
+                ? (x.title ?? x.original_title ?? "Untitled")
+                : (x.name ?? x.original_name ?? "Untitled"),
+            character: x.character ?? "",
+            release_date: date ? String(date).slice(0, 10) : null,
+            poster_path: x.poster_path ?? null,
+            vote_average: typeof x.vote_average === "number" ? x.vote_average : null,
+          };
+        })
+        .sort((a, b) => {
+          // Sort by release date descending, unknown dates last
+          if (!a.release_date && !b.release_date) return 0;
+          if (!a.release_date) return 1;
+          if (!b.release_date) return -1;
+          return b.release_date.localeCompare(a.release_date);
+        })
+        .slice(0, 50);
+
+      return {
+        id: Number(person.id),
+        name: person.name ?? "",
+        biography: person.biography ?? "",
+        known_for_department: person.known_for_department ?? "",
+        profile_path: person.profile_path ?? null,
+        birthday: person.birthday || null,
+        deathday: person.deathday || null,
+        place_of_birth: person.place_of_birth || null,
+        also_known_as: Array.isArray(person.also_known_as) ? person.also_known_as : [],
+        credits: mapped,
+      };
+    } catch {
+      return null;
+    }
+  });
+
