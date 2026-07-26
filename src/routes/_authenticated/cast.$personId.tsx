@@ -1,8 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star } from "lucide-react";
-import { fetchTmdbPersonFn, type TmdbPersonDetail } from "@/lib/tmdb.functions";
+import { useState } from "react";
+import { useLiveQuery } from "dexie-react-hooks";
+import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star, Plus, Check, Loader2 } from "lucide-react";
+import { fetchTmdbPersonFn } from "@/lib/tmdb.functions";
 import { profile, poster } from "@/lib/media";
+import { addTmdbMedia } from "@/lib/notes.functions";
+import { db } from "@/lib/local-db";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/_authenticated/cast/$personId")({
   head: () => ({ meta: [{ title: "Cast — Braintape" }] }),
@@ -25,6 +30,8 @@ function formatDate(date: string | null) {
 function CastDetail() {
   const { personId } = Route.useParams();
   const id = Number(personId);
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
 
   const { data: person, isLoading } = useQuery({
     queryKey: ["tmdb-person", id],
@@ -34,6 +41,56 @@ function CastDetail() {
   });
 
   const profileUrl = person?.profile_path ? profile(person.profile_path, "h632") : null;
+
+  // Map of `${type}:${tmdb_id}` -> noteId for filmography items already saved.
+  const savedMap = useLiveQuery(async () => {
+    const rows = await db.notes.toArray();
+    const m = new Map<string, string>();
+    for (const n of rows) {
+      if (!n.deleted_at && n.media?.tmdb_id && n.media?.type) {
+        m.set(`${n.media.type}:${n.media.tmdb_id}`, n.id);
+      }
+    }
+    return m;
+  }, []);
+
+  const openCredit = async (type: "movie" | "tv", tmdbId: number) => {
+    const key = `${type}:${tmdbId}`;
+    const existingId = savedMap?.get(key);
+    if (existingId) {
+      navigate({ to: "/notes/$id", params: { id: existingId } });
+      return;
+    }
+    if (busy) return;
+    setBusy(key);
+    try {
+      const res = await addTmdbMedia({ data: { type, tmdb_id: tmdbId } });
+      navigate({ to: "/notes/$id", params: { id: res.noteId } });
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not open — try again");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const addCredit = async (e: React.MouseEvent, type: "movie" | "tv", tmdbId: number, title: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const key = `${type}:${tmdbId}`;
+    if (savedMap?.has(key) || busy) return;
+    setBusy(key);
+    try {
+      await addTmdbMedia({ data: { type, tmdb_id: tmdbId } });
+      toast.success(`Added ${title}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not add — try again");
+    } finally {
+      setBusy(null);
+    }
+  };
+
 
   return (
     <div className="min-h-screen pb-8">
@@ -136,15 +193,17 @@ function CastDetail() {
               <div className="flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {person.credits.map((c) => {
                   const img = poster(c.poster_path, "w342");
+                  const key = `${c.type}:${c.id}`;
+                  const isSaved = savedMap?.has(key) ?? false;
+                  const isBusy = busy === key;
                   return (
-                    <a
+                    <button
                       key={`${c.id}-${c.type}`}
-                      href={`https://www.themoviedb.org/${c.type}/${c.id}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="group w-28 shrink-0 active:opacity-60"
+                      type="button"
+                      onClick={() => openCredit(c.type, c.id)}
+                      className="group w-28 shrink-0 text-left active:opacity-60"
                     >
-                      <div className="aspect-[2/3] w-28 overflow-hidden rounded-2xl bg-muted ring-1 ring-black/5">
+                      <div className="relative aspect-[2/3] w-28 overflow-hidden rounded-2xl bg-muted ring-1 ring-black/5">
                         {img ? (
                           <img
                             src={img}
@@ -157,6 +216,26 @@ function CastDetail() {
                             {c.type === "movie" ? <Film className="h-6 w-6" /> : <Tv className="h-6 w-6" />}
                           </div>
                         )}
+                        {/* Add pill — bottom center */}
+                        <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center">
+                          <span
+                            role={isSaved ? undefined : "button"}
+                            onClick={isSaved ? undefined : (e) => addCredit(e, c.type, c.id, c.title)}
+                            className={`pointer-events-auto inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold shadow-md backdrop-blur ${
+                              isSaved
+                                ? "bg-emerald-500/90 text-white"
+                                : "bg-background/90 text-foreground active:scale-95"
+                            }`}
+                          >
+                            {isSaved ? (
+                              <><Check className="h-3 w-3" /> Added</>
+                            ) : isBusy ? (
+                              <><Loader2 className="h-3 w-3 animate-spin" /> Adding</>
+                            ) : (
+                              <><Plus className="h-3 w-3" /> Add</>
+                            )}
+                          </span>
+                        </div>
                       </div>
                       <p className="mt-2 line-clamp-2 text-[12px] font-semibold leading-tight text-foreground">
                         {c.title}
@@ -173,7 +252,7 @@ function CastDetail() {
                           </span>
                         )}
                       </div>
-                    </a>
+                    </button>
                   );
                 })}
               </div>
