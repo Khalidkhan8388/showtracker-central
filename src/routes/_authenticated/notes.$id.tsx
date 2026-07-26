@@ -531,6 +531,37 @@ function NoteDetail() {
     }
   }
 
+  // Auto-refresh YouTube description if it was previously stored truncated (og:description caps ~160 chars).
+  const ytForRefresh = (note as any)?.youtube as LocalYouTube | null | undefined;
+  const ytRefreshedRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const y = ytForRefresh;
+    if (!note || !y || !y.canonical_url) return;
+    const desc = y.description ?? "";
+    if (desc.length >= 300) return;
+    const key = y.video_id ?? y.canonical_url;
+    if (ytRefreshedRef.current.has(key)) return;
+    ytRefreshedRef.current.add(key);
+    (async () => {
+      try {
+        const { fetchYouTubeFn } = await import("@/lib/youtube.functions");
+        const fresh = await fetchYouTubeFn({ data: { url: y.canonical_url } });
+        if (!fresh?.description || fresh.description.length <= desc.length) return;
+        await patchLocalNote(note.id, {
+          youtube: {
+            ...y,
+            description: fresh.description,
+            keywords: fresh.keywords ?? y.keywords ?? [],
+            duration_seconds: fresh.durationSeconds ?? y.duration_seconds,
+            view_count: fresh.viewCount ?? y.view_count,
+            published_at: fresh.publishedAt ?? y.published_at,
+          } as LocalYouTube,
+        } as any);
+      } catch (err) {
+        console.warn("[youtube] description refresh failed", err);
+      }
+    })();
+  }, [ytForRefresh?.video_id, ytForRefresh?.canonical_url, ytForRefresh?.description, note?.id]);
 
   if (!note) {
     return (
