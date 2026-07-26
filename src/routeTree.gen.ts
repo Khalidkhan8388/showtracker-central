@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedYoutubeCardTestRouteImport } from './routes/_authenticated/youtube-card-test'
 import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
@@ -32,6 +33,12 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedYoutubeCardTestRoute =
+  AuthenticatedYoutubeCardTestRouteImport.update({
+    id: '/youtube-card-test',
+    path: '/youtube-card-test',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
   id: '/share',
   path: '/share',
@@ -99,6 +106,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/youtube-card-test': typeof AuthenticatedYoutubeCardTestRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -113,6 +121,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/youtube-card-test': typeof AuthenticatedYoutubeCardTestRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -129,6 +138,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
+  '/_authenticated/youtube-card-test': typeof AuthenticatedYoutubeCardTestRoute
   '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -145,6 +155,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/youtube-card-test'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
@@ -159,6 +170,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/youtube-card-test'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
@@ -174,6 +186,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/share'
+    | '/_authenticated/youtube-card-test'
     | '/_authenticated/cast/$personId'
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
@@ -203,6 +216,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/youtube-card-test': {
+      id: '/_authenticated/youtube-card-test'
+      path: '/youtube-card-test'
+      fullPath: '/youtube-card-test'
+      preLoaderRoute: typeof AuthenticatedYoutubeCardTestRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/share': {
       id: '/_authenticated/share'
@@ -289,6 +309,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
+  AuthenticatedYoutubeCardTestRoute: typeof AuthenticatedYoutubeCardTestRoute
   AuthenticatedCastPersonIdRoute: typeof AuthenticatedCastPersonIdRoute
   AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
@@ -303,6 +324,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
+  AuthenticatedYoutubeCardTestRoute: AuthenticatedYoutubeCardTestRoute,
   AuthenticatedCastPersonIdRoute: AuthenticatedCastPersonIdRoute,
   AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
