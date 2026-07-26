@@ -20,7 +20,7 @@ export type YouTubeCardVariant = "grid" | "row" | "hero" | "compact";
 function ChannelBadge({ name }: { name: string | null }) {
   const initial = (name?.trim() ?? "?").slice(0, 1).toUpperCase();
   return (
-    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white dark:bg-white dark:text-neutral-900">
+    <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-neutral-900 text-[9px] font-bold text-white dark:bg-white dark:text-neutral-900">
       {initial}
     </div>
   );
@@ -30,10 +30,10 @@ function PlayGlyph({ small = false }: { small?: boolean }) {
   return (
     <div
       className={`flex items-center justify-center rounded-full bg-[#FF0033] text-white shadow-lg ${
-        small ? "h-9 w-9" : "h-14 w-14"
+        small ? "h-7 w-7" : "h-10 w-10"
       }`}
     >
-      <Play className={small ? "h-4 w-4 fill-white" : "h-6 w-6 fill-white"} strokeWidth={0} />
+      <Play className={small ? "h-3 w-3 fill-white" : "h-4 w-4 fill-white"} strokeWidth={0} />
     </div>
   );
 }
