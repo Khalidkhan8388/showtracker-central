@@ -70,6 +70,7 @@ export const YouTubeCard = memo(function YouTubeCard({
   variant,
   selectMode = false,
   selected = false,
+  hideThumb = false,
 }: {
   note: Note;
   variant: YouTubeCardVariant;
