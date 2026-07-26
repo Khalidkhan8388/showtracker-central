@@ -638,17 +638,17 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
       </div>
 
-      {/* Main pill — fixed position, only resizes */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center px-5">
+      {/* Main pill — compact, fixed position */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-5 flex justify-center px-4 pb-[env(safe-area-inset-bottom)]">
       <div
         role="toolbar"
         aria-label="Capture actions"
         style={{
-          transform: shrunk ? "scale(0.86)" : "scale(1)",
+          transform: shrunk ? "scale(0.9)" : "scale(1)",
           transformOrigin: "bottom center",
           willChange: "transform",
         }}
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 transition-transform duration-200 ease-out motion-reduce:transition-none ${
+        className={`pointer-events-auto inline-flex items-center gap-0.5 rounded-full p-1 shadow-2xl ring-1 transition-transform duration-200 ease-out motion-reduce:transition-none ${
           recording
             ? "bg-destructive/85 ring-destructive/30 animate-pulse"
             : "bg-white/95 ring-black/10 dark:bg-neutral-900/95 dark:ring-white/10"
@@ -666,58 +666,58 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         <Link
           to="/search"
           aria-label="Search"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
-          <Search className="h-5 w-5" strokeWidth={2} />
+          <Search className="h-4 w-4" strokeWidth={2} />
         </Link>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
           aria-label="Attach image"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
-          <ImagePlus className="h-5 w-5" strokeWidth={2} />
+          <ImagePlus className="h-4 w-4" strokeWidth={2} />
         </button>
         <button
           onClick={() => setTextOpen(true)}
           disabled={disabled || recording}
           aria-label="Write text note"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
-          <FileText className="h-5 w-5" strokeWidth={2} />
+          <FileText className="h-4 w-4" strokeWidth={2} />
         </button>
         <button
           onClick={() => setLinkOpen(true)}
           disabled={disabled || recording}
           aria-label="Save web link"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
-          <Link2 className="h-5 w-5" strokeWidth={2} />
+          <Link2 className="h-4 w-4" strokeWidth={2} />
         </button>
 
-        <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
+        <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
 
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="group inline-flex items-center gap-2.5 rounded-full bg-black/5 py-2 pl-3 pr-5 text-neutral-900 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+          className="group inline-flex items-center gap-2 rounded-full bg-black/5 py-1.5 pl-2.5 pr-3 text-neutral-900 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
         >
 
 
           <span className="relative flex items-center justify-center">
             {!recording && !showSpinner && (
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
+              <span className="absolute -right-0.5 -top-0.5 h-1.5 w-1.5 rounded-full bg-primary ring-1 ring-foreground" />
             )}
             {showSpinner ? (
-              <Loader2 className="h-5 w-5 animate-spin" />
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : recording ? (
-              <Square className="h-4 w-4" fill="currentColor" />
+              <Square className="h-3.5 w-3.5" fill="currentColor" />
             ) : (
-              <Mic className="h-5 w-5" strokeWidth={2} />
+              <Mic className="h-4 w-4" strokeWidth={2} />
             )}
           </span>
-          <span className="text-sm font-semibold tracking-tight tabular-nums">{label}</span>
+          <span className="text-xs font-semibold tracking-tight tabular-nums">{label}</span>
         </button>
       </div>
       </div>
