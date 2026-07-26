@@ -421,6 +421,67 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
   } catch {
     // Fall through to normal AI link processing.
   }
+  // 1b) YouTube — dedicated fetcher + AI analysis using title + description + captions.
+  try {
+    const { parseYouTubeId } = await import("./youtube");
+    if (parseYouTubeId(url)) {
+      const { fetchYouTubeFn } = await import("./youtube.functions");
+      const yt = await fetchYouTubeFn({ data: { url } });
+      let heading = yt.title ?? "YouTube video";
+      let summary = yt.description?.slice(0, 400) ?? null;
+      let keyPoints: string[] = [];
+      let tasksPayload: LocalTask[] = [];
+      try {
+        const { analyzeYouTubeFn } = await import("./ai.functions");
+        const ai = await analyzeYouTubeFn({
+          data: {
+            title: yt.title,
+            channelName: yt.channelName,
+            description: yt.description,
+            captions: yt.captions,
+            url: yt.canonicalUrl,
+          },
+        });
+        heading = ai.heading || heading;
+        summary = ai.summary || summary;
+        keyPoints = ai.key_points ?? [];
+        tasksPayload = ai.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
+      } catch (aiErr) {
+        console.error("[youtube] AI analysis failed, keeping metadata-only card", aiErr);
+      }
+      const tags = (yt.keywords ?? [])
+        .slice(0, 6)
+        .map((k) => k.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, ""))
+        .filter(Boolean);
+      await updateNote(note.id, {
+        status: "ready",
+        heading: heading.slice(0, 140),
+        summary,
+        tasks: tasksPayload,
+        key_points: keyPoints,
+        tags,
+        source_url: normalizeUrl(yt.canonicalUrl),
+        youtube: {
+          video_id: yt.videoId,
+          canonical_url: yt.canonicalUrl,
+          title: yt.title,
+          channel_name: yt.channelName,
+          channel_url: yt.channelUrl,
+          channel_id: yt.channelId,
+          thumbnail_url: yt.thumbnailUrl,
+          description: yt.description,
+          published_at: yt.publishedAt,
+          duration_seconds: yt.durationSeconds,
+          view_count: yt.viewCount,
+          keywords: yt.keywords ?? [],
+          captions_available: (yt.captions?.length ?? 0) > 40,
+        },
+      });
+      return { ok: true as const, noteId: note.id, youtube: true as const };
+    }
+  } catch (ytErr) {
+    console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
+  }
   // 2) Fall back to standard AI enrichment
   try {
     const result = await analyzeWebLinkFn({ data: { url } });

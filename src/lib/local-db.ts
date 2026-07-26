@@ -93,6 +93,7 @@ export type LocalNote = {
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
+  youtube?: LocalYouTube | null;
   reminder_at?: string | null;
   reminders?: string[];
   hidden_episode_reminders?: string[];
@@ -215,6 +216,14 @@ class BraintapeDB extends Dexie {
           n.reminders = n.reminder_at ? [n.reminder_at] : [];
         }
       });
+    });
+    // v11: optional YouTube payload on link notes. No new index.
+    this.version(11).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
     });
   }
 }
