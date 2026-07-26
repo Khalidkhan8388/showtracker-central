@@ -1,7 +1,7 @@
-import { memo } from "react";
+import { memo, useState } from "react";
 import { Play, CheckCircle2, Pin, Check } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { formatYtDuration } from "@/lib/youtube";
+import { formatYtDuration, youtubeThumb } from "@/lib/youtube";
 import type { LocalYouTube } from "@/lib/local-db";
 import { useTheme } from "@/lib/theme";
 
