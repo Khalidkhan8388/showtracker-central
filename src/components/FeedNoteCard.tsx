@@ -119,30 +119,8 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     );
   }
 
-  // YouTube — dedicated card
-  const yt = (note as any).youtube as LocalYouTube | null | undefined;
-  if (yt) {
-    const isHeroY = variant === "hero";
-    const ytVariant = isHeroY
-      ? "hero"
-      : variant === "wide"
-        ? "row"
-        : variant === "square" && !fullWidth
-          ? "compact"
-          : "grid";
-    const sizing = variant === "square" && !fullWidth ? "w-40 shrink-0" : "w-full";
-    return (
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={handleClick}
-        {...lp.handlers}
-        className={`${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97]`}
-      >
-        <YouTubeCard note={note as any} variant={ytVariant as any} selectMode={selectMode} selected={selected} hideThumb={hideYouTubeThumb} />
-      </div>
-    );
-  }
+  // YouTube links render as normal web link cards.
+
 
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
