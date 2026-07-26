@@ -124,12 +124,16 @@ async function scrapeWatchPage(videoId: string): Promise<WatchScrape> {
     // Prefer og:title
     const ogTitle = html.match(/<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']+)["']/i);
     if (ogTitle) out.title = decodeHtml(ogTitle[1]);
-    const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
-    if (ogDesc) out.description = decodeHtml(ogDesc[1]);
-    // Fallback description — attributedDescription (richer)
+    // Prefer richer full description over og:description (which YouTube truncates to ~160 chars)
+    const attr = html.match(/"attributedDescriptionBodyText"\s*:\s*\{\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+    if (attr) out.description = jsonUnescape(attr[1]);
     if (!out.description) {
-      const attr = html.match(/"attributedDescriptionBodyText"\s*:\s*\{\s*"content"\s*:\s*"((?:[^"\\]|\\.)*)"/);
-      if (attr) out.description = jsonUnescape(attr[1]);
+      const shortDesc = html.match(/"shortDescription"\s*:\s*"((?:[^"\\]|\\.)*)"/);
+      if (shortDesc) out.description = jsonUnescape(shortDesc[1]);
+    }
+    if (!out.description) {
+      const ogDesc = html.match(/<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']+)["']/i);
+      if (ogDesc) out.description = decodeHtml(ogDesc[1]);
     }
     const pub = html.match(/<meta[^>]+itemprop=["']datePublished["'][^>]+content=["']([^"']+)["']/i);
     if (pub) out.publishedAt = pub[1];
