@@ -197,6 +197,63 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
         )}
       </section>
 
+      {/* Cast */}
+      {(castQuery.isLoading || cast.length > 0) && (
+        <section className="mt-6 -mx-5">
+          <div className="mb-2 flex items-center justify-between px-6">
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Cast</h2>
+            {cast.length > 0 && (
+              <span className="text-[11px] tabular-nums text-muted-foreground">{cast.length}</span>
+            )}
+          </div>
+          <div className="flex gap-3 overflow-x-auto px-5 pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {castQuery.isLoading && cast.length === 0
+              ? Array.from({ length: 8 }).map((_, i) => (
+                  <div key={i} className="w-20 shrink-0">
+                    <div className="h-20 w-20 animate-pulse rounded-full bg-muted" />
+                    <div className="mx-auto mt-2 h-3 w-16 animate-pulse rounded bg-muted" />
+                    <div className="mx-auto mt-1 h-2 w-12 animate-pulse rounded bg-muted/70" />
+                  </div>
+                ))
+              : cast.map((c) => {
+                  const img = profile(c.profile_path, "w185");
+                  return (
+                    <a
+                      key={c.id}
+                      href={`https://www.themoviedb.org/person/${c.id}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="group w-20 shrink-0 text-center active:opacity-60"
+                    >
+                      <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-muted ring-1 ring-black/5">
+                        {img ? (
+                          <img
+                            src={img}
+                            alt={c.name}
+                            loading="lazy"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full items-center justify-center text-muted-foreground">
+                            <User className="h-6 w-6" />
+                          </div>
+                        )}
+                      </div>
+                      <p className="mt-2 line-clamp-2 text-[11px] font-semibold leading-tight text-foreground">
+                        {c.name}
+                      </p>
+                      {c.character && (
+                        <p className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{c.character}</p>
+                      )}
+                    </a>
+                  );
+                })}
+          </div>
+        </section>
+      )}
+
+
+
       {/* Episodes (TV) */}
       {isTv && media.seasons && media.seasons.length > 0 && (
         <section className="mt-8">
