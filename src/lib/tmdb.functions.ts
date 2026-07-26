@@ -342,3 +342,44 @@ export const fetchTmdbLogoFn = createServerFn({ method: "POST" })
     }
   });
 
+// -- Cast (top-billed) -------------------------------------------------------
+
+export type TmdbCastMember = {
+  id: number;
+  name: string;
+  character: string;
+  profile_path: string | null;
+  order: number;
+};
+
+export const fetchTmdbCreditsFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => LookupIdInput.parse(d))
+  .handler(async ({ data }): Promise<{ cast: TmdbCastMember[] }> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    try {
+      const path = data.type === "movie"
+        ? `/movie/${data.tmdb_id}/credits`
+        : `/tv/${data.tmdb_id}/aggregate_credits`;
+      const r = await tmdbGet(path, key);
+      const raw: any[] = Array.isArray(r.cast) ? r.cast : [];
+      const cast: TmdbCastMember[] = raw
+        .slice(0, 40)
+        .map((c) => ({
+          id: Number(c.id),
+          name: c.name ?? c.original_name ?? "",
+          character: Array.isArray(c.roles) && c.roles[0]?.character
+            ? c.roles[0].character
+            : (c.character ?? ""),
+          profile_path: c.profile_path ?? null,
+          order: typeof c.order === "number" ? c.order : 999,
+        }))
+        .filter((c) => c.name)
+        .sort((a, b) => a.order - b.order)
+        .slice(0, 20);
+      return { cast };
+    } catch {
+      return { cast: [] };
+    }
+  });
+
