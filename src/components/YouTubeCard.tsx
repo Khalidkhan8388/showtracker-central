@@ -75,6 +75,7 @@ export const YouTubeCard = memo(function YouTubeCard({
   variant: YouTubeCardVariant;
   selectMode?: boolean;
   selected?: boolean;
+  hideThumb?: boolean;
 }) {
   const yt = note.youtube!;
   const { isDark } = useTheme();
