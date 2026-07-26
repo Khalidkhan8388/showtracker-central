@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon } from "lucide-react";
+import type { LocalYouTube } from "@/lib/local-db";
+import { formatYtDuration } from "@/lib/youtube";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 
@@ -306,6 +308,8 @@ function NoteDetail() {
   const [readerBusy, setReaderBusy] = useState(false);
   const [readerData, setReaderData] = useState<{ markdown: string; readingMinutes: number; words: number } | null>(null);
   const [readerError, setReaderError] = useState<string | null>(null);
+  const [ytPlaying, setYtPlaying] = useState(false);
+  const [ytDescOpen, setYtDescOpen] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
