@@ -110,16 +110,10 @@ export const YouTubeCard = memo(function YouTubeCard({
   const Thumb = ({ big = true }: { big?: boolean }) => (
     <div className="relative w-full overflow-hidden bg-black">
       <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-        <img
-          src={thumb}
+        <YouTubeThumbImg
+          videoId={yt.video_id}
           alt=""
-          loading="lazy"
-          decoding="async"
-          className="absolute inset-0 h-full w-full object-cover"
-          onError={(e) => {
-            const el = e.currentTarget;
-            if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
-          }}
+          className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
         <div className="absolute inset-0 flex items-center justify-center">
