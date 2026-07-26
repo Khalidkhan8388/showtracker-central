@@ -156,7 +156,11 @@ export const YouTubeCard = memo(function YouTubeCard({
         <div className="flex items-stretch gap-2 p-2">
           <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: "38%", maxWidth: 160 }}>
             <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-              <img src={thumb} alt="" loading="lazy" decoding="async" className="absolute inset-0 h-full w-full object-cover" />
+              <YouTubeThumbImg
+                videoId={yt.video_id}
+                alt=""
+                className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
+              />
               <div className="absolute inset-0 flex items-center justify-center">
                 <PlayGlyph small />
               </div>
