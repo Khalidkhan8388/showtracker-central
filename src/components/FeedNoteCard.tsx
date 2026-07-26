@@ -62,6 +62,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   thumbUrl,
   selected = false,
   selectMode = false,
+  hideYouTubeThumb = false,
   onOpen,
   onLongPress,
   onToggleSel,
@@ -72,6 +73,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
   thumbUrl?: string;
   selected?: boolean;
   selectMode?: boolean;
+  hideYouTubeThumb?: boolean;
   onOpen: () => void;
   onLongPress?: () => void;
   onToggleSel?: () => void;
