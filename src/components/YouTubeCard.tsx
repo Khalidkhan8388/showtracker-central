@@ -194,16 +194,10 @@ export const YouTubeCard = memo(function YouTubeCard({
       <div className="flex items-stretch gap-2.5 p-2.5">
         <div className="relative shrink-0 overflow-hidden rounded-lg bg-black" style={{ width: isHero ? "44%" : "36%", maxWidth: isHero ? 200 : 150 }}>
           <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
-            <img
-              src={thumb}
+            <YouTubeThumbImg
+              videoId={yt.video_id}
               alt=""
-              loading="lazy"
-              decoding="async"
-              className="absolute inset-0 h-full w-full object-cover"
-              onError={(e) => {
-                const el = e.currentTarget;
-                if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
-              }}
+              className="absolute inset-0 h-full w-full scale-[1.08] object-cover"
             />
             <div className="absolute inset-0 flex items-center justify-center">
               <PlayGlyph small />
