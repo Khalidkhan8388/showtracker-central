@@ -100,11 +100,11 @@ export const YouTubeCard = memo(function YouTubeCard({
           <PlayGlyph small={!big} />
         </div>
         {duration && (
-          <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-white">
+          <div className="absolute bottom-1.5 right-1.5 rounded-md bg-black/85 px-1 py-0.5 text-[9px] font-semibold tabular-nums text-white">
             {duration}
           </div>
         )}
-        <div className="absolute left-2 top-2 flex items-center gap-1 rounded-md bg-black/70 px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white">
+        <div className="absolute left-1.5 top-1.5 flex items-center gap-1 rounded-md bg-black/70 px-1 py-0.5 text-[8px] font-bold uppercase tracking-wider text-white">
           <span className="text-[#FF0033]">▶</span> YouTube
         </div>
       </div>
