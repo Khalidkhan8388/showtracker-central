@@ -56,6 +56,22 @@ export type LocalMedia = {
   watched_episodes: string[];
 };
 
+export type LocalYouTube = {
+  video_id: string;
+  canonical_url: string;
+  title: string | null;
+  channel_name: string | null;
+  channel_url: string | null;
+  channel_id: string | null;
+  thumbnail_url: string | null;
+  description: string | null;
+  published_at: string | null;
+  duration_seconds: number | null;
+  view_count: number | null;
+  keywords: string[];
+  captions_available: boolean;
+};
+
 export type LocalNote = {
   id: string;
   user_id: string;
@@ -77,6 +93,7 @@ export type LocalNote = {
   error: string | null;
   deleted_at: string | null;
   media?: LocalMedia | null;
+  youtube?: LocalYouTube | null;
   reminder_at?: string | null;
   reminders?: string[];
   hidden_episode_reminders?: string[];
@@ -199,6 +216,14 @@ class BraintapeDB extends Dexie {
           n.reminders = n.reminder_at ? [n.reminder_at] : [];
         }
       });
+    });
+    // v11: optional YouTube payload on link notes. No new index.
+    this.version(11).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
     });
   }
 }

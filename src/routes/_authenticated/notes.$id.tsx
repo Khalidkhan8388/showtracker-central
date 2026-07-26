@@ -3,7 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon } from "lucide-react";
+import type { LocalYouTube } from "@/lib/local-db";
+import { formatYtDuration } from "@/lib/youtube";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 
@@ -48,6 +50,7 @@ type Note = {
   ocr_hidden?: boolean;
   reminder_at?: string | null;
   reminders?: string[];
+  youtube?: LocalYouTube | null;
 
   reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
@@ -306,6 +309,8 @@ function NoteDetail() {
   const [readerBusy, setReaderBusy] = useState(false);
   const [readerData, setReaderData] = useState<{ markdown: string; readingMinutes: number; words: number } | null>(null);
   const [readerError, setReaderError] = useState<string | null>(null);
+  const [ytPlaying, setYtPlaying] = useState(false);
+  const [ytDescOpen, setYtDescOpen] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
@@ -543,6 +548,7 @@ function NoteDetail() {
   const hasBody = typeof note.transcript === "string" && note.transcript.trim().length > 0;
   const isImage = !isVoice && !isLink && !hasBody && Array.isArray(note.image_paths) && note.image_paths.length > 0;
   const isText = !isVoice && !isLink && !isImage;
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -564,6 +570,12 @@ function NoteDetail() {
     const days = Math.round(hrs / 24);
     if (days < 7) return `${days}d ago`;
     return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  }
+  function formatViews(n: number) {
+    if (n >= 1_000_000_000) return `${(n / 1_000_000_000).toFixed(1)}B`;
+    if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(1)}M`;
+    if (n >= 1_000) return `${(n / 1_000).toFixed(1)}K`;
+    return n.toLocaleString();
   }
   const readingMinutes = note.transcript
     ? Math.max(1, Math.round(note.transcript.trim().split(/\s+/).length / 220))
@@ -714,10 +726,17 @@ function NoteDetail() {
         )}
 
         {/* Kind pill */}
-        <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-          {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-          <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
-        </div>
+        {yt ? (
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-[#FF0033]/10 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-wide text-[#FF0033]">
+            <YoutubeIcon className="h-3 w-3" />
+            <span>YouTube</span>
+          </div>
+        ) : (
+          <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+            {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+            <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
+          </div>
+        )}
 
         <h1 className="text-[30px] font-bold leading-[1.1] tracking-tight">
           {note.heading ?? (processing ? "Processing…" : "Untitled")}
@@ -736,9 +755,140 @@ function NoteDetail() {
           )}
         </p>
 
+        {yt && (
+          <>
+            {/* Channel + publish + views row */}
+            <div className="mt-3 flex flex-wrap items-center gap-x-2 gap-y-1 text-[13px] text-muted-foreground">
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-neutral-900 text-[10px] font-bold text-white dark:bg-white dark:text-neutral-900">
+                {(yt.channel_name ?? "?").slice(0, 1).toUpperCase()}
+              </div>
+              {yt.channel_url ? (
+                <a
+                  href={yt.channel_url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="truncate font-medium text-foreground no-underline"
+                >
+                  {yt.channel_name ?? "YouTube"}
+                </a>
+              ) : (
+                <span className="truncate font-medium text-foreground">{yt.channel_name ?? "YouTube"}</span>
+              )}
+              {yt.published_at && (
+                <>
+                  <span>·</span>
+                  <span>{new Date(yt.published_at).toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })}</span>
+                </>
+              )}
+              {yt.view_count != null && (
+                <>
+                  <span>·</span>
+                  <span>{formatViews(yt.view_count)} views</span>
+                </>
+              )}
+              {yt.captions_available && (
+                <span className="ml-1 rounded bg-muted px-1.5 py-0.5 text-[10px] font-semibold uppercase text-foreground">CC</span>
+              )}
+            </div>
 
+            {/* Player / thumbnail */}
+            <section className="mt-4 overflow-hidden rounded-2xl bg-black">
+              <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
+                {ytPlaying ? (
+                  <iframe
+                    src={`https://www.youtube-nocookie.com/embed/${yt.video_id}?autoplay=1&rel=0&modestbranding=1`}
+                    title={yt.title ?? "YouTube video"}
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                    allowFullScreen
+                    className="absolute inset-0 h-full w-full"
+                  />
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setYtPlaying(true)}
+                    className="group absolute inset-0 block"
+                    aria-label="Play video"
+                  >
+                    <img
+                      src={yt.thumbnail_url ?? `https://i.ytimg.com/vi/${yt.video_id}/maxresdefault.jpg`}
+                      alt=""
+                      className="absolute inset-0 h-full w-full object-cover"
+                      onError={(e) => {
+                        const el = e.currentTarget;
+                        if (!el.src.includes("hqdefault")) el.src = `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
+                      }}
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-black/10" />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#FF0033] text-white shadow-2xl transition-transform group-active:scale-95">
+                        <Play className="h-7 w-7 fill-white" strokeWidth={0} />
+                      </div>
+                    </div>
+                    {yt.duration_seconds != null && (
+                      <div className="absolute bottom-2 right-2 rounded-md bg-black/85 px-2 py-1 text-[12px] font-semibold tabular-nums text-white">
+                        {formatYtDuration(yt.duration_seconds)}
+                      </div>
+                    )}
+                  </button>
+                )}
+              </div>
+            </section>
 
-        {isLink && note.source_url && (
+            {/* Actions */}
+            <section className="mt-4 flex gap-2">
+              <a
+                href={yt.canonical_url}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-[#FF0033] px-4 py-3 text-[15px] font-semibold text-white no-underline active:opacity-80"
+              >
+                <YoutubeIcon className="h-4 w-4" />
+                Open on YouTube
+              </a>
+              <button
+                type="button"
+                onClick={() => navigator.clipboard.writeText(yt.canonical_url).then(() => toast.success("Link copied"))}
+                className="inline-flex items-center justify-center rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground active:opacity-70"
+                aria-label="Copy link"
+              >
+                <Copy className="h-4 w-4" />
+              </button>
+            </section>
+
+            {/* AI summary */}
+            {note.summary && (
+              <section className="mt-6">
+                <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Summary
+                </h2>
+                <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
+              </section>
+            )}
+
+            {/* Description */}
+            {yt.description && yt.description.trim().length > 0 && (
+              <section className="mt-6">
+                <button
+                  type="button"
+                  onClick={() => setYtDescOpen((v) => !v)}
+                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
+                >
+                  <span>Description</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ytDescOpen ? "rotate-180" : ""}`} />
+                </button>
+                <div
+                  className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
+                    ytDescOpen ? "" : "line-clamp-4"
+                  }`}
+                >
+                  {yt.description}
+                </div>
+              </section>
+            )}
+          </>
+        )}
+
+        {isLink && note.source_url && !yt && (
           <div className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
             {linkHost && (
               <img
@@ -766,7 +916,7 @@ function NoteDetail() {
           onChange={onAddImagesToSaved}
         />
 
-        {isLink && imageUrls.length > 0 && (
+        {isLink && imageUrls.length > 0 && !yt && (
           <section className="mt-5">
             <a
               href={note.source_url!}
@@ -784,7 +934,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.source_url && (
+        {isLink && note.source_url && !yt && (
           <section className="mt-5 flex gap-2">
             <a
               href={note.source_url}
@@ -824,7 +974,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.summary && (
+        {isLink && note.summary && !yt && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
@@ -833,7 +983,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && readerData && readerOpen && (
+        {isLink && readerData && readerOpen && !yt && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

@@ -3,6 +3,8 @@ import { formatDistanceToNow } from "date-fns";
 import { CheckCircle2, Loader2, AlertCircle, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { useResolvedImageSrc } from "@/components/LocalImage";
+import { YouTubeCard } from "@/components/YouTubeCard";
+import type { LocalYouTube } from "@/lib/local-db";
 import { useTheme } from "@/lib/theme";
 
 export type Note = {
@@ -197,6 +199,31 @@ export const NoteCard = memo(function NoteCard({
       : undefined;
 
   const isProcessing = note.status !== "ready" && note.status !== "failed";
+
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  if (yt) {
+    const isHeroY = variant === "hero";
+    const ytVariant = isHeroY
+      ? "hero"
+      : variant === "wide"
+        ? "row"
+        : variant === "square" && !fullWidth
+          ? "compact"
+          : "grid";
+    const sizingY = variant === "square" && !fullWidth ? "w-40 shrink-0" : "w-full";
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        {...lp.handlers}
+        className={`${sizingY} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97]`}
+      >
+        <YouTubeCard note={note as any} variant={ytVariant as any} selectMode={selectMode} selected={selected} />
+      </div>
+    );
+  }
+
 
   return (
     <div
