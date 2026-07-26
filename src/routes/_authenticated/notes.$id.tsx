@@ -6,6 +6,7 @@ import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appe
 import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon } from "lucide-react";
 import type { LocalYouTube } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
+import { YouTubeThumbImg } from "@/components/YouTubeCard";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 
