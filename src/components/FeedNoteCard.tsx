@@ -139,7 +139,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         {...lp.handlers}
         className={`${sizing} cursor-pointer select-none transition-transform duration-200 ease-out active:scale-[0.97]`}
       >
-        <YouTubeCard note={note as any} variant={ytVariant as any} selectMode={selectMode} selected={selected} />
+        <YouTubeCard note={note as any} variant={ytVariant as any} selectMode={selectMode} selected={selected} hideThumb={hideYouTubeThumb} />
       </div>
     );
   }
