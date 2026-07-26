@@ -30,6 +30,8 @@ function formatDate(date: string | null) {
 function CastDetail() {
   const { personId } = Route.useParams();
   const id = Number(personId);
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState<string | null>(null);
 
   const { data: person, isLoading } = useQuery({
     queryKey: ["tmdb-person", id],
@@ -39,6 +41,56 @@ function CastDetail() {
   });
 
   const profileUrl = person?.profile_path ? profile(person.profile_path, "h632") : null;
+
+  // Map of `${type}:${tmdb_id}` -> noteId for filmography items already saved.
+  const savedMap = useLiveQuery(async () => {
+    const rows = await db.notes.toArray();
+    const m = new Map<string, string>();
+    for (const n of rows) {
+      if (!n.deleted_at && n.media?.tmdb_id && n.media?.type) {
+        m.set(`${n.media.type}:${n.media.tmdb_id}`, n.id);
+      }
+    }
+    return m;
+  }, []);
+
+  const openCredit = async (type: "movie" | "tv", tmdbId: number) => {
+    const key = `${type}:${tmdbId}`;
+    const existingId = savedMap?.get(key);
+    if (existingId) {
+      navigate({ to: "/notes/$id", params: { id: existingId } });
+      return;
+    }
+    if (busy) return;
+    setBusy(key);
+    try {
+      const res = await addTmdbMedia({ data: { type, tmdb_id: tmdbId } });
+      navigate({ to: "/notes/$id", params: { id: res.noteId } });
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not open — try again");
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const addCredit = async (e: React.MouseEvent, type: "movie" | "tv", tmdbId: number, title: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const key = `${type}:${tmdbId}`;
+    if (savedMap?.has(key) || busy) return;
+    setBusy(key);
+    try {
+      await addTmdbMedia({ data: { type, tmdb_id: tmdbId } });
+      toast.success(`Added ${title}`);
+    } catch (err) {
+      console.error(err);
+      toast.error("Could not add — try again");
+    } finally {
+      setBusy(null);
+    }
+  };
+
 
   return (
     <div className="min-h-screen pb-8">
