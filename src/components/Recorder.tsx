@@ -407,7 +407,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40">
       {/* Ancillary pills stack ABOVE the main pill without pushing it */}
-      <div className="pointer-events-none absolute inset-x-0 bottom-[104px] flex flex-col items-center gap-2 px-5">
+      <div className="pointer-events-none absolute inset-x-0 bottom-[124px] flex flex-col items-center gap-2 px-5">
 
       {pending.length > 0 && (
         <div role="list" aria-label="Attached images" className="pointer-events-auto flex max-w-full gap-2 overflow-x-auto rounded-2xl bg-white/85 p-2 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10">
