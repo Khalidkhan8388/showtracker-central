@@ -42,7 +42,7 @@ function CastDetail() {
       <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-xl">
         <button
           type="button"
-          onClick={() => navigate({ to: -1 })}
+          onClick={() => window.history.back()}
           className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium text-foreground active:opacity-60"
         >
           <ChevronLeft className="h-4 w-4" /> Back
