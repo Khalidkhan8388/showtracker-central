@@ -556,6 +556,7 @@ function Home() {
                       thumbUrl={thumbs[n.id]}
                       selected={selectedNotes.has(n.id)}
                       selectMode={noteSelectMode}
+                      hideYouTubeThumb
                       onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
                       onLongPress={() => toggleNoteSel(n.id)}
                       onToggleSel={() => toggleNoteSel(n.id)}
