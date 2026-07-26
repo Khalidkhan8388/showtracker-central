@@ -225,7 +225,7 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                       rel="noreferrer"
                       className="group w-20 shrink-0 text-center active:opacity-60"
                     >
-                      <div className="mx-auto h-20 w-20 overflow-hidden rounded-full bg-muted ring-1 ring-black/5">
+                      <div className="mx-auto aspect-square w-20 overflow-hidden rounded-[15px] bg-muted ring-1 ring-black/5">
                         {img ? (
                           <img
                             src={img}
