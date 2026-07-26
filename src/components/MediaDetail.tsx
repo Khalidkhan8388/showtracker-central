@@ -210,7 +210,7 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
             {castQuery.isLoading && cast.length === 0
               ? Array.from({ length: 8 }).map((_, i) => (
                   <div key={i} className="w-20 shrink-0">
-                    <div className="h-20 w-20 animate-pulse rounded-full bg-muted" />
+                    <div className="aspect-square w-20 animate-pulse rounded-[15px] bg-muted" />
                     <div className="mx-auto mt-2 h-3 w-16 animate-pulse rounded bg-muted" />
                     <div className="mx-auto mt-1 h-2 w-12 animate-pulse rounded bg-muted/70" />
                   </div>
