@@ -42,6 +42,14 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
   const backdropUrl = backdrop(media.backdrop_path, "w1280");
   const watchedSet = useMemo(() => new Set(media.watched_episodes), [media.watched_episodes]);
 
+  const castQuery = useQuery({
+    queryKey: ["tmdb-credits", media.type, media.tmdb_id],
+    queryFn: () => fetchTmdbCreditsFn({ data: { type: media.type, tmdb_id: media.tmdb_id } }),
+    staleTime: 1000 * 60 * 60 * 24,
+    gcTime: 1000 * 60 * 60 * 24 * 7,
+  });
+  const cast = castQuery.data?.cast ?? [];
+
   return (
     <div className="pb-8">
       {/* Backdrop hero */}
