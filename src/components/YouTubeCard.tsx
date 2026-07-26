@@ -78,7 +78,6 @@ export const YouTubeCard = memo(function YouTubeCard({
 }) {
   const yt = note.youtube!;
   const { isDark } = useTheme();
-  const thumb = yt.thumbnail_url ?? `https://i.ytimg.com/vi/${yt.video_id}/hqdefault.jpg`;
   const duration = formatYtDuration(yt.duration_seconds);
   const channel = yt.channel_name ?? "YouTube";
   const title = note.heading ?? yt.title ?? "YouTube video";
