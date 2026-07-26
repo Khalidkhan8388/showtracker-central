@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star, Plus, Check, Loader2 } from "lucide-react";
 import { fetchTmdbPersonFn } from "@/lib/tmdb.functions";
