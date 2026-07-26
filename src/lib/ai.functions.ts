@@ -422,6 +422,69 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- youtube -------------------------------------------------------
+
+const YT_SYSTEM_PROMPT = `You turn YouTube video metadata into a structured saved note.
+Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
+
+- heading: short (max ~10 words), title case. Prefer the actual video title lightly refined; NEVER include the channel name or timestamps.
+- summary: 3-6 sentences distilling what the video is actually about — the argument, story, or steps — using the captions as the primary source of truth. Do NOT restate the title. Do NOT say "in this video".
+- key_points: 3-7 concrete takeaways as short bullet strings. Each ≤ 120 chars. Return [] if the source is too thin.
+- tasks: concrete, actionable to-dos plausibly triggered by watching this. Skip "Watch this later". Cap at 6. Return [] if nothing is actionable.
+
+Respond with ONLY the JSON object.`;
+
+const YouTubeAnalyzeInput = z.object({
+  title: z.string().trim().max(400).nullable().optional(),
+  channelName: z.string().trim().max(200).nullable().optional(),
+  description: z.string().trim().max(20000).nullable().optional(),
+  captions: z.string().trim().max(60000).nullable().optional(),
+  url: z.string().trim().url().max(2000),
+});
+
+export const analyzeYouTubeFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => YouTubeAnalyzeInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const parts: string[] = [`URL: ${data.url}`];
+    if (data.title) parts.push(`Title: ${data.title}`);
+    if (data.channelName) parts.push(`Channel: ${data.channelName}`);
+    if (data.description) parts.push(`Description:\n${data.description.slice(0, 4000)}`);
+    if (data.captions && data.captions.length > 40) {
+      parts.push(`Captions (auto-generated may contain errors):\n${data.captions.slice(0, 24000)}`);
+    } else {
+      parts.push(`(No captions available — rely on title + description.)`);
+    }
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: YT_SYSTEM_PROMPT },
+          { role: "user", content: parts.join("\n\n") },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 120_000);
+    if (!res.ok) throw new Error(`AI failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+    const keyPoints: string[] = Array.isArray(parsed.key_points)
+      ? parsed.key_points.map((s: unknown) => String(s ?? "").trim()).filter(Boolean).slice(0, 7)
+      : [];
+    return {
+      heading: String(parsed.heading ?? data.title ?? "YouTube video").slice(0, 140),
+      summary: String(parsed.summary ?? "").slice(0, 2400),
+      key_points: keyPoints,
+      tasks: tasksFromRaw(parsed.tasks),
+    };
+  });
+
+
 // ---------- link label ----------------------------------------------------
 
 const LabelInput = z.object({ url: z.string().trim().url().max(2000) });
