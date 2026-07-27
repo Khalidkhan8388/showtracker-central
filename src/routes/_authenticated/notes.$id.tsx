@@ -1402,8 +1402,12 @@ function NoteDetail() {
                   fullscreen
                   onRemoveImage={removeImageFromBody}
                   onRemoveLink={removeLinkFromBody}
-                  placeholder="Start writing… # heading · - list · > quote · [[Title]] links a note"
+                  placeholder="Start writing… type / for commands · [[Title]] links a note"
                   wikiIndex={wikiIndex}
+                  onSlashInsert={(kind) => {
+                    if (kind === "image") editFileRef.current?.click();
+                    else if (kind === "link") setAddingLink(true);
+                  }}
                 />
               </div>
 
