@@ -91,6 +91,7 @@ export function BlockEditor({
   onRemoveLink,
   placeholder,
   wikiIndex,
+  onSlashInsert,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -99,6 +100,7 @@ export function BlockEditor({
   onRemoveLink: (href: string) => void;
   placeholder?: string;
   wikiIndex?: Map<string, string>;
+  onSlashInsert?: (kind: "image" | "link") => void;
 }) {
 
   const blocks = useMemo(() => parseBlocks(value), [value]);
