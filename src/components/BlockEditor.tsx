@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, X, Heading1, Heading2, Heading3, ListChecks, List, Quote, Minus, Code, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
+import { Loader2, X, Heading1, Heading2, Heading3, ListChecks, List, Quote, Minus, Code, Image as ImageIcon, Link as LinkIcon, Bold, Italic, Highlighter } from "lucide-react";
 import { LocalImage } from "@/components/LocalImage";
 
 // Match either an image (!...) or a plain markdown link ([label](url)).
