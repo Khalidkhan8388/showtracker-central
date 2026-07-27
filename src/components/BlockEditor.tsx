@@ -389,96 +389,6 @@ function lineStyleFor(line: string): string {
   return "text-[15px] text-foreground";
 }
 
-// ---------- Inline markdown ↔ HTML helpers ----------
-
-function escapeHtml(s: string): string {
-  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
-}
-
-function wikiChipClass(found: boolean): string {
-  return found
-    ? "mx-0.5 inline-flex items-center rounded-full bg-yellow-400/25 px-2 py-0.5 text-[0.9em] font-medium text-yellow-700 ring-1 ring-yellow-500/40"
-    : "mx-0.5 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.9em] font-medium text-muted-foreground ring-1 ring-border";
-}
-
-/** Render inline markdown to HTML. Keeps whole markdown line content, but
- *  visually hides the syntax markers by dropping them from the output. */
-function inlineMdToHtml(md: string, wikiIndex?: Map<string, string>): string {
-  if (!md) return "";
-  let out = escapeHtml(md);
-  // Order matters: highlight (==) → bold (**) → italic (*) → wiki [[...]]
-  out = out.replace(/==([^=\n]+?)==/g, `<mark class="rounded-sm bg-yellow-300/60 px-0.5 text-foreground">$1</mark>`);
-  out = out.replace(/\*\*([^*\n]+?)\*\*/g, `<strong class="font-semibold">$1</strong>`);
-  out = out.replace(/(^|[^*])\*([^*\n]+?)\*(?!\*)/g, `$1<em class="italic">$2</em>`);
-  out = out.replace(/\[\[([^\]\n]+?)\]\]/g, (_m, raw: string) => {
-    const title = raw.trim();
-    const found = !!wikiIndex?.get(title.toLowerCase());
-    return `<span class="${wikiChipClass(found)}">${escapeHtml(title)}</span>`;
-  });
-  return out;
-}
-
-/** Serialize a contenteditable line back to inline markdown. */
-function htmlToInlineMd(el: HTMLElement): string {
-  let out = "";
-  el.childNodes.forEach((n) => {
-    if (n.nodeType === Node.TEXT_NODE) {
-      out += n.textContent ?? "";
-    } else if (n.nodeType === Node.ELEMENT_NODE) {
-      const e = n as HTMLElement;
-      const tag = e.tagName.toLowerCase();
-      if (tag === "br") return; // ignore stray <br>
-      const inner = htmlToInlineMd(e);
-      if (tag === "strong" || tag === "b") out += `**${inner}**`;
-      else if (tag === "em" || tag === "i") out += `*${inner}*`;
-      else if (tag === "mark") out += `==${inner}==`;
-      else if (tag === "span" && e.classList.contains("mx-0.5")) out += `[[${e.textContent ?? ""}]]`;
-      else out += inner;
-    }
-  });
-  return out;
-}
-
-/** Get caret offset within the visible text of `root`. */
-function getVisibleCaret(root: HTMLElement): number | null {
-  const sel = window.getSelection();
-  if (!sel || sel.rangeCount === 0) return null;
-  const range = sel.getRangeAt(0);
-  if (!root.contains(range.startContainer)) return null;
-  const pre = range.cloneRange();
-  pre.selectNodeContents(root);
-  pre.setEnd(range.startContainer, range.startOffset);
-  return pre.toString().length;
-}
-
-/** Place caret at a visible-text offset inside `root`. */
-function setVisibleCaret(root: HTMLElement, offset: number) {
-  const sel = window.getSelection();
-  if (!sel) return;
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  let node = walker.nextNode() as Text | null;
-  let remaining = offset;
-  while (node) {
-    const len = node.textContent?.length ?? 0;
-    if (remaining <= len) {
-      const range = document.createRange();
-      range.setStart(node, Math.max(0, remaining));
-      range.collapse(true);
-      sel.removeAllRanges();
-      sel.addRange(range);
-      return;
-    }
-    remaining -= len;
-    node = walker.nextNode() as Text | null;
-  }
-  // Fallback: end of root
-  const range = document.createRange();
-  range.selectNodeContents(root);
-  range.collapse(false);
-  sel.removeAllRanges();
-  sel.addRange(range);
-}
-
 export function LineEditor({
   value,
   onChange,
@@ -493,50 +403,46 @@ export function LineEditor({
   onSlashInsert?: (kind: "image" | "link") => void;
 }) {
   const lines = value.length === 0 ? [""] : value.split("\n");
-  const refs = useRef<Array<HTMLDivElement | null>>([]);
+  const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
-  const slashDetectFrame = useRef<number | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
-  const [slash, setSlash] = useState<{ index: number; start: number; end: number; query: string; hi: number } | null>(null);
+  // `start` = index of the "/" character in the line; slash triggers anywhere.
+  const [slash, setSlash] = useState<{ index: number; start: number; query: string; hi: number } | null>(null);
 
-  // Sync DOM only when incoming markdown differs from what the DOM currently
-  // serializes to. Prevents caret loss on our own edits.
+  // Only resize the textarea whose content actually changed since last render,
+  // instead of looping every textarea on every keystroke (O(n) layout thrash).
+  const prevLinesRef = useRef<string[]>([]);
   useEffect(() => {
+    const prev = prevLinesRef.current;
     for (let i = 0; i < lines.length; i++) {
+      if (prev[i] === lines[i]) continue;
       const el = refs.current[i];
       if (!el) continue;
-      const cur = htmlToInlineMd(el);
-      if (cur !== lines[i]) {
-        const wasFocused = document.activeElement === el;
-        const caret = wasFocused ? getVisibleCaret(el) : null;
-        el.innerHTML = inlineMdToHtml(lines[i] ?? "", wikiIndex);
-        if (wasFocused) {
-          const visibleLen = el.textContent?.length ?? 0;
-          setVisibleCaret(el, Math.min(caret ?? visibleLen, visibleLen));
-        }
+      el.style.height = "auto";
+      el.style.height = `${el.scrollHeight}px`;
+    }
+    // Also resize any newly-mounted textareas that had no previous entry.
+    if (lines.length !== prev.length) {
+      for (let i = 0; i < lines.length; i++) {
+        if (i < prev.length) continue;
+        const el = refs.current[i];
+        if (!el) continue;
+        el.style.height = "auto";
+        el.style.height = `${el.scrollHeight}px`;
       }
     }
+    prevLinesRef.current = lines;
     const pending = focusPending.current;
     if (pending) {
       const el = refs.current[pending.index];
       if (el) {
         el.focus();
-        const visibleLen = el.textContent?.length ?? 0;
-        setVisibleCaret(el, Math.min(pending.pos, visibleLen));
+        const pos = Math.min(pending.pos, el.value.length);
+        el.setSelectionRange(pos, pos);
       }
       focusPending.current = null;
     }
-    // Prune stale refs
-    refs.current.length = lines.length;
   }, [value, focusedIdx]);
-
-  useEffect(() => {
-    return () => {
-      if (slashDetectFrame.current !== null) {
-        window.cancelAnimationFrame(slashDetectFrame.current);
-      }
-    };
-  }, []);
 
   function commit(nextLines: string[], focus?: { index: number; pos: number }) {
     if (focus) {
@@ -546,258 +452,255 @@ export function LineEditor({
     onChange(nextLines.join("\n"));
   }
 
-  /** Detect a `/query` token immediately before the caret in visible text. */
-  function detectSlash(el: HTMLElement, i: number) {
-    const caret = getVisibleCaret(el) ?? (el.textContent ?? "").length;
-    const text = el.textContent ?? "";
-    const safeCaret = Math.max(0, Math.min(caret, text.length));
-    for (let p = safeCaret - 1; p >= 0; p--) {
-      const ch = text[p];
+  function detectSlash(line: string, caret: number, i: number) {
+    // Walk back from caret to find a "/" preceded by start-of-line or whitespace.
+    // Query is word chars between "/" and caret (no spaces).
+    for (let p = caret - 1; p >= 0; p--) {
+      const ch = line[p];
       if (ch === "/") {
-        const before = p === 0 ? " " : text[p - 1] ?? "";
-        const isDoubleSlash = before === "/";
-        if (p !== 0 && !/\s/.test(before) && !isDoubleSlash) continue;
-        const rawQuery = text.slice(p + 1, safeCaret);
-        if (rawQuery.length > 32) continue;
-        const query = rawQuery.trim().toLowerCase();
-        if (!/^[\p{L}\p{N}_-]*$/u.test(query)) continue;
-        setSlash((cur) => ({
-          index: i,
-          start: p,
-          end: safeCaret,
-          query,
-          hi: cur && cur.index === i && cur.start === p ? cur.hi : 0,
-        }));
+        const before = p === 0 ? " " : line[p - 1];
+        if (!/\s/.test(before) && before !== undefined && p !== 0) return null;
+        const query = line.slice(p + 1, caret);
+        if (!/^\w*$/.test(query)) return null;
+        setSlash((cur) => ({ index: i, start: p, query: query.toLowerCase(), hi: cur && cur.index === i && cur.start === p ? cur.hi : 0 }));
         return;
       }
+      if (/\s/.test(ch)) break;
     }
     setSlash((cur) => (cur && cur.index === i ? null : cur));
   }
 
-  function scheduleSlashDetect(i: number, el: HTMLDivElement) {
-    detectSlash(el, i);
-    if (slashDetectFrame.current !== null) {
-      window.cancelAnimationFrame(slashDetectFrame.current);
-    }
-    slashDetectFrame.current = window.requestAnimationFrame(() => {
-      const liveEl = refs.current[i] ?? el;
-      detectSlash(liveEl, i);
-      slashDetectFrame.current = null;
-    });
-  }
-
-  /** Delete the "/query" text from the DOM of the currently slashing line. */
-  function stripSlashFromDom(): { el: HTMLDivElement; i: number } | null {
-    if (!slash) return null;
-    const el = refs.current[slash.index];
-    if (!el) return null;
-    // Walk to find the "/" text node and offset within it.
-    const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
-    let node = walker.nextNode() as Text | null;
-    let consumed = 0;
-    const removeLen = Math.max(1, slash.end - slash.start);
-    while (node) {
-      const len = node.textContent?.length ?? 0;
-      if (consumed + len > slash.start) {
-        const localStart = slash.start - consumed;
-        const localEnd = Math.min(len, localStart + removeLen);
-        // Delete part inside this node
-        const t = node.textContent ?? "";
-        node.textContent = t.slice(0, localStart) + t.slice(localEnd);
-        let leftover = removeLen - (localEnd - localStart);
-        // If leftover, remove from following text nodes
-        let next = walker.nextNode() as Text | null;
-        while (leftover > 0 && next) {
-          const nl = next.textContent?.length ?? 0;
-          const take = Math.min(nl, leftover);
-          next.textContent = (next.textContent ?? "").slice(take);
-          leftover -= take;
-          next = walker.nextNode() as Text | null;
-        }
-        return { el, i: slash.index };
-      }
-      consumed += len;
-      node = walker.nextNode() as Text | null;
-    }
-    return { el, i: slash.index };
+  function updateLine(i: number, next: string, caret: number) {
+    const copy = lines.slice();
+    copy[i] = next;
+    detectSlash(next, caret, i);
+    commit(copy);
   }
 
   const SLASH_COMMANDS = useMemo(
     () => [
-      { id: "h1", label: "Heading 1", keys: ["heading", "h1", "title"], icon: Heading1, apply: () => applyBlock("# ") },
-      { id: "h2", label: "Heading 2", keys: ["heading", "h2"], icon: Heading2, apply: () => applyBlock("## ") },
-      { id: "h3", label: "Heading 3", keys: ["heading", "h3"], icon: Heading3, apply: () => applyBlock("### ") },
-      { id: "todo", label: "Checklist", keys: ["todo", "check", "task"], icon: ListChecks, apply: () => applyBlock("- [ ] ") },
-      { id: "bullet", label: "Bullet list", keys: ["list", "bullet", "ul"], icon: List, apply: () => applyBlock("- ") },
-      { id: "quote", label: "Quote", keys: ["quote", "blockquote"], icon: Quote, apply: () => applyBlock("> ") },
-      { id: "divider", label: "Divider", keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => applyBlock("---", true) },
-      { id: "code", label: "Code", keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => applyCode() },
-      { id: "bold", label: "Bold", keys: ["bold", "strong", "b"], icon: Bold, apply: () => applyWrap("**", "**") },
-      { id: "italic", label: "Italic", keys: ["italic", "em", "i"], icon: Italic, apply: () => applyWrap("*", "*") },
-      { id: "highlight", label: "Highlight", keys: ["highlight", "mark", "yellow"], icon: Highlighter, apply: () => applyWrap("==", "==") },
+      { id: "h1", label: "Heading 1", block: true, keys: ["heading", "h1", "title"], icon: Heading1, apply: () => applyBlock("# ") },
+      { id: "h2", label: "Heading 2", block: true, keys: ["heading", "h2"], icon: Heading2, apply: () => applyBlock("## ") },
+      { id: "h3", label: "Heading 3", block: true, keys: ["heading", "h3"], icon: Heading3, apply: () => applyBlock("### ") },
+      { id: "todo", label: "Checklist", block: true, keys: ["todo", "check", "task"], icon: ListChecks, apply: () => applyBlock("- [ ] ") },
+      { id: "bullet", label: "Bullet list", block: true, keys: ["list", "bullet", "ul"], icon: List, apply: () => applyBlock("- ") },
+      { id: "quote", label: "Quote", block: true, keys: ["quote", "blockquote"], icon: Quote, apply: () => applyBlock("> ") },
+      { id: "divider", label: "Divider", block: true, keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => applyBlock("---", true) },
+      { id: "code", label: "Code", block: true, keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => applyCode() },
+      { id: "bold", label: "Bold", block: false, keys: ["bold", "strong", "b"], icon: Bold, apply: () => applyWrap("**", "**") },
+      { id: "italic", label: "Italic", block: false, keys: ["italic", "em", "i"], icon: Italic, apply: () => applyWrap("*", "*") },
+      { id: "highlight", label: "Highlight", block: false, keys: ["highlight", "mark", "yellow"], icon: Highlighter, apply: () => applyWrap("==", "==") },
       ...(onSlashInsert
         ? [
-            { id: "image", label: "Image", keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { const r = stripSlashFromDom(); setSlash(null); if (r) { const md = htmlToInlineMd(r.el); const copy = lines.slice(); copy[r.i] = md; commit(copy); } onSlashInsert("image"); } },
-            { id: "link", label: "Link", keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { const r = stripSlashFromDom(); setSlash(null); if (r) { const md = htmlToInlineMd(r.el); const copy = lines.slice(); copy[r.i] = md; commit(copy); } onSlashInsert("link"); } },
+            { id: "image", label: "Image", block: false, keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { removeSlashText(); onSlashInsert("image"); } },
+            { id: "link", label: "Link", block: false, keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { removeSlashText(); onSlashInsert("link"); } },
           ]
         : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onSlashInsert, slash?.index, slash?.start, slash?.end, lines.join("\n")],
+    [onSlashInsert, slash?.index, slash?.start, lines.join("\n")],
   );
 
   const filteredSlash = slash
     ? SLASH_COMMANDS.filter((c) => !slash.query || c.label.toLowerCase().includes(slash.query) || c.keys.some((k) => k.includes(slash.query)))
     : [];
 
-  function applyBlock(prefix: string, addLineAfter = false) {
-    const r = stripSlashFromDom();
-    setSlash(null);
-    if (!r) return;
-    const md = htmlToInlineMd(r.el);
+  // Remove the "/query" text and return the resulting line + caret at that pos.
+  function stripSlash(): { copy: string[]; i: number; caret: number } | null {
+    if (!slash) return null;
+    const i = slash.index;
+    const line = lines[i] ?? "";
+    const before = line.slice(0, slash.start);
+    const after = line.slice(slash.start + 1 + slash.query.length);
     const copy = lines.slice();
-    copy[r.i] = prefix + md;
-    if (addLineAfter) copy.splice(r.i + 1, 0, "");
-    const focusIdx = addLineAfter ? r.i + 1 : r.i;
-    const focusPos = addLineAfter ? 0 : (copy[focusIdx] ?? "").length;
-    commit(copy, { index: focusIdx, pos: focusPos });
+    copy[i] = before + after;
+    return { copy, i, caret: before.length };
+  }
+
+  function removeSlashText() {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    commit(s.copy, { index: s.i, pos: s.caret });
+  }
+
+  function applyBlock(prefix: string, addLineAfter = false) {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    // Prepend prefix at line start (block commands always apply to whole line).
+    s.copy[s.i] = prefix + line;
+    if (addLineAfter) s.copy.splice(s.i + 1, 0, "");
+    const focusIdx = addLineAfter ? s.i + 1 : s.i;
+    const focusPos = addLineAfter ? 0 : (s.copy[focusIdx] ?? "").length;
+    commit(s.copy, { index: focusIdx, pos: focusPos });
   }
 
   function applyCode() {
-    const r = stripSlashFromDom();
+    const s = stripSlash();
     setSlash(null);
-    if (!r) return;
-    const md = htmlToInlineMd(r.el);
-    const copy = lines.slice();
-    copy.splice(r.i, 1, "```" + md, "", "```");
-    commit(copy, { index: r.i + 1, pos: 0 });
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    s.copy.splice(s.i, 1, "```" + line, "", "```");
+    commit(s.copy, { index: s.i + 1, pos: 0 });
   }
 
   function applyWrap(open: string, close: string) {
-    if (!slash) return;
-    const idx = slash.index;
-    const start = slash.start;
-    const r = stripSlashFromDom();
+    const s = stripSlash();
     setSlash(null);
-    if (!r) return;
-    const md = htmlToInlineMd(r.el);
-    // The stripped position in visible text ≈ position in md when no formatting
-    // straddles it. Approximate by inserting at the same character offset.
-    const insertAt = Math.min(start, md.length);
-    const next = md.slice(0, insertAt) + open + close + md.slice(insertAt);
-    const copy = lines.slice();
-    copy[idx] = next;
-    commit(copy, { index: idx, pos: insertAt + open.length });
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    const insertAt = s.caret;
+    s.copy[s.i] = line.slice(0, insertAt) + open + close + line.slice(insertAt);
+    commit(s.copy, { index: s.i, pos: insertAt + open.length });
   }
 
-  function handleInput(i: number, el: HTMLDivElement) {
-    const md = htmlToInlineMd(el);
-    const copy = lines.slice();
-    copy[i] = md;
-    onChange(copy.join("\n"));
-    // Update slash again on the next frame so mobile contenteditable has time
-    // to move the caret after the newly typed `/`.
-    scheduleSlashDetect(i, el);
-  }
 
-  function handleKey(i: number, e: React.KeyboardEvent<HTMLDivElement>) {
+  function onKey(i: number, e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
+    const start = el.selectionStart ?? 0;
+    const end = el.selectionEnd ?? 0;
     if (slash && slash.index === i && filteredSlash.length > 0) {
       if (e.key === "ArrowDown") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi + 1) % filteredSlash.length }); return; }
       if (e.key === "ArrowUp") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi - 1 + filteredSlash.length) % filteredSlash.length }); return; }
       if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); filteredSlash[slash.hi]?.apply(); return; }
       if (e.key === "Escape") { e.preventDefault(); setSlash(null); return; }
     }
-    if (e.key === "/") {
-      scheduleSlashDetect(i, el);
-    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      const caret = getVisibleCaret(el) ?? 0;
-      const md = htmlToInlineMd(el);
-      // Approximate split at visible caret position within md string.
-      const cut = Math.min(caret, md.length);
-      const before = md.slice(0, cut);
-      const after = md.slice(cut);
+      const line = lines[i] ?? "";
+      const before = line.slice(0, start);
+      const after = line.slice(end);
       const copy = lines.slice();
       copy.splice(i, 1, before, after);
       commit(copy, { index: i + 1, pos: 0 });
-    } else if (e.key === "Backspace") {
-      const caret = getVisibleCaret(el);
-      if (caret === 0 && i > 0) {
-        e.preventDefault();
-        const prev = lines[i - 1] ?? "";
-        const cur = htmlToInlineMd(el);
-        const copy = lines.slice();
-        copy.splice(i - 1, 2, prev + cur);
-        commit(copy, { index: i - 1, pos: prev.length });
-      }
+    } else if (e.key === "Backspace" && start === 0 && end === 0 && i > 0) {
+      e.preventDefault();
+      const prev = lines[i - 1] ?? "";
+      const cur = lines[i] ?? "";
+      const copy = lines.slice();
+      copy.splice(i - 1, 2, prev + cur);
+      commit(copy, { index: i - 1, pos: prev.length });
     } else if (e.key === "ArrowUp" && i > 0) {
-      e.preventDefault();
-      setFocusedIdx(i - 1);
-      focusPending.current = { index: i - 1, pos: getVisibleCaret(el) ?? 0 };
+      const prev = refs.current[i - 1];
+      if (prev) {
+        e.preventDefault();
+        setFocusedIdx(i - 1);
+        focusPending.current = { index: i - 1, pos: Math.min(start, prev.value.length) };
+      }
     } else if (e.key === "ArrowDown" && i < lines.length - 1) {
-      e.preventDefault();
-      setFocusedIdx(i + 1);
-      focusPending.current = { index: i + 1, pos: getVisibleCaret(el) ?? 0 };
+      const next = refs.current[i + 1];
+      if (next) {
+        e.preventDefault();
+        setFocusedIdx(i + 1);
+        focusPending.current = { index: i + 1, pos: Math.min(start, next.value.length) };
+      }
     }
+  }
+
+  function renderPreview(line: string, i: number) {
+    const nodes: React.ReactNode[] = [];
+    const re = /\[\[([^\]\n]+?)\]\]/g;
+    let last = 0;
+    let m: RegExpExecArray | null;
+    let k = 0;
+    while ((m = re.exec(line)) !== null) {
+      if (m.index > last) nodes.push(line.slice(last, m.index));
+      const title = m[1].trim();
+      const found = wikiIndex?.get(title.toLowerCase());
+      nodes.push(
+        <span
+          key={`w-${i}-${k++}`}
+          className={
+            found
+              ? "mx-0.5 inline-flex items-center rounded-full bg-yellow-400/25 px-2 py-0.5 text-[0.9em] font-medium text-yellow-700 ring-1 ring-yellow-500/40 shadow-[0_0_12px_rgba(250,204,21,0.55)]"
+              : "mx-0.5 inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-[0.9em] font-medium text-muted-foreground ring-1 ring-border"
+          }
+        >
+          {title}
+        </span>,
+      );
+      last = m.index + m[0].length;
+    }
+    if (last < line.length) nodes.push(line.slice(last));
+    if (nodes.length === 0) {
+      return <span className="text-muted-foreground/50">{placeholder && i === 0 ? placeholder : "\u00A0"}</span>;
+    }
+    return <>{nodes}</>;
   }
 
   return (
     <div className="flex flex-col">
-      {lines.map((line, i) => (
-        <div key={i} className="relative">
-          <div
-            ref={(el) => {
-              refs.current[i] = el;
-              if (el && el.innerHTML === "" && line) {
-                el.innerHTML = inlineMdToHtml(line, wikiIndex);
-              }
-            }}
-            contentEditable
-            suppressContentEditableWarning
-            role="textbox"
-            aria-multiline="false"
-            data-placeholder={i === 0 ? placeholder ?? "" : ""}
-            onInput={(e) => handleInput(i, e.currentTarget)}
-            onKeyDown={(e) => handleKey(i, e)}
-            onKeyUp={(e) => scheduleSlashDetect(i, e.currentTarget)}
-            onMouseUp={(e) => detectSlash(e.currentTarget, i)}
-            onFocus={(e) => {
-              setFocusedIdx(i);
-              scheduleSlashDetect(i, e.currentTarget);
-            }}
-            onBlur={() => {
-              setFocusedIdx((cur) => (cur === i ? null : cur));
-              setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 220);
-            }}
-            className={`ce-line w-full whitespace-pre-wrap break-words leading-relaxed outline-none focus:outline-none ${lineStyleFor(line)}`}
-          />
-          {slash && slash.index === i && filteredSlash.length > 0 && (
-            <div data-slash-menu className="absolute left-0 top-full z-[120] mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
-              {filteredSlash.map((c, k) => {
-                const Icon = c.icon;
-                const active = k === slash.hi;
-                return (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); c.apply(); }}
-                    onMouseDown={(e) => { e.preventDefault(); }}
-                    onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
-                    className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] ${active ? "bg-muted" : ""}`}
-                  >
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="font-medium text-foreground">{c.label}</span>
-                  </button>
-                );
-              })}
+      {lines.map((line, i) => {
+        const hasWiki = /\[\[([^\]\n]+?)\]\]/.test(line);
+        const isFocused = focusedIdx === i;
+        if (hasWiki && !isFocused) {
+          return (
+            <div
+              key={i}
+              onClick={(e) => {
+                setFocusedIdx(i);
+                // approximate caret at end
+                focusPending.current = { index: i, pos: line.length };
+                e.stopPropagation();
+              }}
+              className={`w-full cursor-text leading-relaxed ${lineStyleFor(line)}`}
+            >
+              {renderPreview(line, i)}
             </div>
-          )}
-        </div>
-      ))}
+          );
+        }
+        return (
+          <div key={i} className="relative">
+            <textarea
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              value={line}
+              onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""), e.target.selectionStart ?? e.target.value.length)}
+              onKeyUp={(e) => {
+                // Also refresh slash state on caret movement (arrows, click).
+                const el = e.currentTarget;
+                if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End") {
+                  detectSlash(el.value, el.selectionStart ?? 0, i);
+                }
+              }}
+              onKeyDown={(e) => onKey(i, e)}
+              onFocus={() => setFocusedIdx(i)}
+              onBlur={() => {
+                setFocusedIdx((cur) => (cur === i ? null : cur));
+                // Delay so menu clicks can register before it unmounts.
+                setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 120);
+              }}
+              placeholder={i === 0 ? placeholder : ""}
+              rows={1}
+              className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
+            />
+            {slash && slash.index === i && filteredSlash.length > 0 && (
+              <div className="absolute left-0 top-full z-30 mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
+                {filteredSlash.map((c, k) => {
+                  const Icon = c.icon;
+                  const active = k === slash.hi;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); c.apply(); }}
+                      onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] ${active ? "bg-muted" : ""}`}
+                    >
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="font-medium text-foreground">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }
-
 

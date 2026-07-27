@@ -178,15 +178,6 @@
     -webkit-tap-highlight-color: transparent;
   }
 
-  /* Empty contenteditable line placeholder. */
-  .ce-line:empty::before {
-    content: attr(data-placeholder);
-    color: var(--color-muted-foreground);
-    opacity: 0.5;
-    pointer-events: none;
-  }
-
-
   /*
    * Universal fluid sizing.
    *
