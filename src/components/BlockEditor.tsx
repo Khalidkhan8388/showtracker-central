@@ -406,7 +406,8 @@ export function LineEditor({
   const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
-  const [slash, setSlash] = useState<{ index: number; query: string; hi: number } | null>(null);
+  // `start` = index of the "/" character in the line; slash triggers anywhere.
+  const [slash, setSlash] = useState<{ index: number; start: number; query: string; hi: number } | null>(null);
 
   // Only resize the textarea whose content actually changed since last render,
   // instead of looping every textarea on every keystroke (O(n) layout thrash).
@@ -451,61 +452,110 @@ export function LineEditor({
     onChange(nextLines.join("\n"));
   }
 
-  function updateLine(i: number, next: string) {
+  function detectSlash(line: string, caret: number, i: number) {
+    // Walk back from caret to find a "/" preceded by start-of-line or whitespace.
+    // Query is word chars between "/" and caret (no spaces).
+    for (let p = caret - 1; p >= 0; p--) {
+      const ch = line[p];
+      if (ch === "/") {
+        const before = p === 0 ? " " : line[p - 1];
+        if (!/\s/.test(before) && before !== undefined && p !== 0) return null;
+        const query = line.slice(p + 1, caret);
+        if (!/^\w*$/.test(query)) return null;
+        setSlash((cur) => ({ index: i, start: p, query: query.toLowerCase(), hi: cur && cur.index === i && cur.start === p ? cur.hi : 0 }));
+        return;
+      }
+      if (/\s/.test(ch)) break;
+    }
+    setSlash((cur) => (cur && cur.index === i ? null : cur));
+  }
+
+  function updateLine(i: number, next: string, caret: number) {
     const copy = lines.slice();
     copy[i] = next;
-    // Detect slash trigger: line starts with "/" followed by optional word chars.
-    const m = next.match(/^\/(\w*)$/);
-    if (m) setSlash({ index: i, query: m[1].toLowerCase(), hi: 0 });
-    else if (slash && slash.index === i) setSlash(null);
+    detectSlash(next, caret, i);
     commit(copy);
   }
 
   const SLASH_COMMANDS = useMemo(
     () => [
-      { id: "h1", label: "Heading 1", keys: ["heading", "h1", "title"], icon: Heading1, apply: () => replaceLineWith("# ", { caretAtEnd: true }) },
-      { id: "h2", label: "Heading 2", keys: ["heading", "h2"], icon: Heading2, apply: () => replaceLineWith("## ", { caretAtEnd: true }) },
-      { id: "h3", label: "Heading 3", keys: ["heading", "h3"], icon: Heading3, apply: () => replaceLineWith("### ", { caretAtEnd: true }) },
-      { id: "todo", label: "Checklist", keys: ["todo", "check", "task"], icon: ListChecks, apply: () => replaceLineWith("- [ ] ", { caretAtEnd: true }) },
-      { id: "bullet", label: "Bullet list", keys: ["list", "bullet", "ul"], icon: List, apply: () => replaceLineWith("- ", { caretAtEnd: true }) },
-      { id: "quote", label: "Quote", keys: ["quote", "blockquote"], icon: Quote, apply: () => replaceLineWith("> ", { caretAtEnd: true }) },
-      { id: "divider", label: "Divider", keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => replaceLineWith("---", { addLineAfter: true }) },
-      { id: "code", label: "Code block", keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => replaceLineWith("```\n\n```", { caretLine: 1, caretPos: 0 }) },
+      { id: "h1", label: "Heading 1", block: true, keys: ["heading", "h1", "title"], icon: Heading1, apply: () => applyBlock("# ") },
+      { id: "h2", label: "Heading 2", block: true, keys: ["heading", "h2"], icon: Heading2, apply: () => applyBlock("## ") },
+      { id: "h3", label: "Heading 3", block: true, keys: ["heading", "h3"], icon: Heading3, apply: () => applyBlock("### ") },
+      { id: "todo", label: "Checklist", block: true, keys: ["todo", "check", "task"], icon: ListChecks, apply: () => applyBlock("- [ ] ") },
+      { id: "bullet", label: "Bullet list", block: true, keys: ["list", "bullet", "ul"], icon: List, apply: () => applyBlock("- ") },
+      { id: "quote", label: "Quote", block: true, keys: ["quote", "blockquote"], icon: Quote, apply: () => applyBlock("> ") },
+      { id: "divider", label: "Divider", block: true, keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => applyBlock("---", true) },
+      { id: "code", label: "Code", block: true, keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => applyCode() },
+      { id: "bold", label: "Bold", block: false, keys: ["bold", "strong", "b"], icon: Bold, apply: () => applyWrap("**", "**") },
+      { id: "italic", label: "Italic", block: false, keys: ["italic", "em", "i"], icon: Italic, apply: () => applyWrap("*", "*") },
+      { id: "highlight", label: "Highlight", block: false, keys: ["highlight", "mark", "yellow"], icon: Highlighter, apply: () => applyWrap("==", "==") },
       ...(onSlashInsert
         ? [
-            { id: "image", label: "Image", keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("image"); } },
-            { id: "link", label: "Link", keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("link"); } },
+            { id: "image", label: "Image", block: false, keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { removeSlashText(); onSlashInsert("image"); } },
+            { id: "link", label: "Link", block: false, keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { removeSlashText(); onSlashInsert("link"); } },
           ]
         : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onSlashInsert, slash?.index, lines.join("\n")],
+    [onSlashInsert, slash?.index, slash?.start, lines.join("\n")],
   );
 
   const filteredSlash = slash
     ? SLASH_COMMANDS.filter((c) => !slash.query || c.label.toLowerCase().includes(slash.query) || c.keys.some((k) => k.includes(slash.query)))
     : [];
 
-  function replaceLineWith(
-    text: string,
-    opts: { caretAtEnd?: boolean; addLineAfter?: boolean; caretLine?: number; caretPos?: number },
-  ) {
-    if (!slash) return;
+  // Remove the "/query" text and return the resulting line + caret at that pos.
+  function stripSlash(): { copy: string[]; i: number; caret: number } | null {
+    if (!slash) return null;
     const i = slash.index;
-    setSlash(null);
-    const inserted = text.split("\n");
+    const line = lines[i] ?? "";
+    const before = line.slice(0, slash.start);
+    const after = line.slice(slash.start + 1 + slash.query.length);
     const copy = lines.slice();
-    copy.splice(i, 1, ...inserted);
-    if (opts.addLineAfter) copy.splice(i + inserted.length, 0, "");
-    const focusIdx = i + (opts.caretLine ?? inserted.length - 1);
-    const focusPos =
-      opts.caretPos !== undefined
-        ? opts.caretPos
-        : opts.caretAtEnd
-          ? (copy[focusIdx] ?? "").length
-          : (copy[focusIdx] ?? "").length;
-    commit(copy, { index: focusIdx, pos: focusPos });
+    copy[i] = before + after;
+    return { copy, i, caret: before.length };
   }
+
+  function removeSlashText() {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    commit(s.copy, { index: s.i, pos: s.caret });
+  }
+
+  function applyBlock(prefix: string, addLineAfter = false) {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    // Prepend prefix at line start (block commands always apply to whole line).
+    s.copy[s.i] = prefix + line;
+    if (addLineAfter) s.copy.splice(s.i + 1, 0, "");
+    const focusIdx = addLineAfter ? s.i + 1 : s.i;
+    const focusPos = addLineAfter ? 0 : (s.copy[focusIdx] ?? "").length;
+    commit(s.copy, { index: focusIdx, pos: focusPos });
+  }
+
+  function applyCode() {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    s.copy.splice(s.i, 1, "```" + line, "", "```");
+    commit(s.copy, { index: s.i + 1, pos: 0 });
+  }
+
+  function applyWrap(open: string, close: string) {
+    const s = stripSlash();
+    setSlash(null);
+    if (!s) return;
+    const line = s.copy[s.i] ?? "";
+    const insertAt = s.caret;
+    s.copy[s.i] = line.slice(0, insertAt) + open + close + line.slice(insertAt);
+    commit(s.copy, { index: s.i, pos: insertAt + open.length });
+  }
+
 
   function onKey(i: number, e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
