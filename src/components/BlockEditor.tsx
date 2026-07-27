@@ -497,7 +497,7 @@ export function LineEditor({
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
   const slashDetectFrame = useRef<number | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
-  const [slash, setSlash] = useState<{ index: number; start: number; query: string; hi: number } | null>(null);
+  const [slash, setSlash] = useState<{ index: number; start: number; end: number; query: string; hi: number } | null>(null);
 
   // Sync DOM only when incoming markdown differs from what the DOM currently
   // serializes to. Prevents caret loss on our own edits.
@@ -554,12 +554,18 @@ export function LineEditor({
     for (let p = safeCaret - 1; p >= 0; p--) {
       const ch = text[p];
       if (ch === "/") {
-        const query = text.slice(p + 1, safeCaret);
-        if (/\s/.test(query) || !/^[\p{L}\p{N}_-]*$/u.test(query)) return setSlash((cur) => (cur && cur.index === i ? null : cur));
+        const before = p === 0 ? " " : text[p - 1] ?? "";
+        const isDoubleSlash = before === "/";
+        if (p !== 0 && !/\s/.test(before) && !isDoubleSlash) continue;
+        const rawQuery = text.slice(p + 1, safeCaret);
+        if (rawQuery.length > 32) continue;
+        const query = rawQuery.trim().toLowerCase();
+        if (!/^[\p{L}\p{N}_-]*$/u.test(query)) continue;
         setSlash((cur) => ({
           index: i,
           start: p,
-          query: query.toLowerCase(),
+          end: safeCaret,
+          query,
           hi: cur && cur.index === i && cur.start === p ? cur.hi : 0,
         }));
         return;
@@ -589,7 +595,7 @@ export function LineEditor({
     const walker = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
     let node = walker.nextNode() as Text | null;
     let consumed = 0;
-    const removeLen = 1 + slash.query.length;
+    const removeLen = Math.max(1, slash.end - slash.start);
     while (node) {
       const len = node.textContent?.length ?? 0;
       if (consumed + len > slash.start) {
@@ -637,7 +643,7 @@ export function LineEditor({
         : []),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [onSlashInsert, slash?.index, slash?.start, lines.join("\n")],
+    [onSlashInsert, slash?.index, slash?.start, slash?.end, lines.join("\n")],
   );
 
   const filteredSlash = slash
@@ -768,7 +774,7 @@ export function LineEditor({
             className={`ce-line w-full whitespace-pre-wrap break-words leading-relaxed outline-none focus:outline-none ${lineStyleFor(line)}`}
           />
           {slash && slash.index === i && filteredSlash.length > 0 && (
-            <div data-slash-menu className="absolute left-0 top-full z-30 mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
+            <div data-slash-menu className="absolute left-0 top-full z-[120] mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
               {filteredSlash.map((c, k) => {
                 const Icon = c.icon;
                 const active = k === slash.hi;
