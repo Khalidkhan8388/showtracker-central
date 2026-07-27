@@ -602,20 +602,47 @@ export function LineEditor({
           );
         }
         return (
-          <textarea
-            key={i}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            value={line}
-            onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
-            onKeyDown={(e) => onKey(i, e)}
-            onFocus={() => setFocusedIdx(i)}
-            onBlur={() => setFocusedIdx((cur) => (cur === i ? null : cur))}
-            placeholder={i === 0 ? placeholder : ""}
-            rows={1}
-            className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
-          />
+          <div key={i} className="relative">
+            <textarea
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              value={line}
+              onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
+              onKeyDown={(e) => onKey(i, e)}
+              onFocus={() => setFocusedIdx(i)}
+              onBlur={() => {
+                setFocusedIdx((cur) => (cur === i ? null : cur));
+                // Delay so menu clicks can register before it unmounts.
+                setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 120);
+              }}
+              placeholder={i === 0 ? placeholder : ""}
+              rows={1}
+              className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
+            />
+            {slash && slash.index === i && filteredSlash.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-2xl">
+                {filteredSlash.map((c, k) => {
+                  const Icon = c.icon;
+                  const active = k === slash.hi;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); c.apply(); }}
+                      onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[14px] ${active ? "bg-muted" : ""}`}
+                    >
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="font-medium text-foreground">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>
