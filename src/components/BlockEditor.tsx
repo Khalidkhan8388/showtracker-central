@@ -755,7 +755,8 @@ export function LineEditor({
                   <button
                     key={c.id}
                     type="button"
-                    onMouseDown={(e) => { e.preventDefault(); c.apply(); }}
+                    onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); c.apply(); }}
+                    onMouseDown={(e) => { e.preventDefault(); }}
                     onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
                     className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] ${active ? "bg-muted" : ""}`}
                   >
