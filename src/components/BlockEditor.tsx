@@ -454,13 +454,69 @@ export function LineEditor({
   function updateLine(i: number, next: string) {
     const copy = lines.slice();
     copy[i] = next;
+    // Detect slash trigger: line starts with "/" followed by optional word chars.
+    const m = next.match(/^\/(\w*)$/);
+    if (m) setSlash({ index: i, query: m[1].toLowerCase(), hi: 0 });
+    else if (slash && slash.index === i) setSlash(null);
     commit(copy);
+  }
+
+  const SLASH_COMMANDS = useMemo(
+    () => [
+      { id: "h1", label: "Heading 1", keys: ["heading", "h1", "title"], icon: Heading1, apply: () => replaceLineWith("# ", { caretAtEnd: true }) },
+      { id: "h2", label: "Heading 2", keys: ["heading", "h2"], icon: Heading2, apply: () => replaceLineWith("## ", { caretAtEnd: true }) },
+      { id: "h3", label: "Heading 3", keys: ["heading", "h3"], icon: Heading3, apply: () => replaceLineWith("### ", { caretAtEnd: true }) },
+      { id: "todo", label: "Checklist", keys: ["todo", "check", "task"], icon: ListChecks, apply: () => replaceLineWith("- [ ] ", { caretAtEnd: true }) },
+      { id: "bullet", label: "Bullet list", keys: ["list", "bullet", "ul"], icon: List, apply: () => replaceLineWith("- ", { caretAtEnd: true }) },
+      { id: "quote", label: "Quote", keys: ["quote", "blockquote"], icon: Quote, apply: () => replaceLineWith("> ", { caretAtEnd: true }) },
+      { id: "divider", label: "Divider", keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => replaceLineWith("---", { addLineAfter: true }) },
+      { id: "code", label: "Code block", keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => replaceLineWith("```\n\n```", { caretLine: 1, caretPos: 0 }) },
+      ...(onSlashInsert
+        ? [
+            { id: "image", label: "Image", keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("image"); } },
+            { id: "link", label: "Link", keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("link"); } },
+          ]
+        : []),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onSlashInsert, slash?.index, lines.join("\n")],
+  );
+
+  const filteredSlash = slash
+    ? SLASH_COMMANDS.filter((c) => !slash.query || c.label.toLowerCase().includes(slash.query) || c.keys.some((k) => k.includes(slash.query)))
+    : [];
+
+  function replaceLineWith(
+    text: string,
+    opts: { caretAtEnd?: boolean; addLineAfter?: boolean; caretLine?: number; caretPos?: number },
+  ) {
+    if (!slash) return;
+    const i = slash.index;
+    setSlash(null);
+    const inserted = text.split("\n");
+    const copy = lines.slice();
+    copy.splice(i, 1, ...inserted);
+    if (opts.addLineAfter) copy.splice(i + inserted.length, 0, "");
+    const focusIdx = i + (opts.caretLine ?? inserted.length - 1);
+    const focusPos =
+      opts.caretPos !== undefined
+        ? opts.caretPos
+        : opts.caretAtEnd
+          ? (copy[focusIdx] ?? "").length
+          : (copy[focusIdx] ?? "").length;
+    commit(copy, { index: focusIdx, pos: focusPos });
   }
 
   function onKey(i: number, e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
+    if (slash && slash.index === i && filteredSlash.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi + 1) % filteredSlash.length }); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi - 1 + filteredSlash.length) % filteredSlash.length }); return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); filteredSlash[slash.hi]?.apply(); return; }
+      if (e.key === "Escape") { e.preventDefault(); setSlash(null); return; }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const line = lines[i] ?? "";
