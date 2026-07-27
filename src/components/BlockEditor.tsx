@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, X } from "lucide-react";
+import { Loader2, X, Heading1, Heading2, Heading3, ListChecks, List, Quote, Minus, Code, Image as ImageIcon, Link as LinkIcon } from "lucide-react";
 import { LocalImage } from "@/components/LocalImage";
 
 // Match either an image (!...) or a plain markdown link ([label](url)).
@@ -91,6 +91,7 @@ export function BlockEditor({
   onRemoveLink,
   placeholder,
   wikiIndex,
+  onSlashInsert,
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -99,6 +100,7 @@ export function BlockEditor({
   onRemoveLink: (href: string) => void;
   placeholder?: string;
   wikiIndex?: Map<string, string>;
+  onSlashInsert?: (kind: "image" | "link") => void;
 }) {
 
   const blocks = useMemo(() => parseBlocks(value), [value]);
@@ -225,6 +227,7 @@ export function BlockEditor({
         onChange={(v) => updateTextBlock(textIdx, v)}
         placeholder={!hasMedia && textIdx === 0 ? placeholder ?? "" : ""}
         wikiIndex={wikiIndex}
+        onSlashInsert={onSlashInsert}
       />
 
     );
@@ -391,16 +394,19 @@ export function LineEditor({
   onChange,
   placeholder,
   wikiIndex,
+  onSlashInsert,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   wikiIndex?: Map<string, string>;
+  onSlashInsert?: (kind: "image" | "link") => void;
 }) {
   const lines = value.length === 0 ? [""] : value.split("\n");
   const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
+  const [slash, setSlash] = useState<{ index: number; query: string; hi: number } | null>(null);
 
   // Only resize the textarea whose content actually changed since last render,
   // instead of looping every textarea on every keystroke (O(n) layout thrash).
@@ -448,13 +454,69 @@ export function LineEditor({
   function updateLine(i: number, next: string) {
     const copy = lines.slice();
     copy[i] = next;
+    // Detect slash trigger: line starts with "/" followed by optional word chars.
+    const m = next.match(/^\/(\w*)$/);
+    if (m) setSlash({ index: i, query: m[1].toLowerCase(), hi: 0 });
+    else if (slash && slash.index === i) setSlash(null);
     commit(copy);
+  }
+
+  const SLASH_COMMANDS = useMemo(
+    () => [
+      { id: "h1", label: "Heading 1", keys: ["heading", "h1", "title"], icon: Heading1, apply: () => replaceLineWith("# ", { caretAtEnd: true }) },
+      { id: "h2", label: "Heading 2", keys: ["heading", "h2"], icon: Heading2, apply: () => replaceLineWith("## ", { caretAtEnd: true }) },
+      { id: "h3", label: "Heading 3", keys: ["heading", "h3"], icon: Heading3, apply: () => replaceLineWith("### ", { caretAtEnd: true }) },
+      { id: "todo", label: "Checklist", keys: ["todo", "check", "task"], icon: ListChecks, apply: () => replaceLineWith("- [ ] ", { caretAtEnd: true }) },
+      { id: "bullet", label: "Bullet list", keys: ["list", "bullet", "ul"], icon: List, apply: () => replaceLineWith("- ", { caretAtEnd: true }) },
+      { id: "quote", label: "Quote", keys: ["quote", "blockquote"], icon: Quote, apply: () => replaceLineWith("> ", { caretAtEnd: true }) },
+      { id: "divider", label: "Divider", keys: ["divider", "hr", "line", "separator"], icon: Minus, apply: () => replaceLineWith("---", { addLineAfter: true }) },
+      { id: "code", label: "Code block", keys: ["code", "codeblock", "snippet"], icon: Code, apply: () => replaceLineWith("```\n\n```", { caretLine: 1, caretPos: 0 }) },
+      ...(onSlashInsert
+        ? [
+            { id: "image", label: "Image", keys: ["image", "photo", "picture"], icon: ImageIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("image"); } },
+            { id: "link", label: "Link", keys: ["link", "url", "web"], icon: LinkIcon, apply: () => { replaceLineWith("", {}); onSlashInsert("link"); } },
+          ]
+        : []),
+    ],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [onSlashInsert, slash?.index, lines.join("\n")],
+  );
+
+  const filteredSlash = slash
+    ? SLASH_COMMANDS.filter((c) => !slash.query || c.label.toLowerCase().includes(slash.query) || c.keys.some((k) => k.includes(slash.query)))
+    : [];
+
+  function replaceLineWith(
+    text: string,
+    opts: { caretAtEnd?: boolean; addLineAfter?: boolean; caretLine?: number; caretPos?: number },
+  ) {
+    if (!slash) return;
+    const i = slash.index;
+    setSlash(null);
+    const inserted = text.split("\n");
+    const copy = lines.slice();
+    copy.splice(i, 1, ...inserted);
+    if (opts.addLineAfter) copy.splice(i + inserted.length, 0, "");
+    const focusIdx = i + (opts.caretLine ?? inserted.length - 1);
+    const focusPos =
+      opts.caretPos !== undefined
+        ? opts.caretPos
+        : opts.caretAtEnd
+          ? (copy[focusIdx] ?? "").length
+          : (copy[focusIdx] ?? "").length;
+    commit(copy, { index: focusIdx, pos: focusPos });
   }
 
   function onKey(i: number, e: React.KeyboardEvent<HTMLTextAreaElement>) {
     const el = e.currentTarget;
     const start = el.selectionStart ?? 0;
     const end = el.selectionEnd ?? 0;
+    if (slash && slash.index === i && filteredSlash.length > 0) {
+      if (e.key === "ArrowDown") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi + 1) % filteredSlash.length }); return; }
+      if (e.key === "ArrowUp") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi - 1 + filteredSlash.length) % filteredSlash.length }); return; }
+      if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); filteredSlash[slash.hi]?.apply(); return; }
+      if (e.key === "Escape") { e.preventDefault(); setSlash(null); return; }
+    }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       const line = lines[i] ?? "";
@@ -540,20 +602,47 @@ export function LineEditor({
           );
         }
         return (
-          <textarea
-            key={i}
-            ref={(el) => {
-              refs.current[i] = el;
-            }}
-            value={line}
-            onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
-            onKeyDown={(e) => onKey(i, e)}
-            onFocus={() => setFocusedIdx(i)}
-            onBlur={() => setFocusedIdx((cur) => (cur === i ? null : cur))}
-            placeholder={i === 0 ? placeholder : ""}
-            rows={1}
-            className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
-          />
+          <div key={i} className="relative">
+            <textarea
+              ref={(el) => {
+                refs.current[i] = el;
+              }}
+              value={line}
+              onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
+              onKeyDown={(e) => onKey(i, e)}
+              onFocus={() => setFocusedIdx(i)}
+              onBlur={() => {
+                setFocusedIdx((cur) => (cur === i ? null : cur));
+                // Delay so menu clicks can register before it unmounts.
+                setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 120);
+              }}
+              placeholder={i === 0 ? placeholder : ""}
+              rows={1}
+              className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
+            />
+            {slash && slash.index === i && filteredSlash.length > 0 && (
+              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-2xl">
+                {filteredSlash.map((c, k) => {
+                  const Icon = c.icon;
+                  const active = k === slash.hi;
+                  return (
+                    <button
+                      key={c.id}
+                      type="button"
+                      onMouseDown={(e) => { e.preventDefault(); c.apply(); }}
+                      onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
+                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[14px] ${active ? "bg-muted" : ""}`}
+                    >
+                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
+                        <Icon className="h-4 w-4" />
+                      </span>
+                      <span className="font-medium text-foreground">{c.label}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
         );
       })}
     </div>
