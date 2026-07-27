@@ -658,7 +658,14 @@ export function LineEditor({
                 refs.current[i] = el;
               }}
               value={line}
-              onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""))}
+              onChange={(e) => updateLine(i, e.target.value.replace(/\n/g, ""), e.target.selectionStart ?? e.target.value.length)}
+              onKeyUp={(e) => {
+                // Also refresh slash state on caret movement (arrows, click).
+                const el = e.currentTarget;
+                if (e.key === "ArrowLeft" || e.key === "ArrowRight" || e.key === "Home" || e.key === "End") {
+                  detectSlash(el.value, el.selectionStart ?? 0, i);
+                }
+              }}
               onKeyDown={(e) => onKey(i, e)}
               onFocus={() => setFocusedIdx(i)}
               onBlur={() => {
@@ -671,7 +678,7 @@ export function LineEditor({
               className={`w-full resize-none appearance-none border-0 bg-transparent p-0 leading-relaxed shadow-none ring-0 placeholder:text-muted-foreground/50 outline-none focus:border-0 focus:outline-none focus:ring-0 ${lineStyleFor(line)}`}
             />
             {slash && slash.index === i && filteredSlash.length > 0 && (
-              <div className="absolute left-0 right-0 top-full z-30 mt-1 max-h-72 overflow-y-auto rounded-2xl border border-border bg-popover p-1 shadow-2xl">
+              <div className="absolute left-0 top-full z-30 mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
                 {filteredSlash.map((c, k) => {
                   const Icon = c.icon;
                   const active = k === slash.hi;
@@ -681,11 +688,9 @@ export function LineEditor({
                       type="button"
                       onMouseDown={(e) => { e.preventDefault(); c.apply(); }}
                       onMouseEnter={() => setSlash((s) => (s ? { ...s, hi: k } : s))}
-                      className={`flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left text-[14px] ${active ? "bg-muted" : ""}`}
+                      className={`flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left text-[13px] ${active ? "bg-muted" : ""}`}
                     >
-                      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-foreground">
-                        <Icon className="h-4 w-4" />
-                      </span>
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                       <span className="font-medium text-foreground">{c.label}</span>
                     </button>
                   );
