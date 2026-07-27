@@ -227,6 +227,7 @@ export function BlockEditor({
         onChange={(v) => updateTextBlock(textIdx, v)}
         placeholder={!hasMedia && textIdx === 0 ? placeholder ?? "" : ""}
         wikiIndex={wikiIndex}
+        onSlashInsert={onSlashInsert}
       />
 
     );
