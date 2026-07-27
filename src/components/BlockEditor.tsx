@@ -394,16 +394,19 @@ export function LineEditor({
   onChange,
   placeholder,
   wikiIndex,
+  onSlashInsert,
 }: {
   value: string;
   onChange: (v: string) => void;
   placeholder?: string;
   wikiIndex?: Map<string, string>;
+  onSlashInsert?: (kind: "image" | "link") => void;
 }) {
   const lines = value.length === 0 ? [""] : value.split("\n");
   const refs = useRef<Array<HTMLTextAreaElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
+  const [slash, setSlash] = useState<{ index: number; query: string; hi: number } | null>(null);
 
   // Only resize the textarea whose content actually changed since last render,
   // instead of looping every textarea on every keystroke (O(n) layout thrash).
