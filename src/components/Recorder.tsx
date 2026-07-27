@@ -73,6 +73,13 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     });
   }
 
+  function focusFirstEditorLine() {
+    requestAnimationFrame(() => {
+      const first = document.querySelector<HTMLElement>('[data-block-editor] .ce-line');
+      first?.focus();
+    });
+  }
+
 
   async function onPickMarkdownImages(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files ?? []);
@@ -508,8 +515,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   if (e.key === "Enter") {
                     e.preventDefault();
                     // jump into body
-                    const first = document.querySelector<HTMLTextAreaElement>('[data-block-editor] textarea');
-                    first?.focus();
+                    focusFirstEditorLine();
                   }
                 }}
                 maxLength={200}
@@ -523,6 +529,10 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   onRemoveImage={removeImageFromBody}
                   onRemoveLink={removeLinkFromBody}
                   placeholder="Start writing… # heading · - list · > quote · [[Title]] links a note"
+                  onSlashInsert={(kind) => {
+                    if (kind === "image") textFileRef.current?.click();
+                    else if (kind === "link") setInlineLinkOpen(true);
+                  }}
                 />
               </div>
             </div>

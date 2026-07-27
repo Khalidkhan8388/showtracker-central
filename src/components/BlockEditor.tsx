@@ -495,6 +495,7 @@ export function LineEditor({
   const lines = value.length === 0 ? [""] : value.split("\n");
   const refs = useRef<Array<HTMLDivElement | null>>([]);
   const focusPending = useRef<{ index: number; pos: number } | null>(null);
+  const slashDetectFrame = useRef<number | null>(null);
   const [focusedIdx, setFocusedIdx] = useState<number | null>(null);
   const [slash, setSlash] = useState<{ index: number; start: number; query: string; hi: number } | null>(null);
 
@@ -529,6 +530,14 @@ export function LineEditor({
     refs.current.length = lines.length;
   }, [value, focusedIdx]);
 
+  useEffect(() => {
+    return () => {
+      if (slashDetectFrame.current !== null) {
+        window.cancelAnimationFrame(slashDetectFrame.current);
+      }
+    };
+  }, []);
+
   function commit(nextLines: string[], focus?: { index: number; pos: number }) {
     if (focus) {
       focusPending.current = focus;
@@ -539,16 +548,14 @@ export function LineEditor({
 
   /** Detect a `/query` token immediately before the caret in visible text. */
   function detectSlash(el: HTMLElement, i: number) {
-    const caret = getVisibleCaret(el);
-    if (caret === null) return;
+    const caret = getVisibleCaret(el) ?? (el.textContent ?? "").length;
     const text = el.textContent ?? "";
-    for (let p = caret - 1; p >= 0; p--) {
+    const safeCaret = Math.max(0, Math.min(caret, text.length));
+    for (let p = safeCaret - 1; p >= 0; p--) {
       const ch = text[p];
       if (ch === "/") {
-        const before = p === 0 ? " " : text[p - 1];
-        if (p !== 0 && !/\s/.test(before)) return setSlash((cur) => (cur && cur.index === i ? null : cur));
-        const query = text.slice(p + 1, caret);
-        if (!/^\w*$/.test(query)) return setSlash((cur) => (cur && cur.index === i ? null : cur));
+        const query = text.slice(p + 1, safeCaret);
+        if (/\s/.test(query) || !/^[\p{L}\p{N}_-]*$/u.test(query)) return setSlash((cur) => (cur && cur.index === i ? null : cur));
         setSlash((cur) => ({
           index: i,
           start: p,
@@ -557,9 +564,20 @@ export function LineEditor({
         }));
         return;
       }
-      if (/\s/.test(ch)) break;
     }
     setSlash((cur) => (cur && cur.index === i ? null : cur));
+  }
+
+  function scheduleSlashDetect(i: number, el: HTMLDivElement) {
+    detectSlash(el, i);
+    if (slashDetectFrame.current !== null) {
+      window.cancelAnimationFrame(slashDetectFrame.current);
+    }
+    slashDetectFrame.current = window.requestAnimationFrame(() => {
+      const liveEl = refs.current[i] ?? el;
+      detectSlash(liveEl, i);
+      slashDetectFrame.current = null;
+    });
   }
 
   /** Delete the "/query" text from the DOM of the currently slashing line. */
@@ -671,8 +689,9 @@ export function LineEditor({
     const copy = lines.slice();
     copy[i] = md;
     onChange(copy.join("\n"));
-    // Update slash on next tick so DOM reflects latest.
-    detectSlash(el, i);
+    // Update slash again on the next frame so mobile contenteditable has time
+    // to move the caret after the newly typed `/`.
+    scheduleSlashDetect(i, el);
   }
 
   function handleKey(i: number, e: React.KeyboardEvent<HTMLDivElement>) {
@@ -682,6 +701,9 @@ export function LineEditor({
       if (e.key === "ArrowUp") { e.preventDefault(); setSlash({ ...slash, hi: (slash.hi - 1 + filteredSlash.length) % filteredSlash.length }); return; }
       if (e.key === "Enter" || e.key === "Tab") { e.preventDefault(); filteredSlash[slash.hi]?.apply(); return; }
       if (e.key === "Escape") { e.preventDefault(); setSlash(null); return; }
+    }
+    if (e.key === "/") {
+      scheduleSlashDetect(i, el);
     }
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -733,21 +755,20 @@ export function LineEditor({
             data-placeholder={i === 0 ? placeholder ?? "" : ""}
             onInput={(e) => handleInput(i, e.currentTarget)}
             onKeyDown={(e) => handleKey(i, e)}
-            onKeyUp={(e) => {
-              if (["ArrowLeft", "ArrowRight", "Home", "End"].includes(e.key)) {
-                detectSlash(e.currentTarget, i);
-              }
-            }}
+            onKeyUp={(e) => scheduleSlashDetect(i, e.currentTarget)}
             onMouseUp={(e) => detectSlash(e.currentTarget, i)}
-            onFocus={() => setFocusedIdx(i)}
+            onFocus={(e) => {
+              setFocusedIdx(i);
+              scheduleSlashDetect(i, e.currentTarget);
+            }}
             onBlur={() => {
               setFocusedIdx((cur) => (cur === i ? null : cur));
-              setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 120);
+              setTimeout(() => setSlash((s) => (s && s.index === i ? null : s)), 220);
             }}
             className={`ce-line w-full whitespace-pre-wrap break-words leading-relaxed outline-none focus:outline-none ${lineStyleFor(line)}`}
           />
           {slash && slash.index === i && filteredSlash.length > 0 && (
-            <div className="absolute left-0 top-full z-30 mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
+            <div data-slash-menu className="absolute left-0 top-full z-30 mt-1 w-56 max-h-64 overflow-y-auto rounded-xl border border-border bg-popover p-0.5 shadow-2xl">
               {filteredSlash.map((c, k) => {
                 const Icon = c.icon;
                 const active = k === slash.hi;
