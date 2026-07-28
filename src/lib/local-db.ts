@@ -72,6 +72,20 @@ export type LocalYouTube = {
   captions_available: boolean;
 };
 
+export type LocalInstagram = {
+  shortcode: string;
+  kind: "post" | "reel" | "tv";
+  canonical_url: string;
+  username: string | null;
+  display_name: string | null;
+  caption: string | null;
+  like_count: number | null;
+  comment_count: number | null;
+  posted_at: string | null;
+  is_video: boolean;
+};
+
+
 export type LocalNote = {
   id: string;
   user_id: string;
