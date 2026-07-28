@@ -1066,25 +1066,28 @@ function NoteDetail() {
               </button>
             </div>
 
-            {igPost.caption && (
+            {(igPost.places ?? []).length > 0 && (
               <div className="mt-4">
-                <button
-                  type="button"
-                  onClick={() => setIgCaptionOpen((v) => !v)}
-                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
-                >
-                  <span>Caption</span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${igCaptionOpen ? "rotate-180" : ""}`} />
-                </button>
-                <p
-                  className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
-                    igCaptionOpen ? "" : "line-clamp-6"
-                  }`}
-                >
-                  {igPost.caption}
-                </p>
+                <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Places
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {(igPost.places ?? []).map((p) => (
+                    <a
+                      key={p}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[12.5px] font-medium active:opacity-70"
+                    >
+                      <MapPin className="h-3.5 w-3.5" />
+                      {p}
+                    </a>
+                  ))}
+                </div>
               </div>
             )}
+
           </section>
         )}
 
