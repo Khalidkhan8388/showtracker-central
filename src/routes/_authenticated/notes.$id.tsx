@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle, MapPin } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle } from "lucide-react";
 import { formatIgCount } from "@/components/FeedNoteCard";
 import type { LocalYouTube, LocalInstagram } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
@@ -644,31 +644,19 @@ function NoteDetail() {
     try {
       const { fetchInstagramFn } = await import("@/lib/instagram.functions");
       const ig = await fetchInstagramFn({ data: { url: igPost.canonical_url } });
-      let summary: string | null = note.summary ?? null;
-      let places: string[] = igPost.places ?? [];
-      if ((ig.caption ?? "").trim().length >= 12) {
-        try {
-          const { analyzeInstagramFn } = await import("@/lib/ai.functions");
-          const ai = await analyzeInstagramFn({ data: { caption: ig.caption ?? "", username: ig.username } });
-          if (ai.summary) summary = ai.summary;
-          if (ai.places?.length) places = ai.places;
-        } catch {}
-      }
       await patchLocalNote(note.id, {
-        summary,
         instagram: {
           shortcode: ig.shortcode,
           kind: ig.kind,
           canonical_url: ig.canonicalUrl,
           username: ig.username,
           display_name: ig.displayName,
-          caption: null,
+          caption: ig.caption,
           like_count: ig.likeCount,
           comment_count: ig.commentCount,
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
           thumbnail_url: ig.imageUrl ?? null,
-          places,
         },
       } as any);
       toast.success("Instagram data refreshed");
@@ -1010,7 +998,7 @@ function NoteDetail() {
                   src={imageUrls[0] ?? igPost.thumbnail_url ?? ""}
                   alt=""
                   referrerPolicy="no-referrer"
-                  className="block max-h-[34vh] w-full object-contain"
+                  className="block max-h-[52vh] w-full object-contain"
                 />
               </button>
             )}
@@ -1047,6 +1035,18 @@ function NoteDetail() {
                 <Link2 className="h-3.5 w-3.5" />
                 Copy link
               </button>
+              {igPost.caption && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard.writeText(igPost.caption ?? "").then(() => toast.success("Caption copied"))
+                  }
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy caption
+                </button>
+              )}
               <button
                 type="button"
                 onClick={onShare}
@@ -1066,28 +1066,25 @@ function NoteDetail() {
               </button>
             </div>
 
-            {(igPost.places ?? []).length > 0 && (
+            {igPost.caption && (
               <div className="mt-4">
-                <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Places
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {(igPost.places ?? []).map((p) => (
-                    <a
-                      key={p}
-                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(p)}`}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[12.5px] font-medium active:opacity-70"
-                    >
-                      <MapPin className="h-3.5 w-3.5" />
-                      {p}
-                    </a>
-                  ))}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setIgCaptionOpen((v) => !v)}
+                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
+                >
+                  <span>Caption</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${igCaptionOpen ? "rotate-180" : ""}`} />
+                </button>
+                <p
+                  className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
+                    igCaptionOpen ? "" : "line-clamp-6"
+                  }`}
+                >
+                  {igPost.caption}
+                </p>
               </div>
             )}
-
           </section>
         )}
 

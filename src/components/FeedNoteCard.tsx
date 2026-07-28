@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play, MapPin } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
@@ -128,18 +128,16 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     );
   }
 
-  // Instagram posts / reels — dedicated card with the post image + AI summary.
+  // Instagram posts / reels — dedicated card with the post image + caption.
   const ig = (note as any).instagram as LocalInstagram | null | undefined;
   if (ig) {
     const isHeroV = variant === "hero";
     const handle = ig.username ? `@${ig.username}` : ig.display_name ?? "instagram";
     const likes = formatIgCount(ig.like_count);
     const comments = formatIgCount(ig.comment_count);
-    const blurb = (note.summary ?? "").replace(/\s+/g, " ").trim();
-    const igPlaces = (ig.places ?? []).slice(0, 3);
-    const igTasks = (note.tasks ?? []).filter((t) => !t.done).slice(0, 2);
+    const caption = (ig.caption ?? "").replace(/\s+/g, " ").trim();
     const igImg = thumbUrl ?? ig.thumbnail_url ?? null;
-    const igRatio = isHeroV ? "aspect-[16/9]" : variant === "wide" ? "aspect-[2/1]" : "aspect-[4/3]";
+    const igRatio = isHeroV ? "aspect-[16/11]" : variant === "wide" ? "aspect-[16/10]" : "aspect-square";
     const igSizing =
       isHeroV || variant === "wide" || fullWidth || variant === "masonry" ? "w-full" : "w-40 shrink-0";
     return (
@@ -163,68 +161,44 @@ export const FeedNoteCard = memo(function FeedNoteCard({
               className={`block w-full object-cover ${igRatio}`}
             />
           ) : (
-            <div className={`flex w-full flex-col items-center justify-center gap-1 ${igRatio}`}>
-              <Instagram className="h-5 w-5 text-neutral-400" />
+            <div
+              className={`flex w-full flex-col items-center justify-center gap-1 ${isHeroV ? "aspect-[16/11]" : "aspect-[4/3]"}`}
+            >
+              <Instagram className="h-6 w-6 text-neutral-400" />
               <span className="text-[10px] font-medium text-neutral-400">
                 {ig.kind === "reel" ? "Reel" : "Post"}
               </span>
             </div>
           )}
 
-          <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
-            <Instagram className="h-2.5 w-2.5" />
+          <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+            <Instagram className="h-3 w-3" />
             {ig.kind === "reel" ? "Reel" : "Post"}
           </div>
           {ig.is_video && (
-            <div className="pointer-events-none absolute right-2 bottom-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm">
-              <Play className="h-3 w-3 fill-white text-white" />
+            <div className="pointer-events-none absolute right-2 bottom-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm">
+              <Play className="h-3.5 w-3.5 fill-white text-white" />
             </div>
           )}
         </div>
 
-        <div className="flex flex-col gap-1 p-2.5">
+        <div className="flex flex-col gap-1.5 p-3">
           <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-900 dark:text-white">
             <span className="truncate">{handle}</span>
           </div>
-          {blurb && (
-            <p className="text-[12px] leading-snug text-neutral-700 line-clamp-2 dark:text-white/75">{blurb}</p>
+          {caption && (
+            <p className="text-[12.5px] leading-snug text-neutral-700 line-clamp-3 dark:text-white/75">{caption}</p>
           )}
-          {igPlaces.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {igPlaces.map((p) => (
-                <span
-                  key={p}
-                  className="flex items-center gap-0.5 rounded-full bg-neutral-100 px-1.5 py-0.5 text-[10px] font-medium text-neutral-600 dark:bg-white/10 dark:text-white/70"
-                >
-                  <MapPin className="h-2.5 w-2.5" />
-                  {p}
-                </span>
-              ))}
-            </div>
-          )}
-          {igTasks.length > 0 && (
-            <div className="flex flex-col gap-0.5">
-              {igTasks.map((t) => (
-                <span
-                  key={t.id}
-                  className="flex items-start gap-1 truncate text-[11px] text-neutral-600 dark:text-white/65"
-                >
-                  <span className="mt-[3px] h-1 w-1 shrink-0 rounded-full bg-current" />
-                  <span className="truncate">{t.text}</span>
-                </span>
-              ))}
-            </div>
-          )}
-          <div className="flex items-center gap-2.5 text-[10px] text-neutral-500 dark:text-white/55">
+          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-neutral-500 dark:text-white/55">
             {likes && (
               <span className="flex items-center gap-1">
-                <Heart className="h-2.5 w-2.5" />
+                <Heart className="h-3 w-3" />
                 {likes}
               </span>
             )}
             {comments && (
               <span className="flex items-center gap-1">
-                <MessageCircle className="h-2.5 w-2.5" />
+                <MessageCircle className="h-3 w-3" />
                 {comments}
               </span>
             )}
@@ -233,7 +207,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             </span>
           </div>
         </div>
-
 
         {selectMode && (
           <div className="absolute right-2 top-2 z-10">
