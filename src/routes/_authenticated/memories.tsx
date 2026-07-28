@@ -68,6 +68,45 @@ function MemoriesPage() {
   const navigate = useNavigate();
   const [active, setActive] = useState<Kind | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const selectMode = selected.size > 0;
+
+  function toggleSel(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  async function confirmDelete() {
+    const ids = Array.from(selected);
+    if (ids.length === 0) return;
+    await deleteLocalNotes(ids);
+    setSelected(new Set());
+    try {
+      await deleteNotes({ data: { noteIds: ids } });
+      await clearPendingDelete(ids);
+    } catch {
+      void resync();
+    }
+  }
+
+  async function togglePinSelected() {
+    const ids = Array.from(selected);
+    if (ids.length === 0 || !notes) return;
+    const nextPinned = notes.some((n) => selected.has(n.id) && !n.pinned);
+    await Promise.all(ids.map((id) => patchLocalNote(id, { pinned: nextPinned })));
+    setSelected(new Set());
+    try {
+      await Promise.all(ids.map((noteId) => pinNote({ data: { noteId, pinned: nextPinned } })));
+    } catch {
+      void resync();
+    }
+  }
+
+
 
   const all = useMemo(
     () =>
