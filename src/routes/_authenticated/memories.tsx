@@ -1,10 +1,12 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Pin, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import type { LocalNote } from "@/lib/local-db";
+import { patchLocalNote, deleteLocalNotes, resync, clearPendingDelete } from "@/lib/sync-engine";
+import { deleteNotes, pinNote } from "@/lib/notes.functions";
 
 export const Route = createFileRoute("/_authenticated/memories")({
   head: () => ({
