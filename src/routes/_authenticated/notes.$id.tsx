@@ -313,6 +313,8 @@ function NoteDetail() {
   const [readerError, setReaderError] = useState<string | null>(null);
   const [ytPlaying, setYtPlaying] = useState(false);
   const [ytDescOpen, setYtDescOpen] = useState(false);
+  const [igCaptionOpen, setIgCaptionOpen] = useState(false);
+  const [igRefreshing, setIgRefreshing] = useState(false);
   const longPressRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const linkLabelFn = generateLinkLabel;
   const transcribeClipFn = transcribeAudioClip;
