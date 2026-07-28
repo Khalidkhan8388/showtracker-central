@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play, FileText } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
