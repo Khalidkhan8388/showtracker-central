@@ -416,19 +416,24 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         </>
       ) : isWideLike ? (
         <div className="flex items-start gap-4">
-          {!isLink && hasImage && (
+          {(!isLink || !!ytThumb) && hasImage && (
             <img
               src={effThumb}
               alt=""
               loading="lazy"
               decoding="async"
               className={
-                isHero
-                  ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
-                  : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+                ytThumb
+                  ? isHero
+                    ? "h-24 w-40 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                    : "h-16 w-28 shrink-0 rounded-xl object-cover ring-1 ring-border"
+                  : isHero
+                    ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                    : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
               }
             />
           )}
+
           <div className="min-w-0 flex-1">
             {isHero ? (
               <div className="mb-2 flex items-center gap-2">
