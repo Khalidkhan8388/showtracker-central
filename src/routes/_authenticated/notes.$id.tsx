@@ -638,6 +638,36 @@ function NoteDetail() {
     } catch {}
   }
 
+  async function refreshInstagram() {
+    if (!note || !igPost || igRefreshing) return;
+    setIgRefreshing(true);
+    try {
+      const { fetchInstagramFn } = await import("@/lib/instagram.functions");
+      const ig = await fetchInstagramFn({ data: { url: igPost.canonical_url } });
+      await patchLocalNote(note.id, {
+        instagram: {
+          shortcode: ig.shortcode,
+          kind: ig.kind,
+          canonical_url: ig.canonicalUrl,
+          username: ig.username,
+          display_name: ig.displayName,
+          caption: ig.caption,
+          like_count: ig.likeCount,
+          comment_count: ig.commentCount,
+          posted_at: ig.postedAt,
+          is_video: ig.isVideo,
+          thumbnail_url: ig.imageUrl ?? null,
+        },
+      } as any);
+      toast.success("Instagram data refreshed");
+    } catch {
+      toast.error("Couldn't refetch this post");
+    } finally {
+      setIgRefreshing(false);
+    }
+  }
+
+
   async function copyTranscript() {
     if (!note?.transcript) return;
     try {
