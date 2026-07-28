@@ -219,12 +219,13 @@ function MemoriesPage() {
                       note={n}
                       variant="masonry"
                       thumbUrl={thumbs[n.id]}
-                      selected={false}
-                      selectMode={false}
+                      selected={selected.has(n.id)}
+                      selectMode={selectMode}
                       onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                      onLongPress={() => {}}
-                      onToggleSel={() => {}}
+                      onLongPress={() => toggleSel(n.id)}
+                      onToggleSel={() => toggleSel(n.id)}
                     />
+
                   </div>
                 ))}
               </div>
