@@ -991,7 +991,7 @@ function NoteDetail() {
             {(imageUrls[0] || igPost.thumbnail_url) && (
               <button
                 type="button"
-                onClick={() => imageUrls[0] && setLightboxIndex(0)}
+                onClick={() => imageUrls[0] && setLightboxIdx(0)}
                 className="mt-3 block w-full overflow-hidden rounded-[15px] bg-muted"
               >
                 <img
