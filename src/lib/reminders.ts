@@ -77,7 +77,7 @@ function nextUnwatchedEpisode(media: LocalMedia): { season: number; episode: num
 export function deriveReminders(notes: LocalNote[], now: Date = new Date()): Reminder[] {
   const out: Reminder[] = [];
   const nowMs = now.getTime();
-  const soonMs = nowMs + DAY; // upcoming within 24h
+  const soonMs = nowMs + 2 * DAY; // releasing today or tomorrow
   const pastMs = nowMs - 30 * DAY; // recently released, still relevant
 
   for (const n of notes) {
