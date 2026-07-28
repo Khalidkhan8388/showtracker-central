@@ -260,6 +260,14 @@ function MemoriesPage() {
               <Pin aria-hidden="true" className="h-3.5 w-3.5" />
               Pin
             </button>
+            <button
+              onClick={() => setShowAddToCollection(true)}
+              aria-label="Add to collection"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+            >
+              <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
+              Collect
+            </button>
             <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
             <button
               onClick={confirmDelete}
@@ -271,7 +279,28 @@ function MemoriesPage() {
           </div>
         </div>
       )}
+
+      {showAddToCollection && (
+        <AddToCollectionSheet
+          collections={allCollections ?? []}
+          onClose={() => setShowAddToCollection(false)}
+          onPick={async (collectionId) => {
+            const ids = Array.from(selected);
+            if (ids.length > 0) await addNotesToCollection(collectionId, ids);
+            setSelected(new Set());
+            setShowAddToCollection(false);
+          }}
+          onCreate={async (title) => {
+            const c = await createCollection(title);
+            const ids = Array.from(selected);
+            if (ids.length > 0) await addNotesToCollection(c.id, ids);
+            setSelected(new Set());
+            setShowAddToCollection(false);
+          }}
+        />
+      )}
     </div>
+
 
   );
 }
