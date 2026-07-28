@@ -492,21 +492,27 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
 
       const caption = ig.caption ?? "";
       const author = ig.username ? `@${ig.username}` : ig.displayName ?? "Instagram";
-      let heading =
-        caption
-          .split(/\r?\n/)
-          .map((l) => l.trim())
-          .find(Boolean)
-          ?.replace(/\s+/g, " ")
-          .slice(0, 90) || `${author} on Instagram`;
-      let summary: string | null = caption ? caption.replace(/\s+/g, " ").slice(0, 280) : null;
-      if (caption.length >= 60) {
+      let heading = `${author} on Instagram`;
+      // The raw caption is never surfaced — we only keep the AI's summary,
+      // tasks and any place names found in the caption.
+      let summary: string | null = null;
+      let places: string[] = [];
+      let tasksPayload: LocalTask[] = [];
+      if (caption.trim().length >= 12) {
         try {
-          const ai = await analyzeTextFn({ data: { heading: "", body: caption } });
+          const { analyzeInstagramFn } = await import("./ai.functions");
+          const ai = await analyzeInstagramFn({ data: { caption, username: ig.username } });
           if (ai.heading) heading = ai.heading.slice(0, 90);
           if (ai.summary) summary = ai.summary;
+          places = ai.places ?? [];
+          tasksPayload = (ai.tasks ?? []).map((t, i) => ({
+            id: `t${i}`,
+            text: t,
+            done: false,
+            pending: true,
+          }));
         } catch {
-          /* keep caption-derived fallbacks */
+          /* keep the author-derived heading */
         }
       }
       // Persist the post image locally so the card works offline.
@@ -535,7 +541,8 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
         status: "ready",
         heading,
         summary,
-        transcript: caption || null,
+        transcript: null,
+        tasks: tasksPayload,
         image_paths: imagePaths,
         tags,
         source_url: normalizeUrl(ig.canonicalUrl),
@@ -545,14 +552,16 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           canonical_url: ig.canonicalUrl,
           username: ig.username,
           display_name: ig.displayName,
-          caption: caption || null,
+          caption: null,
           like_count: ig.likeCount,
           comment_count: ig.commentCount,
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
           thumbnail_url: ig.imageUrl ?? null,
+          places,
         },
       });
+
       return { ok: true as const, noteId: note.id, instagram: true as const };
     }
   } catch (igErr) {
