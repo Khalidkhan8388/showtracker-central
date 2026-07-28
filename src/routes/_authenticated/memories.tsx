@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
 import { useMemo, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { NoteCard } from "@/components/NoteCard";
+import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import type { LocalNote } from "@/lib/local-db";
 
 export const Route = createFileRoute("/_authenticated/memories")({
