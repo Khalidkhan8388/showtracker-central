@@ -228,16 +228,18 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     );
   }
 
-  // YouTube links render as normal web link cards.
-
-
-
+  // YouTube links render as normal web link cards, but always have a thumbnail
+  // available from the video id (no locally cached image needed).
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  const ytThumb = yt?.video_id ? youtubeThumb(yt.video_id, "hq") : null;
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
-  const hasImage = imageCount > 0 && !!thumbUrl;
+  const effThumb = thumbUrl ?? ytThumb ?? undefined;
+  const hasImage = (imageCount > 0 && !!thumbUrl) || !!ytThumb;
   const isVoice = note.duration_seconds != null;
   const isText = !isVoice && note.transcript != null;
   const isLink = !!note.source_url && !isText;
+
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
