@@ -483,11 +483,13 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
     console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
   }
   // 1c) Instagram — dedicated fetcher: image + full caption + author metadata.
+  const { isInstagramUrl: isIgUrl } = await import("./instagram");
+  const isIg = isIgUrl(url);
   try {
-    const { parseInstagram } = await import("./instagram");
-    if (parseInstagram(url)) {
+    if (isIg) {
       const { fetchInstagramFn } = await import("./instagram.functions");
       const ig = await fetchInstagramFn({ data: { url } });
+
       const caption = ig.caption ?? "";
       const author = ig.username ? `@${ig.username}` : ig.displayName ?? "Instagram";
       let heading =
