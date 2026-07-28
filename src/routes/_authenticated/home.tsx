@@ -546,25 +546,55 @@ function Home() {
 
             <CollectionsRow notes={localNotes ?? []} />
 
-            {(derived.strip.length > 0 || derived.grid.length > 0) && (
-              <div className="columns-2 gap-3 [column-fill:_balance]">
-                {[...derived.strip, ...derived.grid].map((n) => (
-                  <div key={n.id} className="mb-3 break-inside-avoid">
-                    <NoteCard
-                      note={n}
-                      variant="masonry"
-                      thumbUrl={thumbs[n.id]}
-                      selected={selectedNotes.has(n.id)}
-                      selectMode={noteSelectMode}
-                      hideYouTubeThumb
-                      onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                      onLongPress={() => toggleNoteSel(n.id)}
-                      onToggleSel={() => toggleNoteSel(n.id)}
-                    />
+            {(derived.strip.length > 0 || derived.grid.length > 0) && (() => {
+              const all = [...derived.strip, ...derived.grid];
+              const startOfToday = new Date();
+              startOfToday.setHours(0, 0, 0, 0);
+              const today = all.filter((n) => new Date(n.created_at).getTime() >= startOfToday.getTime());
+              const earlier = all.filter((n) => new Date(n.created_at).getTime() < startOfToday.getTime());
+              const renderGrid = (items: typeof all) => (
+                <div className="columns-2 gap-3 [column-fill:_balance]">
+                  {items.map((n) => (
+                    <div key={n.id} className="mb-3 break-inside-avoid">
+                      <NoteCard
+                        note={n}
+                        variant="masonry"
+                        thumbUrl={thumbs[n.id]}
+                        selected={selectedNotes.has(n.id)}
+                        selectMode={noteSelectMode}
+                        hideYouTubeThumb
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => toggleNoteSel(n.id)}
+                        onToggleSel={() => toggleNoteSel(n.id)}
+                      />
+                    </div>
+                  ))}
+                </div>
+              );
+              return (
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-baseline justify-between">
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                      Memories
+                    </span>
+                    <span className="text-[11px] text-muted-foreground">{all.length}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {today.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[12px] font-semibold text-foreground">Today</span>
+                      {renderGrid(today)}
+                    </div>
+                  )}
+                  {earlier.length > 0 && (
+                    <div className="flex flex-col gap-2">
+                      <span className="text-[12px] font-semibold text-foreground">Earlier</span>
+                      {renderGrid(earlier)}
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+
           </div>
         )}
       </section>
