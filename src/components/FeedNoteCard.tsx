@@ -386,7 +386,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
               alt=""
               loading="lazy"
               decoding="async"
-              className="block h-auto max-h-72 w-full object-contain"
+              className={ytThumb ? "block aspect-video w-full object-cover" : "block h-auto max-h-72 w-full object-contain"}
             />
             {linkHost && (
               <div className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
