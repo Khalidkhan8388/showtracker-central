@@ -482,7 +482,81 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
   } catch (ytErr) {
     console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
   }
+  // 1c) Instagram — dedicated fetcher: image + full caption + author metadata.
+  try {
+    const { parseInstagram } = await import("./instagram");
+    if (parseInstagram(url)) {
+      const { fetchInstagramFn } = await import("./instagram.functions");
+      const ig = await fetchInstagramFn({ data: { url } });
+      const caption = ig.caption ?? "";
+      const author = ig.username ? `@${ig.username}` : ig.displayName ?? "Instagram";
+      let heading =
+        caption
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .find(Boolean)
+          ?.replace(/\s+/g, " ")
+          .slice(0, 90) || `${author} on Instagram`;
+      let summary: string | null = caption ? caption.replace(/\s+/g, " ").slice(0, 280) : null;
+      if (caption.length >= 60) {
+        try {
+          const ai = await analyzeTextFn({ data: { heading: "", body: caption } });
+          if (ai.heading) heading = ai.heading.slice(0, 90);
+          if (ai.summary) summary = ai.summary;
+        } catch {
+          /* keep caption-derived fallbacks */
+        }
+      }
+      // Persist the post image locally so the card works offline.
+      let imagePaths: string[] = [];
+      if (ig.imageUrl) {
+        try {
+          const img = await fetchLinkImageFn({ data: { url: ig.imageUrl } });
+          if (img.ok) {
+            const bin = atob(img.base64);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            imagePaths = [await storeLocalPhoto(new Blob([bytes], { type: img.mime }), img.mime)];
+          }
+        } catch {
+          /* image is optional */
+        }
+      }
+      const tags = Array.from(
+        new Set(
+          (caption.match(/#[\p{L}\p{N}_]{2,30}/gu) ?? [])
+            .map((t) => t.slice(1).toLowerCase())
+            .slice(0, 6),
+        ),
+      );
+      await updateNote(note.id, {
+        status: "ready",
+        heading,
+        summary,
+        transcript: caption || null,
+        image_paths: imagePaths,
+        tags,
+        source_url: normalizeUrl(ig.canonicalUrl),
+        instagram: {
+          shortcode: ig.shortcode,
+          kind: ig.kind,
+          canonical_url: ig.canonicalUrl,
+          username: ig.username,
+          display_name: ig.displayName,
+          caption: caption || null,
+          like_count: ig.likeCount,
+          comment_count: ig.commentCount,
+          posted_at: ig.postedAt,
+          is_video: ig.isVideo,
+        },
+      });
+      return { ok: true as const, noteId: note.id, instagram: true as const };
+    }
+  } catch (igErr) {
+    console.error("[instagram] fetch failed, falling back to generic web link", igErr);
+  }
   // 2) Fall back to standard AI enrichment
+
   try {
     const result = await analyzeWebLinkFn({ data: { url } });
     const tasksPayload: LocalTask[] = result.tasks.map((t, i) => ({
