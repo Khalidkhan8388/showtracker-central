@@ -920,7 +920,7 @@ function NoteDetail() {
           </>
         )}
 
-        {isLink && note.source_url && !yt && (
+        {isLink && note.source_url && !yt && !igPost && (
           <div className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
             {linkHost && (
               <img
@@ -948,7 +948,7 @@ function NoteDetail() {
           onChange={onAddImagesToSaved}
         />
 
-        {isLink && imageUrls.length > 0 && !yt && (
+        {isLink && imageUrls.length > 0 && !yt && !igPost && (
           <section className="mt-5">
             <a
               href={note.source_url!}
@@ -966,7 +966,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.source_url && !yt && (
+        {isLink && note.source_url && !yt && !igPost && (
           <section className="mt-5 flex gap-2">
             <a
               href={note.source_url}
@@ -1006,7 +1006,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.summary && !yt && (
+        {isLink && note.summary && !yt && !igPost && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
@@ -1015,7 +1015,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && readerData && readerOpen && !yt && (
+        {isLink && readerData && readerOpen && !yt && !igPost && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
