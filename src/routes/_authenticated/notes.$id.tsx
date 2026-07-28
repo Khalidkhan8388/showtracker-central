@@ -998,7 +998,7 @@ function NoteDetail() {
                   src={imageUrls[0] ?? igPost.thumbnail_url ?? ""}
                   alt=""
                   referrerPolicy="no-referrer"
-                  className="block max-h-[52vh] w-full object-contain"
+                  className="block max-h-[34vh] w-full object-contain"
                 />
               </button>
             )}
