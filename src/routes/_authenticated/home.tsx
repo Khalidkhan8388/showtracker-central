@@ -311,21 +311,22 @@ function Home() {
   const derived = useMemo(() => {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
+    const pinnedNotes = displayNotes.filter((n) => n.pinned);
+    const hasPinned = pinnedNotes.length > 0;
     const [latest, ...rest] = displayNotes;
-    // If reminders exist, the reminder hero replaces the latest-note hero,
-    // so the latest note flows into the strip like any other card.
-    const stripSource = hasReminders ? displayNotes : rest;
-    const pinnedRest = stripSource.filter((n) => n.pinned);
-    const unpinnedRest = stripSource.filter((n) => !n.pinned);
+    // Pinned entries take over the hero slot; reminders take it next; otherwise
+    // the latest note is the hero. Anything not in the hero flows into the strip.
+    const stripSource = (hasPinned || hasReminders ? displayNotes : rest).filter((n) => !n.pinned);
     const stripIds = new Set<string>();
     const strip: Note[] = [];
-    for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
+    for (const n of stripSource.slice(0, 5)) {
       if (!stripIds.has(n.id)) {
         stripIds.add(n.id);
         strip.push(n);
       }
     }
-    const grid = unpinnedRest.slice(5);
+    const grid = stripSource.slice(5);
+
 
     const allTasksRaw = notes.flatMap((n) =>
       (n.tasks ?? []).map((t) => ({
