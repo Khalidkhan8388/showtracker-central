@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Pin, Trash2, X } from "lucide-react";
+import { ChevronLeft, FolderPlus, Pin, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
@@ -7,6 +7,8 @@ import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import type { LocalNote } from "@/lib/local-db";
 import { patchLocalNote, deleteLocalNotes, resync, clearPendingDelete } from "@/lib/sync-engine";
 import { deleteNotes, pinNote } from "@/lib/notes.functions";
+import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
+import { useCollections, addNotesToCollection, createCollection } from "@/lib/collections";
 
 export const Route = createFileRoute("/_authenticated/memories")({
   head: () => ({
@@ -69,6 +71,8 @@ function MemoriesPage() {
   const [active, setActive] = useState<Kind | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showAddToCollection, setShowAddToCollection] = useState(false);
+  const allCollections = useCollections();
   const selectMode = selected.size > 0;
 
   function toggleSel(id: string) {
@@ -256,6 +260,14 @@ function MemoriesPage() {
               <Pin aria-hidden="true" className="h-3.5 w-3.5" />
               Pin
             </button>
+            <button
+              onClick={() => setShowAddToCollection(true)}
+              aria-label="Add to collection"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+            >
+              <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
+              Collect
+            </button>
             <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
             <button
               onClick={confirmDelete}
@@ -267,7 +279,28 @@ function MemoriesPage() {
           </div>
         </div>
       )}
+
+      {showAddToCollection && (
+        <AddToCollectionSheet
+          collections={allCollections ?? []}
+          onClose={() => setShowAddToCollection(false)}
+          onPick={async (collectionId) => {
+            const ids = Array.from(selected);
+            if (ids.length > 0) await addNotesToCollection(collectionId, ids);
+            setSelected(new Set());
+            setShowAddToCollection(false);
+          }}
+          onCreate={async (title) => {
+            const c = await createCollection(title);
+            const ids = Array.from(selected);
+            if (ids.length > 0) await addNotesToCollection(c.id, ids);
+            setSelected(new Set());
+            setShowAddToCollection(false);
+          }}
+        />
+      )}
     </div>
+
 
   );
 }
