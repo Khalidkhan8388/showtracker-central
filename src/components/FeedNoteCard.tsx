@@ -4,6 +4,7 @@ import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, He
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
+import { youtubeThumb } from "@/lib/youtube";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
 import type { LocalMedia, LocalYouTube, LocalInstagram } from "@/lib/local-db";
@@ -228,16 +229,18 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     );
   }
 
-  // YouTube links render as normal web link cards.
-
-
-
+  // YouTube links render as normal web link cards, but always have a thumbnail
+  // available from the video id (no locally cached image needed).
+  const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  const ytThumb = yt?.video_id ? youtubeThumb(yt.video_id, "hq") : null;
 
   const imageCount = Array.isArray(note.image_paths) ? note.image_paths.length : 0;
-  const hasImage = imageCount > 0 && !!thumbUrl;
+  const effThumb = thumbUrl ?? ytThumb ?? undefined;
+  const hasImage = (imageCount > 0 && !!thumbUrl) || !!ytThumb;
   const isVoice = note.duration_seconds != null;
   const isText = !isVoice && note.transcript != null;
   const isLink = !!note.source_url && !isText;
+
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -319,7 +322,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
       {isSquareLike && hasImage && !isLink && !isText && (
         <>
           <img
-            src={thumbUrl}
+            src={effThumb}
             alt=""
             loading="lazy"
             decoding="async"
@@ -379,11 +382,11 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         <>
           <div className="relative w-full bg-white dark:bg-white/95">
             <img
-              src={thumbUrl}
+              src={effThumb}
               alt=""
               loading="lazy"
               decoding="async"
-              className="block h-auto max-h-72 w-full object-contain"
+              className={ytThumb ? "block aspect-video w-full object-cover" : "block h-auto max-h-72 w-full object-contain"}
             />
             {linkHost && (
               <div className="absolute left-2 top-2 rounded-md bg-black/60 px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-white backdrop-blur-sm">
@@ -413,19 +416,24 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         </>
       ) : isWideLike ? (
         <div className="flex items-start gap-4">
-          {!isLink && hasImage && (
+          {(!isLink || !!ytThumb) && hasImage && (
             <img
-              src={thumbUrl}
+              src={effThumb}
               alt=""
               loading="lazy"
               decoding="async"
               className={
-                isHero
-                  ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
-                  : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
+                ytThumb
+                  ? isHero
+                    ? "h-24 w-40 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                    : "h-16 w-28 shrink-0 rounded-xl object-cover ring-1 ring-border"
+                  : isHero
+                    ? "h-24 w-24 shrink-0 rounded-2xl object-cover ring-1 ring-border"
+                    : "h-16 w-16 shrink-0 rounded-xl object-cover ring-1 ring-border"
               }
             />
           )}
+
           <div className="min-w-0 flex-1">
             {isHero ? (
               <div className="mb-2 flex items-center gap-2">
