@@ -262,8 +262,9 @@ export const FeedNoteCard = memo(function FeedNoteCard({
       ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
       : isHero
-        ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+        ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card shadow-sm transition-all " +
           (selected ? "ring-2 ring-foreground" : "")
+
         : isLinkTile
           ? "relative block overflow-hidden rounded-[15px] transition-all " +
             (selected ? "ring-2 ring-foreground" : "")
