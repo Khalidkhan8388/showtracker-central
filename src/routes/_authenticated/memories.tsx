@@ -71,6 +71,8 @@ function MemoriesPage() {
   const [active, setActive] = useState<Kind | null>(null);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [showAddToCollection, setShowAddToCollection] = useState(false);
+  const allCollections = useCollections();
   const selectMode = selected.size > 0;
 
   function toggleSel(id: string) {
