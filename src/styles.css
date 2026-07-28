@@ -116,10 +116,11 @@
   --scrim-mid: rgba(0, 0, 0, 0.4);
   --scrim-fg: #ffffff;
 
-  /* Reminder accent — soft faded yellow */
-  --reminder: #fde68a;          /* amber-200, soft */
-  --reminder-strong: #fcd34d;   /* amber-300 */
-  --reminder-foreground: #4a3a00;
+  /* Reminder accent — faded orange */
+  --reminder: #fbd0ae;          /* soft faded orange */
+  --reminder-strong: #f4a870;   /* deeper faded orange */
+  --reminder-foreground: #55290b;
+
 
 
 }
