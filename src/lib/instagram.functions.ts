@@ -55,30 +55,71 @@ function cleanCaption(s: string): string {
 
 const Input = z.object({ url: z.string().trim().max(2000) });
 
+const UAS = [
+  UA,
+  "Twitterbot/1.0",
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
+];
+
+async function fetchHtml(url: string, ua: string): Promise<{ html: string; finalUrl: string } | null> {
+  const controller = new AbortController();
+  const to = setTimeout(() => controller.abort(), 15_000);
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      signal: controller.signal,
+      headers: { "User-Agent": ua, Accept: "text/html,*/*", "Accept-Language": "en-US,en;q=0.9" },
+    });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, 1_500_000);
+    return { html, finalUrl: res.url || url };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
 export const fetchInstagramFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
-    const parsed = parseInstagram(data.url);
-    if (!parsed) throw new Error("Not an Instagram URL");
+    if (!isInstagramUrl(data.url)) throw new Error("Not an Instagram URL");
+    const parsedInput = parseInstagram(data.url);
+    // Share links (/share/...) only reveal their shortcode after redirect.
+    const startUrl = parsedInput
+      ? instagramCanonicalUrl(parsedInput.shortcode, parsedInput.kind)
+      : /^https?:\/\//i.test(data.url)
+        ? data.url
+        : `https://${data.url}`;
+
+    let html = "";
+    let finalUrl = startUrl;
+    let ogTitle: string | null = null;
+    let ogDesc: string | null = null;
+    let imageUrl: string | null = null;
+    let videoUrl: string | null = null;
+    let ogUrl: string | null = null;
+
+    for (const ua of UAS) {
+      const r = await fetchHtml(startUrl, ua);
+      if (!r) continue;
+      html = r.html;
+      finalUrl = r.finalUrl;
+      ogTitle = meta(html, "og:title");
+      ogDesc = meta(html, "og:description");
+      imageUrl = meta(html, "og:image");
+      videoUrl = meta(html, "og:video") ?? meta(html, "og:video:secure_url");
+      ogUrl = meta(html, "og:url");
+      if (imageUrl || (ogTitle && ogTitle.trim()) || (ogDesc && ogDesc.trim())) break;
+    }
+
+    const parsed =
+      parsedInput ?? parseInstagram(ogUrl ?? "") ?? parseInstagram(finalUrl) ?? null;
+    if (!parsed) throw new Error("Could not resolve Instagram post");
     const canonical = instagramCanonicalUrl(parsed.shortcode, parsed.kind);
 
-    const controller = new AbortController();
-    const to = setTimeout(() => controller.abort(), 15_000);
-    const res = await fetch(canonical, {
-      redirect: "follow",
-      signal: controller.signal,
-      headers: { "User-Agent": UA, Accept: "text/html,*/*", "Accept-Language": "en-US,en;q=0.9" },
-    }).finally(() => clearTimeout(to));
-    if (!res.ok) throw new Error(`Instagram fetch failed (${res.status})`);
-    const html = (await res.text()).slice(0, 1_500_000);
-
-    const ogTitle = meta(html, "og:title");
-    const ogDesc = meta(html, "og:description");
-    const imageUrl = meta(html, "og:image");
-    const videoUrl = meta(html, "og:video") ?? meta(html, "og:video:secure_url");
-    const ogUrl = meta(html, "og:url");
-
     if (!imageUrl && !ogTitle && !ogDesc) throw new Error("No Instagram metadata found");
+
 
     // og:description => `1M likes, 3,709 comments - nasa on July 29, 2023: "caption"`
     let username: string | null = null;
