@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ChevronLeft } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import type { LocalNote } from "@/lib/local-db";
@@ -36,6 +37,8 @@ function kindOf(n: LocalNote): Kind {
   if (n.instagram) return "instagram";
   if (n.youtube) return "youtube";
   if (n.duration_seconds != null) return "voice";
+  // Text notes stay "notes" even when they carry attached images.
+  if (n.transcript != null && n.transcript.trim() !== "") return "note";
   if (Array.isArray(n.image_paths) && n.image_paths.length > 0) return "image";
   if (n.source_url) return "web";
   return "note";
@@ -62,6 +65,7 @@ function MemoriesPage() {
   const notes = useLocalNotes();
   const navigate = useNavigate();
   const [active, setActive] = useState<Kind | null>(null);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   const all = useMemo(
     () =>
@@ -71,6 +75,36 @@ function MemoriesPage() {
         .sort((a, b) => b.created_at.localeCompare(a.created_at)),
     [notes],
   );
+
+  useEffect(() => {
+    const rows = all.filter((n) => Array.isArray(n.image_paths) && n.image_paths.length > 0);
+    if (rows.length === 0) return;
+    const paths = rows.map((n) => n.image_paths[0]).filter(Boolean) as string[];
+    let cancelled = false;
+    const apply = (pairs: Array<[string, string | undefined]>) => {
+      if (cancelled) return;
+      setThumbs((cur) => {
+        let next = cur;
+        for (const [id, url] of pairs) {
+          if (url && next[id] !== url) {
+            if (next === cur) next = { ...cur };
+            next[id] = url;
+          }
+        }
+        return next;
+      });
+    };
+    apply(rows.map((n) => [n.id, getCachedPhotoUrl(n.image_paths[0])]));
+    void warmPhotoCache(paths).then(() =>
+      apply(rows.map((n) => [n.id, getCachedPhotoUrl(n.image_paths[0])])),
+    );
+    void Promise.all(
+      rows.map(async (n) => [n.id, await getPhotoUrl(n.image_paths[0])] as [string, string]),
+    ).then(apply);
+    return () => {
+      cancelled = true;
+    };
+  }, [all]);
 
   const counts = useMemo(() => {
     const m = new Map<Kind, number>();
@@ -143,6 +177,7 @@ function MemoriesPage() {
                     <NoteCard
                       note={n}
                       variant="masonry"
+                      thumbUrl={thumbs[n.id]}
                       selected={false}
                       selectMode={false}
                       onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
