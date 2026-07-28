@@ -144,7 +144,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         tabIndex={0}
         onClick={handleClick}
         {...lp.handlers}
-        style={{ backgroundColor: "var(--ig-card-bg, transparent)" }}
         className={`${igSizing} relative flex cursor-pointer select-none flex-col overflow-hidden rounded-[15px] bg-white transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 dark:bg-[#1c1c1e] ${
           selected ? "ring-2 ring-foreground" : ""
         }`}
