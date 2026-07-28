@@ -136,6 +136,8 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     const likes = formatIgCount(ig.like_count);
     const comments = formatIgCount(ig.comment_count);
     const caption = (ig.caption ?? "").replace(/\s+/g, " ").trim();
+    const igImg = thumbUrl ?? ig.thumbnail_url ?? null;
+    const igRatio = isHeroV ? "aspect-[16/11]" : variant === "wide" ? "aspect-[16/10]" : "aspect-square";
     const igSizing =
       isHeroV || variant === "wide" || fullWidth || variant === "masonry" ? "w-full" : "w-40 shrink-0";
     return (
@@ -149,19 +151,26 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         }`}
       >
         <div className="relative w-full bg-neutral-100 dark:bg-black">
-          {thumbUrl ? (
+          {igImg ? (
             <img
-              src={thumbUrl}
+              src={igImg}
               alt=""
               loading="lazy"
               decoding="async"
-              className={`block w-full object-cover ${isHeroV ? "aspect-[4/5]" : variant === "wide" ? "aspect-[16/10]" : "aspect-square"}`}
+              referrerPolicy="no-referrer"
+              className={`block w-full object-cover ${igRatio}`}
             />
           ) : (
-            <div className={`flex w-full items-center justify-center ${isHeroV ? "aspect-[4/5]" : "aspect-square"}`}>
-              <Instagram className="h-7 w-7 text-neutral-400" />
+            <div
+              className={`flex w-full flex-col items-center justify-center gap-1 ${isHeroV ? "aspect-[16/11]" : "aspect-[4/3]"}`}
+            >
+              <Instagram className="h-6 w-6 text-neutral-400" />
+              <span className="text-[10px] font-medium text-neutral-400">
+                {ig.kind === "reel" ? "Reel" : "Post"}
+              </span>
             </div>
           )}
+
           <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
             <Instagram className="h-3 w-3" />
             {ig.kind === "reel" ? "Reel" : "Post"}
