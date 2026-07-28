@@ -345,8 +345,11 @@ function Home() {
     return {
       displayNotes,
       latest,
+      pinnedNotes,
+      hasPinned,
       strip,
       grid,
+
       suggested,
       allTasks,
       visible,
