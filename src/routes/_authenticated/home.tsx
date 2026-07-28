@@ -313,10 +313,10 @@ function Home() {
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
     const pinnedNotes = displayNotes.filter((n) => n.pinned);
     const hasPinned = pinnedNotes.length > 0;
-    const [latest, ...rest] = displayNotes;
-    // Pinned entries take over the hero slot; reminders take it next; otherwise
-    // the latest note is the hero. Anything not in the hero flows into the strip.
-    const stripSource = (hasPinned || hasReminders ? displayNotes : rest).filter((n) => !n.pinned);
+    const latest = displayNotes[0];
+    // No hero card: pinned entries render as a feed block above tasks, and every
+    // unpinned note flows into the normal memories feed.
+    const stripSource = displayNotes.filter((n) => !n.pinned);
     const stripIds = new Set<string>();
     const strip: Note[] = [];
     for (const n of stripSource.slice(0, 5)) {
