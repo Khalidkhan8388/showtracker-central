@@ -72,6 +72,20 @@ export type LocalYouTube = {
   captions_available: boolean;
 };
 
+export type LocalInstagram = {
+  shortcode: string;
+  kind: "post" | "reel" | "tv";
+  canonical_url: string;
+  username: string | null;
+  display_name: string | null;
+  caption: string | null;
+  like_count: number | null;
+  comment_count: number | null;
+  posted_at: string | null;
+  is_video: boolean;
+};
+
+
 export type LocalNote = {
   id: string;
   user_id: string;
@@ -94,6 +108,8 @@ export type LocalNote = {
   deleted_at: string | null;
   media?: LocalMedia | null;
   youtube?: LocalYouTube | null;
+  instagram?: LocalInstagram | null;
+
   reminder_at?: string | null;
   reminders?: string[];
   hidden_episode_reminders?: string[];
@@ -225,6 +241,15 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v12: optional Instagram payload on link notes. No new index.
+    this.version(12).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+    });
+
   }
 }
 

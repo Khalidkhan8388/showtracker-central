@@ -3,8 +3,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon } from "lucide-react";
-import type { LocalYouTube } from "@/lib/local-db";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle } from "lucide-react";
+import { formatIgCount } from "@/components/FeedNoteCard";
+import type { LocalYouTube, LocalInstagram } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
 import { YouTubeThumbImg } from "@/components/YouTubeCard";
 import { ReminderPicker } from "@/components/ReminderPicker";
@@ -581,6 +582,8 @@ function NoteDetail() {
   const isImage = !isVoice && !isLink && !hasBody && Array.isArray(note.image_paths) && note.image_paths.length > 0;
   const isText = !isVoice && !isLink && !isImage;
   const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  const igPost = (note as any).instagram as LocalInstagram | null | undefined;
+
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
@@ -920,7 +923,76 @@ function NoteDetail() {
           </>
         )}
 
-        {isLink && note.source_url && !yt && (
+        {igPost && (
+          <section className="mt-3">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex min-w-0 items-center gap-2">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                  <InstagramIcon className="h-4 w-4" />
+                </span>
+                <div className="min-w-0">
+                  <div className="truncate text-[14px] font-semibold leading-tight">
+                    {igPost.username ? `@${igPost.username}` : igPost.display_name ?? "Instagram"}
+                  </div>
+                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    {igPost.kind === "reel" ? "Reel" : igPost.kind === "tv" ? "IGTV" : "Post"}
+                    {igPost.posted_at ? ` · ${new Date(igPost.posted_at).toLocaleDateString()}` : ""}
+                  </div>
+                </div>
+              </div>
+              <a
+                href={igPost.canonical_url}
+                target="_blank"
+                rel="noreferrer"
+                className="shrink-0 rounded-full bg-foreground px-3 py-1.5 text-[12px] font-semibold text-background active:opacity-80"
+              >
+                Open
+              </a>
+            </div>
+
+            {imageUrls[0] && (
+              <a
+                href={igPost.canonical_url}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-3 block overflow-hidden rounded-[15px] bg-muted"
+              >
+                <img src={imageUrls[0]} alt="" className="block max-h-[70vh] w-full object-contain" />
+              </a>
+            )}
+
+            {(igPost.like_count != null || igPost.comment_count != null) && (
+              <div className="mt-3 flex items-center gap-4 text-[13px] text-muted-foreground">
+                {igPost.like_count != null && (
+                  <span className="flex items-center gap-1.5">
+                    <Heart className="h-4 w-4" />
+                    {formatIgCount(igPost.like_count)}
+                  </span>
+                )}
+                {igPost.comment_count != null && (
+                  <span className="flex items-center gap-1.5">
+                    <MessageCircle className="h-4 w-4" />
+                    {formatIgCount(igPost.comment_count)}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {igPost.caption && (
+              <div className="mt-4">
+                <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Caption
+                </div>
+                <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90">
+                  {igPost.caption}
+                </p>
+              </div>
+            )}
+          </section>
+        )}
+
+        {isLink && note.source_url && !yt && !igPost && (
+
           <div className="mt-3 flex items-center gap-2 text-[13px] text-muted-foreground">
             {linkHost && (
               <img
@@ -948,7 +1020,7 @@ function NoteDetail() {
           onChange={onAddImagesToSaved}
         />
 
-        {isLink && imageUrls.length > 0 && !yt && (
+        {isLink && imageUrls.length > 0 && !yt && !igPost && (
           <section className="mt-5">
             <a
               href={note.source_url!}
@@ -966,7 +1038,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.source_url && !yt && (
+        {isLink && note.source_url && !yt && !igPost && (
           <section className="mt-5 flex gap-2">
             <a
               href={note.source_url}
@@ -1006,7 +1078,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && note.summary && !yt && (
+        {isLink && note.summary && !yt && !igPost && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
@@ -1015,7 +1087,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isLink && readerData && readerOpen && !yt && (
+        {isLink && readerData && readerOpen && !yt && !igPost && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
               <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
