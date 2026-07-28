@@ -483,11 +483,13 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
     console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
   }
   // 1c) Instagram — dedicated fetcher: image + full caption + author metadata.
+  const { isInstagramUrl: isIgUrl } = await import("./instagram");
+  const isIg = isIgUrl(url);
   try {
-    const { parseInstagram } = await import("./instagram");
-    if (parseInstagram(url)) {
+    if (isIg) {
       const { fetchInstagramFn } = await import("./instagram.functions");
       const ig = await fetchInstagramFn({ data: { url } });
+
       const caption = ig.caption ?? "";
       const author = ig.username ? `@${ig.username}` : ig.displayName ?? "Instagram";
       let heading =
@@ -553,8 +555,34 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       return { ok: true as const, noteId: note.id, instagram: true as const };
     }
   } catch (igErr) {
-    console.error("[instagram] fetch failed, falling back to generic web link", igErr);
+    console.error("[instagram] fetch failed", igErr);
   }
+  if (isIg) {
+    // Never fall through to the generic scraper for Instagram — it only ever
+    // reaches the login/browser-update wall. Save a minimal Instagram card.
+    const { parseInstagram } = await import("./instagram");
+    const p = parseInstagram(url);
+    await updateNote(note.id, {
+      status: "ready",
+      heading: "Instagram post",
+      summary: null,
+      source_url: normalizeUrl(url),
+      instagram: {
+        shortcode: p?.shortcode ?? "",
+        kind: p?.kind ?? "post",
+        canonical_url: url,
+        username: null,
+        display_name: null,
+        caption: null,
+        like_count: null,
+        comment_count: null,
+        posted_at: null,
+        is_video: (p?.kind ?? "post") !== "post",
+      },
+    });
+    return { ok: true as const, noteId: note.id, instagram: true as const };
+  }
+
   // 2) Fall back to standard AI enrichment
 
   try {

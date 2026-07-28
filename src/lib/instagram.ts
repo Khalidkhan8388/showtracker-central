@@ -10,6 +10,17 @@ const IG_HOSTS = new Set([
 
 export type InstagramKind = "post" | "reel" | "tv";
 
+/** True for any Instagram URL, including share links (/share/...) whose
+ *  shortcode is only known after following the redirect. */
+export function isInstagramUrl(url: string): boolean {
+  try {
+    const u = new URL(/^https?:\/\//i.test(url) ? url : `https://${url}`);
+    return IG_HOSTS.has(u.hostname.toLowerCase());
+  } catch {
+    return false;
+  }
+}
+
 export function parseInstagram(url: string): { shortcode: string; kind: InstagramKind } | null {
   let u: URL;
   try {
@@ -28,6 +39,7 @@ export function parseInstagram(url: string): { shortcode: string; kind: Instagra
   const kind: InstagramKind = parts[idx] === "tv" ? "tv" : parts[idx] === "p" ? "post" : "reel";
   return { shortcode, kind };
 }
+
 
 export function instagramCanonicalUrl(shortcode: string, kind: InstagramKind): string {
   const seg = kind === "reel" ? "reel" : kind === "tv" ? "tv" : "p";
