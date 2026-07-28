@@ -644,19 +644,31 @@ function NoteDetail() {
     try {
       const { fetchInstagramFn } = await import("@/lib/instagram.functions");
       const ig = await fetchInstagramFn({ data: { url: igPost.canonical_url } });
+      let summary: string | null = note.summary ?? null;
+      let places: string[] = igPost.places ?? [];
+      if ((ig.caption ?? "").trim().length >= 12) {
+        try {
+          const { analyzeInstagramFn } = await import("@/lib/ai.functions");
+          const ai = await analyzeInstagramFn({ data: { caption: ig.caption ?? "", username: ig.username } });
+          if (ai.summary) summary = ai.summary;
+          if (ai.places?.length) places = ai.places;
+        } catch {}
+      }
       await patchLocalNote(note.id, {
+        summary,
         instagram: {
           shortcode: ig.shortcode,
           kind: ig.kind,
           canonical_url: ig.canonicalUrl,
           username: ig.username,
           display_name: ig.displayName,
-          caption: ig.caption,
+          caption: null,
           like_count: ig.likeCount,
           comment_count: ig.commentCount,
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
           thumbnail_url: ig.imageUrl ?? null,
+          places,
         },
       } as any);
       toast.success("Instagram data refreshed");
