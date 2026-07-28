@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play, FileText } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
@@ -262,8 +262,9 @@ export const FeedNoteCard = memo(function FeedNoteCard({
       ? "relative block overflow-hidden rounded-[15px] p-4 transition-all " +
         (selected ? "ring-2 ring-foreground" : "")
       : isHero
-        ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card p-6 shadow-sm transition-all " +
+        ? "relative block overflow-hidden rounded-[15px] border border-border/60 bg-card shadow-sm transition-all " +
           (selected ? "ring-2 ring-foreground" : "")
+
         : isLinkTile
           ? "relative block overflow-hidden rounded-[15px] transition-all " +
             (selected ? "ring-2 ring-foreground" : "")
@@ -414,7 +415,81 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             </div>
           </div>
         </>
+      ) : isHero ? (
+        <>
+          {/* Instagram-style post header */}
+          <div className="flex items-center gap-3 px-3.5 py-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-full bg-muted ring-1 ring-border">
+              {linkHost ? (
+                <img
+                  src={`https://www.google.com/s2/favicons?sz=64&domain=${linkHost}`}
+                  alt=""
+                  loading="lazy"
+                  className="h-5 w-5"
+                />
+              ) : isVoice ? (
+                <Mic className="h-4 w-4 text-muted-foreground" />
+              ) : (
+                <FileText className="h-4 w-4 text-muted-foreground" />
+              )}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] font-semibold leading-tight text-foreground">
+                {linkHost ?? (isVoice ? "Voice note" : "Note")}
+              </div>
+              <div className="truncate text-[11px] leading-tight text-muted-foreground">
+                {formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}
+                {note.duration_seconds != null && ` · ${formatDur(note.duration_seconds)}`}
+              </div>
+            </div>
+            <span className="shrink-0 rounded-full border border-border px-2 py-0.5 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Latest
+            </span>
+          </div>
+
+          {/* Full-bleed media */}
+          {hasImage && (
+            <div className="relative w-full bg-muted">
+              <img
+                src={effThumb}
+                alt=""
+                loading="lazy"
+                decoding="async"
+                className={`block w-full object-cover ${ytThumb ? "aspect-video" : "aspect-[4/3]"}`}
+              />
+              {ytThumb && (
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm">
+                    <Play className="h-5 w-5 fill-white text-white" />
+                  </div>
+                </div>
+              )}
+              {imageCount > 1 && !isLink && (
+                <div className="absolute right-2 top-2 rounded-full bg-black/50 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                  1/{imageCount}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Caption */}
+          <div className="flex flex-col gap-1.5 px-3.5 pb-3.5 pt-3">
+            <h3 className="font-serif text-[19px] font-normal leading-[1.2] tracking-tight text-foreground line-clamp-2">
+              {note.heading ?? (note.status === "failed" ? "Failed to process" : <AnalyzingBadge />)}
+            </h3>
+            {note.summary && (
+              <p className="text-[13px] leading-snug text-muted-foreground line-clamp-2">{note.summary}</p>
+            )}
+            {note.tasks && note.tasks.length > 0 && (
+              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5" />
+                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
+              </div>
+            )}
+          </div>
+        </>
       ) : isWideLike ? (
+
         <div className="flex items-start gap-4">
           {(!isLink || !!ytThumb) && hasImage && (
             <img
