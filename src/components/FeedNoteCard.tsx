@@ -1,12 +1,12 @@
 import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
+import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, Heart, MessageCircle, Play } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
-import type { LocalMedia, LocalYouTube } from "@/lib/local-db";
+import type { LocalMedia, LocalYouTube, LocalInstagram } from "@/lib/local-db";
 
 export type FeedNote = {
   id: string;
@@ -22,7 +22,16 @@ export type FeedNote = {
   transcript: string | null;
   media?: LocalMedia | null;
   youtube?: LocalYouTube | null;
+  instagram?: LocalInstagram | null;
 };
+
+export function formatIgCount(n: number | null | undefined): string | null {
+  if (n == null || isNaN(n)) return null;
+  if (n >= 1_000_000) return `${(n / 1_000_000).toFixed(n >= 10_000_000 ? 0 : 1).replace(/\.0$/, "")}M`;
+  if (n >= 1_000) return `${(n / 1_000).toFixed(n >= 10_000 ? 0 : 1).replace(/\.0$/, "")}K`;
+  return String(n);
+}
+
 
 export type FeedNoteVariant = "wide" | "square" | "hero" | "masonry";
 
