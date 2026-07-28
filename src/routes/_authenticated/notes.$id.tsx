@@ -1035,18 +1035,6 @@ function NoteDetail() {
                 <Link2 className="h-3.5 w-3.5" />
                 Copy link
               </button>
-              {igPost.caption && (
-                <button
-                  type="button"
-                  onClick={() =>
-                    navigator.clipboard.writeText(igPost.caption ?? "").then(() => toast.success("Caption copied"))
-                  }
-                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                  Copy caption
-                </button>
-              )}
               <button
                 type="button"
                 onClick={onShare}
