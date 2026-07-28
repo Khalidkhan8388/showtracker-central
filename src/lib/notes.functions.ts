@@ -550,6 +550,7 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           comment_count: ig.commentCount,
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
+          thumbnail_url: ig.imageUrl ?? null,
         },
       });
       return { ok: true as const, noteId: note.id, instagram: true as const };
