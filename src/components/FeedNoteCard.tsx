@@ -128,7 +128,100 @@ export const FeedNoteCard = memo(function FeedNoteCard({
     );
   }
 
+  // Instagram posts / reels — dedicated card with the post image + caption.
+  const ig = (note as any).instagram as LocalInstagram | null | undefined;
+  if (ig) {
+    const isHeroV = variant === "hero";
+    const handle = ig.username ? `@${ig.username}` : ig.display_name ?? "instagram";
+    const likes = formatIgCount(ig.like_count);
+    const comments = formatIgCount(ig.comment_count);
+    const caption = (ig.caption ?? "").replace(/\s+/g, " ").trim();
+    const igSizing =
+      isHeroV || variant === "wide" || fullWidth || variant === "masonry" ? "w-full" : "w-40 shrink-0";
+    return (
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={handleClick}
+        {...lp.handlers}
+        style={{ backgroundColor: "var(--ig-card-bg, transparent)" }}
+        className={`${igSizing} relative flex cursor-pointer select-none flex-col overflow-hidden rounded-[15px] bg-white transition-transform duration-200 ease-out active:scale-[0.97] motion-reduce:transition-none motion-reduce:active:scale-100 dark:bg-[#1c1c1e] ${
+          selected ? "ring-2 ring-foreground" : ""
+        }`}
+      >
+        <div className="relative w-full bg-neutral-100 dark:bg-black">
+          {thumbUrl ? (
+            <img
+              src={thumbUrl}
+              alt=""
+              loading="lazy"
+              decoding="async"
+              className={`block w-full object-cover ${isHeroV ? "aspect-[4/5]" : variant === "wide" ? "aspect-[16/10]" : "aspect-square"}`}
+            />
+          ) : (
+            <div className={`flex w-full items-center justify-center ${isHeroV ? "aspect-[4/5]" : "aspect-square"}`}>
+              <Instagram className="h-7 w-7 text-neutral-400" />
+            </div>
+          )}
+          <div className="pointer-events-none absolute left-2 top-2 flex items-center gap-1 rounded-full bg-black/55 px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white backdrop-blur-sm">
+            <Instagram className="h-3 w-3" />
+            {ig.kind === "reel" ? "Reel" : "Post"}
+          </div>
+          {ig.is_video && (
+            <div className="pointer-events-none absolute right-2 bottom-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/55 backdrop-blur-sm">
+              <Play className="h-3.5 w-3.5 fill-white text-white" />
+            </div>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-1.5 p-3">
+          <div className="flex items-center gap-1.5 text-[11px] font-semibold text-neutral-900 dark:text-white">
+            <span className="truncate">{handle}</span>
+          </div>
+          {caption && (
+            <p className="text-[12.5px] leading-snug text-neutral-700 line-clamp-3 dark:text-white/75">{caption}</p>
+          )}
+          <div className="mt-0.5 flex items-center gap-3 text-[11px] text-neutral-500 dark:text-white/55">
+            {likes && (
+              <span className="flex items-center gap-1">
+                <Heart className="h-3 w-3" />
+                {likes}
+              </span>
+            )}
+            {comments && (
+              <span className="flex items-center gap-1">
+                <MessageCircle className="h-3 w-3" />
+                {comments}
+              </span>
+            )}
+            <span className="truncate">
+              {formatDistanceToNow(new Date(ig.posted_at ?? note.created_at), { addSuffix: true })}
+            </span>
+          </div>
+        </div>
+
+        {selectMode && (
+          <div className="absolute right-2 top-2 z-10">
+            {selected ? (
+              <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+                <Check className="h-3 w-3 text-background" strokeWidth={3} />
+              </div>
+            ) : (
+              <div className="h-5 w-5 rounded-full bg-background ring-2 ring-background shadow-sm border border-muted-foreground/40" />
+            )}
+          </div>
+        )}
+        {note.pinned && !selectMode && (
+          <div className="absolute right-2 top-2 z-10">
+            <Pin className="h-3.5 w-3.5 fill-white text-white drop-shadow" />
+          </div>
+        )}
+      </div>
+    );
+  }
+
   // YouTube links render as normal web link cards.
+
 
 
 
