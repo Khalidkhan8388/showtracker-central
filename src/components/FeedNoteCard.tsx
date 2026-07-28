@@ -4,6 +4,7 @@ import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check, Instagram, He
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
+import { youtubeThumb } from "@/lib/youtube";
 import { useTheme } from "@/lib/theme";
 import { AnalyzingBadge, useLongPress, formatDur } from "@/components/NoteCard";
 import type { LocalMedia, LocalYouTube, LocalInstagram } from "@/lib/local-db";
