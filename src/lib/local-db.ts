@@ -108,6 +108,8 @@ export type LocalNote = {
   deleted_at: string | null;
   media?: LocalMedia | null;
   youtube?: LocalYouTube | null;
+  instagram?: LocalInstagram | null;
+
   reminder_at?: string | null;
   reminders?: string[];
   hidden_episode_reminders?: string[];
