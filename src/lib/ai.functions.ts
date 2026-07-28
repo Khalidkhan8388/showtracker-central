@@ -422,6 +422,71 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- instagram -----------------------------------------------------
+
+const IG_SYSTEM_PROMPT = `You turn an Instagram post's caption/description into a saved note.
+Return ONE JSON object with keys: heading, summary, tasks, places. No prose, no code fences.
+
+- heading: short (max ~8 words), title case. Never copy the caption verbatim.
+- summary: 1-3 plain sentences describing what the post is actually about. Never quote or reproduce the caption text, hashtags, emoji or @mentions.
+- tasks: concrete actionable to-dos this post plausibly triggers (e.g. "Visit X cafe", "Try this recipe"). Cap at 5. [] if nothing actionable.
+- places: real-world place names mentioned or clearly shown (city, country, venue, restaurant, landmark). Proper names only, no hashtags. Cap at 5. [] if none.
+
+Respond with ONLY the JSON object.`;
+
+const IgAnalyzeInput = z.object({
+  caption: z.string().trim().max(20000).optional().default(""),
+  username: z.string().trim().max(200).nullable().optional(),
+});
+
+export const analyzeInstagramFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => IgAnalyzeInput.parse(d))
+  .handler(async ({ data }) => {
+    const empty = { heading: "", summary: "", tasks: [] as string[], places: [] as string[] };
+    if (!data.caption || data.caption.trim().length < 12) return empty;
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const res = await fetchWithTimeout(
+      `${GATEWAY}/chat/completions`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+        body: JSON.stringify({
+          model: MODEL,
+          messages: [
+            { role: "system", content: IG_SYSTEM_PROMPT },
+            {
+              role: "user",
+              content: `Author: ${data.username ? `@${data.username}` : "unknown"}\n\nCaption:\n${data.caption}`,
+            },
+          ],
+          response_format: { type: "json_object" },
+        }),
+      },
+      120_000,
+    );
+    if (!res.ok) return empty;
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    let parsed: any;
+    try {
+      parsed = JSON.parse(j.choices?.[0]?.message?.content ?? "{}");
+    } catch {
+      parsed = {};
+    }
+    const places = Array.isArray(parsed.places)
+      ? parsed.places
+          .map((p: unknown) => String(p ?? "").trim())
+          .filter((p: string) => p.length > 1 && p.length < 60)
+          .slice(0, 5)
+      : [];
+    return {
+      heading: String(parsed.heading ?? "").slice(0, 120),
+      summary: String(parsed.summary ?? "").slice(0, 1200),
+      tasks: tasksFromRaw(parsed.tasks).slice(0, 5),
+      places,
+    };
+  });
+
 // ---------- youtube -------------------------------------------------------
 
 const YT_SYSTEM_PROMPT = `You turn YouTube video metadata into a structured saved note.
