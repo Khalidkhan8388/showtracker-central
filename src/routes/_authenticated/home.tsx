@@ -573,23 +573,27 @@ function Home() {
               );
               return (
                 <div className="flex flex-col gap-3">
-                  <div className="flex items-baseline justify-between">
+                  <Link
+                    to="/memories"
+                    className="flex items-center justify-between active:opacity-70"
+                  >
                     <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                       Memories
                     </span>
-                    <span className="text-[11px] text-muted-foreground">{all.length}</span>
-                  </div>
-                  {today.length > 0 && (
+                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
+                      {all.length}
+                      <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
+                    </span>
+                  </Link>
+                  {today.length > 0 ? (
                     <div className="flex flex-col gap-2">
                       <span className="text-[12px] font-semibold text-foreground">Today</span>
                       {renderGrid(today)}
                     </div>
-                  )}
-                  {earlier.length > 0 && (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[12px] font-semibold text-foreground">Earlier</span>
-                      {renderGrid(earlier)}
-                    </div>
+                  ) : (
+                    <p className="text-[12px] text-muted-foreground">
+                      Nothing saved today — {earlier.length} earlier {earlier.length === 1 ? "memory" : "memories"}.
+                    </p>
                   )}
                 </div>
               );
