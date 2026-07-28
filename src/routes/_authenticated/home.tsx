@@ -428,7 +428,46 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            {hasReminders ? (
+            {derived.hasPinned ? (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Pin aria-hidden="true" className="h-3.5 w-3.5 fill-primary text-primary" />
+                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Pinned{derived.pinnedNotes.length > 1 ? ` · ${derived.pinnedNotes.length}` : ""}
+                  </span>
+                </div>
+                <NoteCard
+                  note={derived.pinnedNotes[0]}
+                  variant="hero"
+                  thumbUrl={thumbs[derived.pinnedNotes[0].id]}
+                  selected={selectedNotes.has(derived.pinnedNotes[0].id)}
+                  selectMode={noteSelectMode}
+                  hideYouTubeThumb
+                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.pinnedNotes[0].id } })}
+                  onLongPress={() => toggleNoteSel(derived.pinnedNotes[0].id)}
+                  onToggleSel={() => toggleNoteSel(derived.pinnedNotes[0].id)}
+                />
+                {derived.pinnedNotes.length > 1 && (
+                  <div className="columns-2 gap-3 [column-fill:_balance]">
+                    {derived.pinnedNotes.slice(1).map((n) => (
+                      <div key={n.id} className="mb-3 break-inside-avoid">
+                        <NoteCard
+                          note={n}
+                          variant="masonry"
+                          thumbUrl={thumbs[n.id]}
+                          selected={selectedNotes.has(n.id)}
+                          selectMode={noteSelectMode}
+                          hideYouTubeThumb
+                          onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                          onLongPress={() => toggleNoteSel(n.id)}
+                          onToggleSel={() => toggleNoteSel(n.id)}
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : hasReminders ? (
               <ReminderHero />
             ) : (
               derived.latest && (
@@ -446,6 +485,7 @@ function Home() {
 
               )
             )}
+
 
 
             {derived.suggested.length > 0 && (
