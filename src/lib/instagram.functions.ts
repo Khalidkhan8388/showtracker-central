@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { instagramCanonicalUrl, parseInstagram, type InstagramKind } from "./instagram";
+import { instagramCanonicalUrl, isInstagramUrl, parseInstagram, type InstagramKind } from "./instagram";
 
 // Instagram serves full Open Graph metadata (image + full caption + author +
 // like/comment counts) to crawler user agents, so we scrape that instead of
