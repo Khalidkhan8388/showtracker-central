@@ -925,71 +925,137 @@ function NoteDetail() {
 
         {igPost && (
           <section className="mt-3">
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex min-w-0 items-center gap-2">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
-                  <InstagramIcon className="h-4 w-4" />
-                </span>
-                <div className="min-w-0">
-                  <div className="truncate text-[14px] font-semibold leading-tight">
-                    {igPost.username ? `@${igPost.username}` : igPost.display_name ?? "Instagram"}
-                  </div>
-                  <div className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                    {igPost.kind === "reel" ? "Reel" : igPost.kind === "tv" ? "IGTV" : "Post"}
-                    {igPost.posted_at ? ` · ${new Date(igPost.posted_at).toLocaleDateString()}` : ""}
-                  </div>
+            <div className="flex items-center gap-2">
+              <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-foreground text-background">
+                <InstagramIcon className="h-3.5 w-3.5" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[13px] font-semibold leading-tight">
+                  {igPost.username ? `@${igPost.username}` : igPost.display_name ?? "Instagram"}
+                </div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {igPost.kind === "reel" ? "Reel" : igPost.kind === "tv" ? "IGTV" : "Post"}
+                  {igPost.posted_at ? ` · ${new Date(igPost.posted_at).toLocaleDateString()}` : ""}
                 </div>
               </div>
-              <a
-                href={igPost.canonical_url}
-                target="_blank"
-                rel="noreferrer"
-                className="shrink-0 rounded-full bg-foreground px-3 py-1.5 text-[12px] font-semibold text-background active:opacity-80"
-              >
-                Open
-              </a>
+              {(igPost.like_count != null || igPost.comment_count != null) && (
+                <div className="flex shrink-0 items-center gap-3 text-[12px] text-muted-foreground">
+                  {igPost.like_count != null && (
+                    <span className="flex items-center gap-1">
+                      <Heart className="h-3.5 w-3.5" />
+                      {formatIgCount(igPost.like_count)}
+                    </span>
+                  )}
+                  {igPost.comment_count != null && (
+                    <span className="flex items-center gap-1">
+                      <MessageCircle className="h-3.5 w-3.5" />
+                      {formatIgCount(igPost.comment_count)}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
 
-            {imageUrls[0] && (
+            {(imageUrls[0] || igPost.thumbnail_url) && (
+              <button
+                type="button"
+                onClick={() => imageUrls[0] && setLightboxIndex(0)}
+                className="mt-3 block w-full overflow-hidden rounded-[15px] bg-muted"
+              >
+                <img
+                  src={imageUrls[0] ?? igPost.thumbnail_url ?? ""}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="block max-h-[52vh] w-full object-contain"
+                />
+              </button>
+            )}
+
+            {/* Actions */}
+            <div className="mt-3 flex flex-wrap gap-2">
               <a
                 href={igPost.canonical_url}
                 target="_blank"
                 rel="noreferrer"
-                className="mt-3 block overflow-hidden rounded-[15px] bg-muted"
+                className="flex items-center gap-1.5 rounded-full bg-foreground px-3.5 py-2 text-[12.5px] font-semibold text-background active:opacity-80"
               >
-                <img src={imageUrls[0]} alt="" className="block max-h-[70vh] w-full object-contain" />
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open {igPost.kind === "reel" ? "reel" : "post"}
               </a>
-            )}
-
-            {(igPost.like_count != null || igPost.comment_count != null) && (
-              <div className="mt-3 flex items-center gap-4 text-[13px] text-muted-foreground">
-                {igPost.like_count != null && (
-                  <span className="flex items-center gap-1.5">
-                    <Heart className="h-4 w-4" />
-                    {formatIgCount(igPost.like_count)}
-                  </span>
-                )}
-                {igPost.comment_count != null && (
-                  <span className="flex items-center gap-1.5">
-                    <MessageCircle className="h-4 w-4" />
-                    {formatIgCount(igPost.comment_count)}
-                  </span>
-                )}
-              </div>
-            )}
+              {igPost.username && (
+                <a
+                  href={`https://www.instagram.com/${igPost.username}/`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                >
+                  <InstagramIcon className="h-3.5 w-3.5" />
+                  Profile
+                </a>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  navigator.clipboard.writeText(igPost.canonical_url).then(() => toast.success("Link copied"))
+                }
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                Copy link
+              </button>
+              {igPost.caption && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    navigator.clipboard.writeText(igPost.caption ?? "").then(() => toast.success("Caption copied"))
+                  }
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                  Copy caption
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={onShare}
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+              >
+                <Share2 className="h-3.5 w-3.5" />
+                Share
+              </button>
+              <button
+                type="button"
+                disabled={igRefreshing}
+                onClick={refreshInstagram}
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70 disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${igRefreshing ? "animate-spin" : ""}`} />
+                Refetch
+              </button>
+            </div>
 
             {igPost.caption && (
               <div className="mt-4">
-                <div className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Caption
-                </div>
-                <p className="whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90">
+                <button
+                  type="button"
+                  onClick={() => setIgCaptionOpen((v) => !v)}
+                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
+                >
+                  <span>Caption</span>
+                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${igCaptionOpen ? "rotate-180" : ""}`} />
+                </button>
+                <p
+                  className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
+                    igCaptionOpen ? "" : "line-clamp-6"
+                  }`}
+                >
                   {igPost.caption}
                 </p>
               </div>
             )}
           </section>
         )}
+
 
         {isLink && note.source_url && !yt && !igPost && (
 
