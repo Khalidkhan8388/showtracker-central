@@ -581,6 +581,8 @@ function NoteDetail() {
   const isImage = !isVoice && !isLink && !hasBody && Array.isArray(note.image_paths) && note.image_paths.length > 0;
   const isText = !isVoice && !isLink && !isImage;
   const yt = (note as any).youtube as LocalYouTube | null | undefined;
+  const igPost = (note as any).instagram as LocalInstagram | null | undefined;
+
   const linkHost = (() => {
     if (!note.source_url) return null;
     try { return new URL(note.source_url).hostname.replace(/^www\./, ""); } catch { return null; }
