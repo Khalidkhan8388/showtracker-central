@@ -83,6 +83,8 @@ export type LocalInstagram = {
   comment_count: number | null;
   posted_at: string | null;
   is_video: boolean;
+  /** Remote CDN image, used when the local cached copy is unavailable. */
+  thumbnail_url?: string | null;
 };
 
 
