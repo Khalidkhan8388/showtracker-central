@@ -322,7 +322,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
       {isSquareLike && hasImage && !isLink && !isText && (
         <>
           <img
-            src={thumbUrl}
+            src={effThumb}
             alt=""
             loading="lazy"
             decoding="async"
@@ -382,7 +382,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         <>
           <div className="relative w-full bg-white dark:bg-white/95">
             <img
-              src={thumbUrl}
+              src={effThumb}
               alt=""
               loading="lazy"
               decoding="async"
@@ -418,7 +418,7 @@ export const FeedNoteCard = memo(function FeedNoteCard({
         <div className="flex items-start gap-4">
           {!isLink && hasImage && (
             <img
-              src={thumbUrl}
+              src={effThumb}
               alt=""
               loading="lazy"
               decoding="async"
