@@ -113,6 +113,8 @@ export type LocalNote = {
   media?: LocalMedia | null;
   youtube?: LocalYouTube | null;
   instagram?: LocalInstagram | null;
+  /** Real-world places extracted from a link's content (AI extracted). */
+  places?: { name: string; detail: string | null }[] | null;
 
   reminder_at?: string | null;
   reminders?: string[];
