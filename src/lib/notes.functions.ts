@@ -482,11 +482,13 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
   } catch (ytErr) {
     console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
   }
-  // 1c) Instagram — dedicated fetcher: image + full caption + author metadata.
+  // 1c) Instagram — same web-link treatment as any other page, we just bypass
+  // the login wall to get the thumbnail + caption, then run the normal
+  // summary / tasks / places analysis on it.
   const { isInstagramUrl: isIgUrl } = await import("./instagram");
   const isIg = isIgUrl(url);
-  try {
-    if (isIg) {
+  if (isIg) {
+    try {
       const { fetchInstagramFn } = await import("./instagram.functions");
       const ig = await fetchInstagramFn({ data: { url } });
 
@@ -557,53 +559,24 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
         key_points: keyPoints,
         image_paths: imagePaths,
         tags,
+        places,
+        instagram: null,
         source_url: normalizeUrl(ig.canonicalUrl),
-        instagram: {
-          shortcode: ig.shortcode,
-          kind: ig.kind,
-          canonical_url: ig.canonicalUrl,
-          username: ig.username,
-          display_name: ig.displayName,
-          caption: caption || null,
-          like_count: ig.likeCount,
-          comment_count: ig.commentCount,
-          posted_at: ig.postedAt,
-          is_video: ig.isVideo,
-          thumbnail_url: ig.imageUrl ?? null,
-          places,
-        },
       });
-      return { ok: true as const, noteId: note.id, instagram: true as const };
-
+      return { ok: true as const, noteId: note.id };
+    } catch (igErr) {
+      console.error("[instagram] fetch failed, saving plain link", igErr);
+      await updateNote(note.id, {
+        status: "ready",
+        heading: "Instagram post",
+        summary: null,
+        instagram: null,
+        source_url: normalizeUrl(url),
+      });
+      return { ok: true as const, noteId: note.id };
     }
-  } catch (igErr) {
-    console.error("[instagram] fetch failed", igErr);
   }
-  if (isIg) {
-    // Never fall through to the generic scraper for Instagram — it only ever
-    // reaches the login/browser-update wall. Save a minimal Instagram card.
-    const { parseInstagram } = await import("./instagram");
-    const p = parseInstagram(url);
-    await updateNote(note.id, {
-      status: "ready",
-      heading: "Instagram post",
-      summary: null,
-      source_url: normalizeUrl(url),
-      instagram: {
-        shortcode: p?.shortcode ?? "",
-        kind: p?.kind ?? "post",
-        canonical_url: url,
-        username: null,
-        display_name: null,
-        caption: null,
-        like_count: null,
-        comment_count: null,
-        posted_at: null,
-        is_video: (p?.kind ?? "post") !== "post",
-      },
-    });
-    return { ok: true as const, noteId: note.id, instagram: true as const };
-  }
+
 
   // 2) Fall back to standard AI enrichment
 
