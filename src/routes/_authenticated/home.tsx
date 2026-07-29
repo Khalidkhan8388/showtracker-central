@@ -581,6 +581,7 @@ function Home() {
           <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
             <button
               onClick={() => {
+                void haptic.tap();
                 setSelectedNotes(new Set());
                 setSelectedTasks(new Set());
               }}
@@ -591,7 +592,10 @@ function Home() {
             </button>
             {(noteSelectMode || taskSelectMode) && (
               <button
-                onClick={noteSelectMode ? togglePinSelected : togglePinSelectedTasks}
+                onClick={() => {
+                  void haptic.impact();
+                  noteSelectMode ? togglePinSelected() : togglePinSelectedTasks();
+                }}
                 aria-label="Pin selected"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
@@ -601,7 +605,10 @@ function Home() {
             )}
             {noteSelectMode && (
               <button
-                onClick={() => setShowAddToCollection(true)}
+                onClick={() => {
+                  void haptic.tap();
+                  setShowAddToCollection(true);
+                }}
                 aria-label="Add to collection"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
@@ -611,7 +618,10 @@ function Home() {
             )}
             <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
             <button
-              onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
+              onClick={() => {
+                void haptic.heavy();
+                noteSelectMode ? confirmDeleteNotes() : confirmDeleteTasks();
+              }}
               className="inline-flex items-center gap-1.5 rounded-full bg-destructive/90 px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm active:scale-90 active:opacity-90"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -619,9 +629,9 @@ function Home() {
             </button>
           </div>
         </div>
-      ) : (
-        <Recorder onNoteReady={() => { void resync(); }} />
-      )}
+      ) : !memoriesExpanded ? (
+        <Recorder onNoteReady={() => { void haptic.success(); void resync(); }} />
+      ) : null}
 
       {showAddToCollection && (
         <AddToCollectionSheet
