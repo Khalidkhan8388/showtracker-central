@@ -354,7 +354,7 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
     let username: string | null = embed?.username ?? null;
     let displayName: string | null = null;
     let likeCount: number | null = embed?.likeCount ?? null;
-    let commentCount: number | null = null;
+    let commentCount: number | null = readerCommentCount;
     let postedAt: string | null = null;
     let caption: string | null = embed?.caption ?? null;
     // Prefer whichever source actually yielded a real media image.
