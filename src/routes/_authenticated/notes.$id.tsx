@@ -1230,6 +1230,33 @@ function NoteDetail() {
           </section>
         )}
 
+        {isLink && !yt && !igPost && (note as any).places && (note as any).places.length > 0 && (
+          <section className="mt-6">
+            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+              Places
+            </h2>
+            <div className="flex flex-col gap-1.5">
+              {((note as any).places as { name: string; detail: string | null }[]).map((p, i) => (
+                <a
+                  key={`${p.name}-${i}`}
+                  href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                    [p.name, p.detail].filter(Boolean).join(" "),
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 no-underline press-bounce active:opacity-70"
+                >
+                  <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                  <span className="min-w-0">
+                    <span className="block truncate text-[14px] font-semibold text-foreground">{p.name}</span>
+                    {p.detail && <span className="block truncate text-[12px] text-muted-foreground">{p.detail}</span>}
+                  </span>
+                </a>
+              ))}
+            </div>
+          </section>
+        )}
+
         {isLink && readerData && readerOpen && !yt && !igPost && (
           <section className="mt-6">
             <div className="mb-2 flex items-center justify-between px-1">
