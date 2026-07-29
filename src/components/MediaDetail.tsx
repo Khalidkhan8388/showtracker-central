@@ -295,9 +295,12 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                           {s.air_date ? ` · ${s.air_date.slice(0, 4)}` : ""}
                         </p>
                       </div>
-                      <ChevronDown
-                        className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
-                      />
+                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted text-foreground">
+                        <ChevronDown
+                          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
+                          strokeWidth={2.5}
+                        />
+                      </span>
                     </button>
                   </div>
                   {open && (

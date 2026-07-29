@@ -233,11 +233,11 @@ export const NoteCard = memo(function NoteCard({
       {selectMode && (
         <div className="absolute right-2 top-2 z-10">
           {selected ? (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-foreground ring-2 ring-background">
+            <div className="flex h-5 w-5 items-center justify-center rounded-[7px] bg-foreground ring-2 ring-background">
               <Check className="h-3 w-3 text-background" strokeWidth={3} />
             </div>
           ) : (
-            <div className="h-5 w-5 rounded-full bg-background ring-2 ring-background shadow-sm border border-muted-foreground/40" />
+            <div className="h-5 w-5 rounded-[7px] bg-background ring-2 ring-background shadow-sm border border-muted-foreground/40" />
           )}
         </div>
       )}

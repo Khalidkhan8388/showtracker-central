@@ -151,7 +151,7 @@ function ProfilePage() {
             className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${sizeScale === "small" ? "bg-primary" : "bg-muted"}`}
           >
             <span
-              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-card shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform duration-200 ease-out"
               style={{ transform: sizeScale === "small" ? "translateX(20px)" : "translateX(0)" }}
             />
           </span>
@@ -182,7 +182,7 @@ function ProfilePage() {
             className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${hideMedia ? "bg-primary" : "bg-muted"}`}
           >
             <span
-              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+              className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-card shadow-[0_1px_3px_rgba(0,0,0,0.25)] transition-transform duration-200 ease-out"
               style={{ transform: hideMedia ? "translateX(20px)" : "translateX(0)" }}
             />
           </span>

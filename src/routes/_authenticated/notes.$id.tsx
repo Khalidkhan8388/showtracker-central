@@ -942,7 +942,9 @@ function NoteDetail() {
                   className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
                 >
                   <span>Description</span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ytDescOpen ? "rotate-180" : ""}`} />
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-foreground">
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${ytDescOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                  </span>
                 </button>
                 <div
                   className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
@@ -1075,7 +1077,9 @@ function NoteDetail() {
                   className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
                 >
                   <span>Caption</span>
-                  <ChevronDown className={`h-3.5 w-3.5 transition-transform ${igCaptionOpen ? "rotate-180" : ""}`} />
+                  <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-foreground">
+                    <ChevronDown className={`h-3.5 w-3.5 transition-transform ${igCaptionOpen ? "rotate-180" : ""}`} strokeWidth={2.5} />
+                  </span>
                 </button>
                 <p
                   className={`whitespace-pre-wrap break-words text-[14px] leading-[1.6] text-foreground/90 ${
