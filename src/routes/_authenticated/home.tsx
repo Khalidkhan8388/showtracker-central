@@ -14,14 +14,15 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { ReminderHero } from "@/components/ReminderHero";
-import { DailyRecall } from "@/components/DailyRecall";
+import { NowLane } from "@/components/NowLane";
 import { MemoriesSection } from "@/components/MemoriesSection";
+import { haptic } from "@/lib/haptics";
 
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
 import { toast } from "sonner";
 import { useReminders } from "@/lib/reminders";
+
 
 
 
@@ -87,7 +88,9 @@ function Home() {
   const [newTaskText, setNewTaskText] = useState("");
   const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
+  const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const allCollections = useCollections();
+
 
   useEffect(() => {
     if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
@@ -109,6 +112,7 @@ function Home() {
     setAddingTask(false);
     try {
       await addCustomTask({ data: { text } });
+      void haptic.success();
       void resync();
     } catch {
       setNewTaskText(text);
@@ -140,6 +144,8 @@ function Home() {
     const cur = note?.tasks?.find((t) => t.id === taskId);
     const nextDone = !(cur?.done ?? false);
     await patchLocalTask(noteId, taskId, { done: nextDone });
+    if (nextDone) void haptic.success();
+    else void haptic.impact();
     try {
       await toggleFn({ data: { noteId, taskId, done: nextDone } });
     } catch {
@@ -150,6 +156,7 @@ function Home() {
   async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
     const nextPinned = !pinned;
     await patchLocalTask(noteId, taskId, { pinned: nextPinned });
+    void haptic.impact();
     try {
       await pinTask({ data: { noteId, taskId, pinned: nextPinned } });
     } catch {
@@ -223,6 +230,7 @@ function Home() {
 
 
   function toggleNoteSel(id: string) {
+    void haptic.select();
     setSelectedNotes((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -231,6 +239,7 @@ function Home() {
     });
   }
   function toggleTaskSel(key: TaskKey) {
+    void haptic.select();
     setSelectedTasks((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
@@ -242,6 +251,7 @@ function Home() {
   async function confirmDeleteNotes() {
     const ids = Array.from(selectedNotes);
     if (ids.length === 0) return;
+    void haptic.heavy();
     await deleteLocalNotes(ids);
     setSelectedNotes(new Set());
     try {
@@ -258,6 +268,7 @@ function Home() {
       return { noteId, taskId };
     });
     if (items.length === 0) return;
+    void haptic.heavy();
     await deleteLocalTasks(items);
     setSelectedTasks(new Set());
     try {
@@ -270,6 +281,7 @@ function Home() {
   async function togglePinSelected() {
     const ids = Array.from(selectedNotes);
     if (ids.length === 0 || !notes) return;
+    void haptic.impact();
     // If any selected is unpinned, pin all; otherwise unpin all.
     const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
     const nextPinned = anyUnpinned;
@@ -285,6 +297,7 @@ function Home() {
   async function togglePinSelectedTasks() {
     const keys = Array.from(selectedTasks);
     if (keys.length === 0 || !notes) return;
+    void haptic.impact();
     const items = keys
       .map((k) => {
         const [noteId, taskId] = k.split("::");
@@ -431,7 +444,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            {hasReminders ? <ReminderHero /> : <DailyRecall />}
+            <NowLane />
 
 
 
@@ -440,6 +453,7 @@ function Home() {
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
+                onPointerDown={() => void haptic.tap()}
                 className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
               >
                 <div className="flex items-center gap-2">
@@ -482,7 +496,10 @@ function Home() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setAddingTask(true)}
+                    onClick={() => {
+                      void haptic.tap();
+                      setAddingTask(true);
+                    }}
                     className="flex w-full items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
                   >
                     <div className="flex items-center gap-2">
@@ -546,9 +563,26 @@ function Home() {
               selected={selectedNotes}
               selectMode={noteSelectMode}
               onToggleSel={toggleNoteSel}
+              limit={6}
+              onSeeAll={() => {
+                void haptic.tap();
+                setMemoriesExpanded(true);
+              }}
             />
 
-
+            {memoriesExpanded && (
+              <MemoriesOverlay
+                notes={derived.displayNotes as any}
+                thumbs={thumbs}
+                selected={selectedNotes}
+                selectMode={noteSelectMode}
+                onToggleSel={toggleNoteSel}
+                onClose={() => {
+                  void haptic.tap();
+                  setMemoriesExpanded(false);
+                }}
+              />
+            )}
           </div>
         )}
       </section>
@@ -561,6 +595,7 @@ function Home() {
           <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
             <button
               onClick={() => {
+                void haptic.tap();
                 setSelectedNotes(new Set());
                 setSelectedTasks(new Set());
               }}
@@ -571,7 +606,10 @@ function Home() {
             </button>
             {(noteSelectMode || taskSelectMode) && (
               <button
-                onClick={noteSelectMode ? togglePinSelected : togglePinSelectedTasks}
+                onClick={() => {
+                  void haptic.impact();
+                  noteSelectMode ? togglePinSelected() : togglePinSelectedTasks();
+                }}
                 aria-label="Pin selected"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
@@ -581,7 +619,10 @@ function Home() {
             )}
             {noteSelectMode && (
               <button
-                onClick={() => setShowAddToCollection(true)}
+                onClick={() => {
+                  void haptic.tap();
+                  setShowAddToCollection(true);
+                }}
                 aria-label="Add to collection"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
@@ -591,7 +632,10 @@ function Home() {
             )}
             <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
             <button
-              onClick={noteSelectMode ? confirmDeleteNotes : confirmDeleteTasks}
+              onClick={() => {
+                void haptic.heavy();
+                noteSelectMode ? confirmDeleteNotes() : confirmDeleteTasks();
+              }}
               className="inline-flex items-center gap-1.5 rounded-full bg-destructive/90 px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm active:scale-90 active:opacity-90"
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -599,9 +643,9 @@ function Home() {
             </button>
           </div>
         </div>
-      ) : (
-        <Recorder onNoteReady={() => { void resync(); }} />
-      )}
+      ) : !memoriesExpanded ? (
+        <Recorder onNoteReady={() => { void haptic.success(); void resync(); }} />
+      ) : null}
 
       {showAddToCollection && (
         <AddToCollectionSheet
@@ -622,6 +666,58 @@ function Home() {
           }}
         />
       )}
+    </div>
+  );
+}
+
+function MemoriesOverlay({
+  notes,
+  thumbs,
+  selected,
+  selectMode,
+  onToggleSel,
+  onClose,
+}: {
+  notes: import("@/lib/local-db").LocalNote[];
+  thumbs: Record<string, string>;
+  selected: Set<string>;
+  selectMode: boolean;
+  onToggleSel: (id: string) => void;
+  onClose: () => void;
+}) {
+  return (
+    <div className="fixed inset-0 z-30 flex flex-col bg-background animate-bounce-in">
+      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background px-4 py-3">
+        <div className="flex flex-col">
+          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            All memories
+          </span>
+          <span className="text-[13px] text-muted-foreground">
+            {notes.length} {notes.length === 1 ? "entry" : "entries"}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            void haptic.tap();
+            onClose();
+          }}
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
+          aria-label="Close"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </header>
+      <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4">
+        <MemoriesSection
+          notes={notes}
+          thumbs={thumbs}
+          selected={selected}
+          selectMode={selectMode}
+          onToggleSel={onToggleSel}
+          expanded
+        />
+      </div>
     </div>
   );
 }
@@ -800,6 +896,7 @@ const TaskRow = memo(function TaskRow({
     >
 
       <button
+        onPointerDown={() => void haptic.tap()}
         onClick={(e) => {
           e.stopPropagation();
           if (selectMode) {
@@ -846,6 +943,7 @@ const TaskRow = memo(function TaskRow({
       </div>
       {!selectMode && onPin && (
         <button
+          onPointerDown={() => void haptic.tap()}
           onClick={(e) => {
             e.stopPropagation();
             onPin();
