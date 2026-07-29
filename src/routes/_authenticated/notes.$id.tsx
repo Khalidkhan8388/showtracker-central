@@ -1085,8 +1085,47 @@ function NoteDetail() {
                 </p>
               </div>
             )}
+
+            {note.summary && (
+              <div className="mt-5">
+                <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Summary
+                </h2>
+                <p className="text-[15px] leading-[1.6] text-foreground">{note.summary}</p>
+              </div>
+            )}
+
+            {igPost.places && igPost.places.length > 0 && (
+              <div className="mt-5">
+                <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                  Places
+                </h2>
+                <div className="flex flex-col gap-1.5">
+                  {igPost.places.map((p, i) => (
+                    <a
+                      key={`${p.name}-${i}`}
+                      href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                        [p.name, p.detail].filter(Boolean).join(" "),
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 no-underline active:opacity-70"
+                    >
+                      <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
+                      <span className="min-w-0">
+                        <span className="block truncate text-[14px] font-semibold text-foreground">{p.name}</span>
+                        {p.detail && (
+                          <span className="block truncate text-[12px] text-muted-foreground">{p.detail}</span>
+                        )}
+                      </span>
+                    </a>
+                  ))}
+                </div>
+              </div>
+            )}
           </section>
         )}
+
 
 
         {isLink && note.source_url && !yt && !igPost && (
