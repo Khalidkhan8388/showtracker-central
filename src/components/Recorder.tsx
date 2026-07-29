@@ -9,6 +9,7 @@ import { Markdown } from "@/components/Markdown";
 import { BlockEditor } from "@/components/BlockEditor";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 
 function pickMime(): string {
@@ -148,9 +149,9 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
     try { localStorage.removeItem("braintape:textDraft"); } catch {}
   }
 
-  function handleCancelText() {
+  async function handleCancelText() {
     const dirty = textHeading.trim().length > 0 || textBody.trim().length > 0;
-    if (dirty && !confirm("Discard this note?")) return;
+    if (dirty && !(await confirmDialog({ title: "Discard note", message: "This draft won't be saved.", confirmLabel: "Discard", destructive: true }))) return;
     resetTextComposer();
     setTextOpen(false);
     setInlineLinkOpen(false);
@@ -431,7 +432,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {linkOpen && (
-        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full glass-pill p-1 pl-4">
+        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full glass-pill animate-bounce-up p-1 pl-4">
           <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-600 dark:text-white/70" />
           <label htmlFor="recorder-link-input" className="sr-only">Web link</label>
           <input
@@ -488,7 +489,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
               <button
                 onClick={submitText}
                 disabled={!textHeading.trim() && !textBody.trim()}
-                className="rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground active:opacity-70 disabled:opacity-40"
+                className="rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground press-bounce active:opacity-70 disabled:opacity-40"
               >
                 Save
               </button>

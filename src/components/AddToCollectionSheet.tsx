@@ -27,7 +27,7 @@ export function AddToCollectionSheet({
             type="button"
             onClick={onClose}
             aria-label="Close"
-            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
           >
             <X className="h-4 w-4" />
           </button>
@@ -65,7 +65,7 @@ export function AddToCollectionSheet({
           <button
             type="button"
             onClick={() => setCreating(true)}
-            className="mb-2 flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-left text-[14px] font-semibold text-muted-foreground active:opacity-70"
+            className="mb-2 flex w-full items-center gap-3 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-left text-[14px] font-semibold text-muted-foreground press-bounce active:opacity-70"
           >
             <Plus className="h-4 w-4" />
             New collection

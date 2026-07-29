@@ -7,6 +7,7 @@ import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
 import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functions";
 import { NoteCard, type Note } from "@/components/NoteCard";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
@@ -107,7 +108,7 @@ function TrashPage() {
   async function purgeSelected() {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!confirm(`Permanently delete ${ids.length} note${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
+    if (!(await confirmDialog({ title: "Delete forever", message: `Permanently delete ${ids.length} note${ids.length > 1 ? "s" : ""}? This cannot be undone.`, destructive: true }))) return;
     setBusy(true);
     try {
       await hardDeleteLocalNotes(ids);
@@ -123,7 +124,7 @@ function TrashPage() {
 
   async function purgeAll() {
     if (items.length === 0) return;
-    if (!confirm(`Permanently delete all ${items.length} notes? This cannot be undone.`)) return;
+    if (!(await confirmDialog({ title: "Empty trash", message: `Permanently delete all ${items.length} notes? This cannot be undone.`, confirmLabel: "Delete all", destructive: true }))) return;
     const ids = items.map((n) => n.id);
     setBusy(true);
     try {
@@ -209,7 +210,7 @@ function TrashPage() {
             <button
               disabled={busy}
               onClick={restoreSelected}
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold press-bounce active:opacity-70 disabled:opacity-50"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore
@@ -217,7 +218,7 @@ function TrashPage() {
             <button
               disabled={busy}
               onClick={purgeSelected}
-              className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground press-bounce active:opacity-70 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
@@ -228,7 +229,7 @@ function TrashPage() {
             <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
               <button
                 onClick={() => setSelected(new Set(items.map((n) => n.id)))}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold press-bounce active:opacity-70"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Restore all
@@ -236,7 +237,7 @@ function TrashPage() {
               <button
                 disabled={busy}
                 onClick={purgeAll}
-                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground press-bounce active:opacity-70 disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete all

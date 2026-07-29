@@ -146,7 +146,7 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                 type="button"
                 onClick={() => void setWatchStatus(noteId, active ? null : s)}
                 className={`rounded-2xl px-2 py-2.5 text-[12px] font-semibold transition-colors ${
-                  active ? WATCH_COLORS[s] : "bg-muted text-muted-foreground active:opacity-70"
+                  active ? WATCH_COLORS[s] : "bg-muted text-muted-foreground press-bounce active:opacity-70"
                 }`}
               >
                 {WATCH_LABEL[s]}

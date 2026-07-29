@@ -10,6 +10,7 @@ import { formatYtDuration } from "@/lib/youtube";
 import { YouTubeThumbImg } from "@/components/YouTubeCard";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 
 
@@ -149,7 +150,7 @@ function NoteDetail() {
 
 
   async function onDelete() {
-    if (!confirm("Delete this note?")) return;
+    if (!(await confirmDialog({ title: "Delete note", message: "Are you sure you want to delete this memory?", destructive: true }))) return;
     await deleteLocalNotes([id]);
     navigate({ to: "/home" });
     try {
@@ -195,8 +196,8 @@ function NoteDetail() {
     );
   }
 
-  function cancelEdit() {
-    if (isDirty() && !confirm("Discard your changes?")) return;
+  async function cancelEdit() {
+    if (isDirty() && !(await confirmDialog({ title: "Discard changes", message: "Your edits to this note will be lost.", confirmLabel: "Discard", destructive: true }))) return;
     try { localStorage.removeItem(`braintape:noteDraft:${id}`); } catch {}
     setEditing(false);
     setAddingLink(false);
@@ -718,7 +719,7 @@ function NoteDetail() {
   if (media) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
-        <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+        <header className="sticky top-0 z-10 glass-bar">
           <div className="flex items-center justify-between px-2 pt-3 pb-2">
             <button
               type="button"
@@ -752,7 +753,7 @@ function NoteDetail() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
       {/* iOS nav bar */}
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 glass-bar">
         <div className="flex items-center justify-between px-2 pt-3 pb-2">
           <button
             type="button"
@@ -790,7 +791,7 @@ function NoteDetail() {
             {note.error && <p className="mt-1 text-[13px] text-muted-foreground">{note.error}</p>}
             <button
               onClick={onRetry}
-              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-foreground active:opacity-70"
+              className="mt-3 inline-flex items-center gap-1.5 rounded-full bg-primary px-3.5 py-1.5 text-[13px] font-semibold text-primary-foreground press-bounce active:opacity-70"
             >
               <RefreshCw className="h-3.5 w-3.5" /> Retry
             </button>
@@ -916,7 +917,7 @@ function NoteDetail() {
               <button
                 type="button"
                 onClick={() => navigator.clipboard.writeText(yt.canonical_url).then(() => toast.success("Link copied"))}
-                className="inline-flex items-center justify-center rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground active:opacity-70"
+                className="inline-flex items-center justify-center rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground press-bounce active:opacity-70"
                 aria-label="Copy link"
               >
                 <Copy className="h-4 w-4" />
@@ -939,7 +940,7 @@ function NoteDetail() {
                 <button
                   type="button"
                   onClick={() => setYtDescOpen((v) => !v)}
-                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
+                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground press-bounce active:opacity-70"
                 >
                   <span>Description</span>
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-foreground">
@@ -1022,7 +1023,7 @@ function NoteDetail() {
                   href={`https://www.instagram.com/${igPost.username}/`}
                   target="_blank"
                   rel="noreferrer"
-                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold press-bounce active:opacity-70"
                 >
                   <InstagramIcon className="h-3.5 w-3.5" />
                   Profile
@@ -1033,7 +1034,7 @@ function NoteDetail() {
                 onClick={() =>
                   navigator.clipboard.writeText(igPost.canonical_url).then(() => toast.success("Link copied"))
                 }
-                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold press-bounce active:opacity-70"
               >
                 <Link2 className="h-3.5 w-3.5" />
                 Copy link
@@ -1044,7 +1045,7 @@ function NoteDetail() {
                   onClick={() =>
                     navigator.clipboard.writeText(igPost.caption ?? "").then(() => toast.success("Caption copied"))
                   }
-                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                  className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold press-bounce active:opacity-70"
                 >
                   <Copy className="h-3.5 w-3.5" />
                   Copy caption
@@ -1053,7 +1054,7 @@ function NoteDetail() {
               <button
                 type="button"
                 onClick={onShare}
-                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70"
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold press-bounce active:opacity-70"
               >
                 <Share2 className="h-3.5 w-3.5" />
                 Share
@@ -1062,7 +1063,7 @@ function NoteDetail() {
                 type="button"
                 disabled={igRefreshing}
                 onClick={refreshInstagram}
-                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold active:opacity-70 disabled:opacity-50"
+                className="flex items-center gap-1.5 rounded-full bg-muted px-3.5 py-2 text-[12.5px] font-semibold press-bounce active:opacity-70 disabled:opacity-50"
               >
                 <RefreshCw className={`h-3.5 w-3.5 ${igRefreshing ? "animate-spin" : ""}`} />
                 Refetch
@@ -1074,7 +1075,7 @@ function NoteDetail() {
                 <button
                   type="button"
                   onClick={() => setIgCaptionOpen((v) => !v)}
-                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground active:opacity-70"
+                  className="mb-2 flex w-full items-center justify-between px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground press-bounce active:opacity-70"
                 >
                   <span>Caption</span>
                   <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-muted text-foreground">
@@ -1114,7 +1115,7 @@ function NoteDetail() {
                       )}`}
                       target="_blank"
                       rel="noreferrer"
-                      className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 no-underline active:opacity-70"
+                      className="flex items-center gap-2.5 rounded-2xl bg-muted/60 px-3.5 py-2.5 no-underline press-bounce active:opacity-70"
                     >
                       <MapPin className="h-4 w-4 flex-shrink-0 text-muted-foreground" />
                       <span className="min-w-0">
@@ -1186,7 +1187,7 @@ function NoteDetail() {
               href={note.source_url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-[15px] font-semibold text-primary-foreground no-underline active:opacity-70"
+              className="inline-flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-[15px] font-semibold text-primary-foreground no-underline press-bounce active:opacity-70"
             >
               <ExternalLink className="h-4 w-4" />
               Open original
@@ -1212,7 +1213,7 @@ function NoteDetail() {
                   setReaderBusy(false);
                 }
               }}
-              className="inline-flex items-center justify-center gap-2 rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-muted px-4 py-3 text-[15px] font-semibold text-foreground press-bounce active:opacity-70 disabled:opacity-50"
             >
               {readerBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <BookOpen className="h-4 w-4" />}
               {readerData ? (readerOpen ? "Hide reader" : "Reader view") : "Reader view"}
@@ -1316,7 +1317,7 @@ function NoteDetail() {
                       await patchLocalNote(note.id, { image_paths: next });
                     } finally { setReorderBusy(false); }
                   }}
-                  className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium active:opacity-70 disabled:opacity-50"
+                  className="rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium press-bounce active:opacity-70 disabled:opacity-50"
                 >
                   Move to front
                 </button>
@@ -1335,7 +1336,7 @@ function NoteDetail() {
                       if (next.length === 0) setSelectMode(false);
                     } finally { setReorderBusy(false); }
                   }}
-                  className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1.5 text-[13px] font-medium text-destructive active:opacity-70 disabled:opacity-50"
+                  className="inline-flex items-center gap-1 rounded-full bg-destructive/10 px-3 py-1.5 text-[13px] font-medium text-destructive press-bounce active:opacity-70 disabled:opacity-50"
                 >
                   <Trash2 className="h-3.5 w-3.5" />
                   Delete
@@ -1343,7 +1344,7 @@ function NoteDetail() {
                 <button
                   type="button"
                   onClick={() => { setSelectMode(false); setSelected(new Set()); }}
-                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground active:opacity-70"
+                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground press-bounce active:opacity-70"
                 >
                   Done
                 </button>
@@ -1354,7 +1355,7 @@ function NoteDetail() {
                   type="button"
                   onClick={() => viewAddImagesRef.current?.click()}
                   disabled={addingImages}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground press-bounce active:opacity-70 disabled:opacity-50"
                 >
                   {addingImages ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <ImagePlus className="h-3.5 w-3.5" />}
                   Add photos
@@ -1376,7 +1377,7 @@ function NoteDetail() {
                       toast.error(e?.message ?? "OCR failed");
                     } finally { setOcrBusy(false); }
                   }}
-                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground active:opacity-70 disabled:opacity-50"
+                  className="inline-flex items-center gap-1.5 rounded-full bg-muted px-3 py-1.5 text-[13px] font-medium text-foreground press-bounce active:opacity-70 disabled:opacity-50"
                 >
                   {ocrBusy ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <FileText className="h-3.5 w-3.5" />}
                   {note.ocr_text
@@ -1399,7 +1400,7 @@ function NoteDetail() {
                 onClick={async () => {
                   await patchLocalNote(note.id, { ocr_hidden: true });
                 }}
-                className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground active:opacity-70"
+                className="rounded-full px-2 py-1 text-[11px] font-medium text-muted-foreground press-bounce active:opacity-70"
               >
                 Hide
               </button>
@@ -1537,7 +1538,7 @@ function NoteDetail() {
               type="button"
               onClick={contRecording ? stopContinueRecording : startContinueRecording}
               disabled={contBusy}
-              className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold shadow-sm active:opacity-70 disabled:opacity-50 ${
+              className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold shadow-sm press-bounce active:opacity-70 disabled:opacity-50 ${
                 contRecording
                   ? "bg-red-500 text-white"
                   : "bg-card text-foreground ring-1 ring-border"
@@ -1583,7 +1584,7 @@ function NoteDetail() {
               <button
                 onClick={saveEdit}
                 disabled={saving}
-                className="inline-flex items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground active:opacity-70 disabled:opacity-50"
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-3.5 py-1.5 text-[14px] font-semibold text-primary-foreground press-bounce active:opacity-70 disabled:opacity-50"
               >
                 {saving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                 Save
@@ -1814,7 +1815,7 @@ function NoteDetail() {
           <div
             role="toolbar"
             aria-label="Note actions"
-            className="pointer-events-auto inline-flex items-center gap-1 rounded-full glass-pill p-1.5"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-full glass-pill animate-bounce-up p-1.5"
           >
             <button
               onClick={startEdit}

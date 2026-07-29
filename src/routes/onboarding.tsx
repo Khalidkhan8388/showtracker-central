@@ -307,7 +307,7 @@ function NotificationsSlide({ goNext }: SlideCtx) {
           ) : (
             <button
               onClick={request}
-              className="inline-flex items-center gap-2 rounded-full bg-foreground/5 px-4 py-2.5 text-[13px] font-semibold text-foreground ring-1 ring-foreground/10 active:opacity-70"
+              className="inline-flex items-center gap-2 rounded-full bg-foreground/5 px-4 py-2.5 text-[13px] font-semibold text-foreground ring-1 ring-foreground/10 press-bounce active:opacity-70"
             >
               Enable notifications
               <ChevronRight className="h-4 w-4" />

@@ -269,7 +269,7 @@ function ProfilePage() {
               <button
                 disabled={deleting}
                 onClick={() => setConfirmOpen(false)}
-                className="flex-1 rounded-full bg-muted px-4 py-3 text-[15px] font-medium active:opacity-70"
+                className="flex-1 rounded-full bg-muted px-4 py-3 text-[15px] font-medium press-bounce active:opacity-70"
               >
                 Cancel
               </button>

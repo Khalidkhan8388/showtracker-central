@@ -285,7 +285,7 @@ export function VoicePlayer({ audioPath, audioPaths, fallbackDuration, onTimeUpd
           type="button"
           onClick={cycleSpeed}
           aria-label={`Playback speed ${SPEEDS[speedIdx]}x`}
-          className="inline-flex h-9 min-w-11 items-center justify-center rounded-full bg-muted px-2.5 text-[12px] font-semibold tabular-nums text-foreground active:opacity-70"
+          className="inline-flex h-9 min-w-11 items-center justify-center rounded-full bg-muted px-2.5 text-[12px] font-semibold tabular-nums text-foreground press-bounce active:opacity-70"
         >
           {SPEEDS[speedIdx]}×
         </button>

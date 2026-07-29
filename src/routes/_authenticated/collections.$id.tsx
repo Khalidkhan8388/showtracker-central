@@ -195,7 +195,7 @@ function CollectionDetail() {
               }
             }}
             aria-label="Back"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground press-bounce active:opacity-70"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -236,7 +236,7 @@ function CollectionDetail() {
             type="button"
             onClick={() => setConfirmDelete(true)}
             aria-label="Delete collection"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -256,7 +256,7 @@ function CollectionDetail() {
                     setPicked(new Set());
                     setPicking(false);
                   }}
-                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground active:opacity-70"
+                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground press-bounce active:opacity-70"
                 >
                   Cancel
                 </button>
@@ -319,7 +319,7 @@ function CollectionDetail() {
                     setPicking(true);
                   }
                 }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground active:opacity-70"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground press-bounce active:opacity-70"
               >
                 <Plus className="h-4 w-4" />
                 Add memories
@@ -327,7 +327,7 @@ function CollectionDetail() {
             </div>
             {hasMedia && (
             <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill p-1">
+              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
                 <button
                   type="button"
                   onClick={() => setTvView("posters")}
@@ -470,7 +470,7 @@ function CollectionDetail() {
                         className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                           active
                             ? "bg-primary text-primary-foreground"
-                            : "bg-card text-muted-foreground ring-1 ring-border/60 active:opacity-70"
+                            : "bg-card text-muted-foreground ring-1 ring-border/60 press-bounce active:opacity-70"
                         }`}
                       >
                         {label}
@@ -551,7 +551,7 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full glass-pill px-2 py-1.5 text-foreground">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full glass-pill animate-bounce-up px-2 py-1.5 text-foreground">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
