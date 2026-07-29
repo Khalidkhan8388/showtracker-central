@@ -431,7 +431,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
       )}
 
       {linkOpen && (
-        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full bg-white/90 p-1 pl-4 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+        <div className="pointer-events-auto flex w-full max-w-md items-center gap-1 rounded-full glass-pill p-1 pl-4">
           <Link2 aria-hidden="true" className="h-4 w-4 shrink-0 text-neutral-600 dark:text-white/70" />
           <label htmlFor="recorder-link-input" className="sr-only">Web link</label>
           <input
@@ -539,7 +539,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                   onChange={onPickMarkdownImages}
                 />
                 {inlineLinkOpen && (
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
+                  <div className="flex items-center gap-1 rounded-full glass-pill p-1 pl-3">
                     <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <input
                       autoFocus
@@ -586,7 +586,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
                     </button>
                   </div>
                 )}
-                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full glass-pill p-1.5">
                   <button
                     type="button"
                     onClick={() => textFileRef.current?.click()}

@@ -116,6 +116,13 @@
   --scrim-mid: rgba(0, 0, 0, 0.4);
   --scrim-fg: #ffffff;
 
+  /* Liquid glass pills */
+  --glass-bg: rgba(255, 255, 255, 0.55);
+  --glass-highlight: rgba(255, 255, 255, 0.75);
+  --glass-ring: rgba(0, 0, 0, 0.06);
+  --glass-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.35), 0 2px 8px -2px rgba(0, 0, 0, 0.12);
+  --glass-item-bg: rgba(255, 255, 255, 0.85);
+
   /* Reminder accent — faded orange */
   --reminder: #fbd0ae;          /* soft faded orange */
   --reminder-strong: #f4a870;   /* deeper faded orange */
@@ -164,6 +171,13 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(84, 84, 88, 0.65);
   --sidebar-ring: #ffffff;
+
+  /* Liquid glass pills */
+  --glass-bg: rgba(40, 40, 44, 0.5);
+  --glass-highlight: rgba(255, 255, 255, 0.18);
+  --glass-ring: rgba(255, 255, 255, 0.12);
+  --glass-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.7), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
+  --glass-item-bg: rgba(255, 255, 255, 0.16);
 
   /* Scrim tokens — dark mode fades to black */
   --scrim-strong: rgba(0, 0, 0, 0.85);
@@ -419,3 +433,19 @@ input[type="search"]::-webkit-search-decoration {
   background: var(--scrim-fg);
 }
 
+
+/* ---------- Liquid glass action pills ---------- */
+@utility glass-pill {
+  background: var(--glass-bg);
+  backdrop-filter: blur(32px) saturate(180%);
+  box-shadow:
+    inset 0 1px 0 0 var(--glass-highlight),
+    inset 0 0 0 1px var(--glass-ring),
+    var(--glass-shadow);
+}
+
+/* Selected / active item inside a glass pill */
+@utility glass-item {
+  background: var(--glass-item-bg);
+  box-shadow: inset 0 1px 0 0 var(--glass-highlight), 0 4px 12px -6px rgba(0, 0, 0, 0.4);
+}

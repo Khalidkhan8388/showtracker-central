@@ -626,7 +626,7 @@ function Home() {
 
       {selectMode ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
-          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill p-1">
             <button
               onClick={() => {
                 setSelectedNotes(new Set());
