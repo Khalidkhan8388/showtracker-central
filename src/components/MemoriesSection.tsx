@@ -27,7 +27,7 @@ export function kindOf(n: LocalNote): Kind {
   return "note";
 }
 
-function dayLabel(iso: string): string {
+function unusedDayLabel(iso: string): string {
   const d = new Date(iso);
   const today = new Date();
   today.setHours(0, 0, 0, 0);
@@ -64,7 +64,7 @@ export function MemoriesSection({
   onToggleSel: (id: string) => void;
 }) {
   const navigate = useNavigate();
-  const [active, setActive] = useState<Kind | null>(null);
+  const [active, setActive] = useState<Kind | "pinned" | null>(null);
 
   const all = useMemo(
     () => notes.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)),
