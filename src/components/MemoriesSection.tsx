@@ -27,27 +27,12 @@ export function kindOf(n: LocalNote): Kind {
   return "note";
 }
 
-function dayLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yest = new Date(today);
-  yest.setDate(yest.getDate() - 1);
-  const t = new Date(d);
-  t.setHours(0, 0, 0, 0);
-  if (t.getTime() === today.getTime()) return "Today";
-  if (t.getTime() === yest.getTime()) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: d.getFullYear() === today.getFullYear() ? undefined : "numeric",
-  });
-}
-
 /**
  * Memories — inline section that lives under Collections on the home feed.
- * Pinned entries sit on top, then everything else grouped by day, with
- * type filter pills. Selection is owned by the parent so the bulk action
+ * One flat, newest-first grid (no date grouping); pinned entries render at
+ * double width in place, and a "Pinned" filter pill sits with the type
+ * filters. Selection is owned by the parent so the bulk action
+
  * pill (pin / collect / delete) stays shared with the rest of home.
  */
 export function MemoriesSection({
@@ -64,7 +49,7 @@ export function MemoriesSection({
   onToggleSel: (id: string) => void;
 }) {
   const navigate = useNavigate();
-  const [active, setActive] = useState<Kind | null>(null);
+  const [active, setActive] = useState<Kind | "pinned" | null>(null);
 
   const all = useMemo(
     () => notes.slice().sort((a, b) => b.created_at.localeCompare(a.created_at)),
@@ -80,42 +65,15 @@ export function MemoriesSection({
     return m;
   }, [all]);
 
-  const filtered = active ? all.filter((n) => kindOf(n) === active) : all;
-  const pinned = filtered.filter((n) => n.pinned);
-  const rest = filtered.filter((n) => !n.pinned);
-
-  const groups = useMemo(() => {
-    const out: Array<{ label: string; items: LocalNote[] }> = [];
-    for (const n of rest) {
-      const label = dayLabel(n.created_at);
-      const last = out[out.length - 1];
-      if (last && last.label === label) last.items.push(n);
-      else out.push({ label, items: [n] });
-    }
-    return out;
-  }, [rest]);
+  const pinnedCount = all.filter((n) => n.pinned).length;
+  const filtered =
+    active === "pinned"
+      ? all.filter((n) => n.pinned)
+      : active
+        ? all.filter((n) => kindOf(n) === active)
+        : all;
 
   if (all.length === 0) return null;
-
-  const grid = (items: LocalNote[]) => (
-    <div className="columns-2 gap-3 [column-fill:_balance]">
-      {items.map((n) => (
-        <div key={n.id} className="mb-3 break-inside-avoid">
-          <NoteCard
-            note={n as any}
-            variant="masonry"
-            thumbUrl={thumbs[n.id]}
-            selected={selected.has(n.id)}
-            selectMode={selectMode}
-            hideYouTubeThumb
-            onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-            onLongPress={() => onToggleSel(n.id)}
-            onToggleSel={() => onToggleSel(n.id)}
-          />
-        </div>
-      ))}
-    </div>
-  );
 
   return (
     <section aria-label="Memories" className="flex flex-col gap-3">
@@ -130,6 +88,15 @@ export function MemoriesSection({
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <FilterPill label="All" count={all.length} active={active === null} onClick={() => setActive(null)} />
+        {pinnedCount > 0 && (
+          <FilterPill
+            label="Pinned"
+            icon={<Pin aria-hidden="true" className="h-3 w-3" />}
+            count={pinnedCount}
+            active={active === "pinned"}
+            onClick={() => setActive(active === "pinned" ? null : "pinned")}
+          />
+        )}
         {KIND_LABELS.filter((k) => (counts.get(k.key) ?? 0) > 0).map((k) => (
           <FilterPill
             key={k.key}
@@ -141,27 +108,23 @@ export function MemoriesSection({
         ))}
       </div>
 
-      {pinned.length > 0 && (
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <Pin aria-hidden="true" className="h-3.5 w-3.5 fill-primary text-primary" />
-            <span className="text-[12px] font-semibold text-foreground">
-              Pinned{pinned.length > 1 ? ` · ${pinned.length}` : ""}
-            </span>
+      <div className="grid grid-cols-2 items-start gap-3">
+        {filtered.map((n) => (
+          <div key={n.id} className={n.pinned ? "col-span-2" : ""}>
+            <NoteCard
+              note={n as any}
+              variant={n.pinned ? "hero" : "masonry"}
+              thumbUrl={thumbs[n.id]}
+              selected={selected.has(n.id)}
+              selectMode={selectMode}
+              hideYouTubeThumb={!n.pinned}
+              onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+              onLongPress={() => onToggleSel(n.id)}
+              onToggleSel={() => onToggleSel(n.id)}
+            />
           </div>
-          {grid(pinned)}
-        </div>
-      )}
-
-      {groups.map((g) => (
-        <div key={g.label} className="flex flex-col gap-2">
-          <div className="flex items-baseline justify-between">
-            <span className="text-[12px] font-semibold text-foreground">{g.label}</span>
-            <span className="text-[11px] text-muted-foreground">{g.items.length}</span>
-          </div>
-          {grid(g.items)}
-        </div>
-      ))}
+        ))}
+      </div>
 
       {filtered.length === 0 && (
         <p className="py-10 text-center text-[13px] text-muted-foreground">Nothing here yet.</p>
@@ -175,11 +138,13 @@ function FilterPill({
   count,
   active,
   onClick,
+  icon,
 }: {
   label: string;
   count: number;
   active: boolean;
   onClick: () => void;
+  icon?: React.ReactNode;
 }) {
   return (
     <button
@@ -191,8 +156,10 @@ function FilterPill({
           : "bg-card text-foreground ring-border/60"
       }`}
     >
+      {icon}
       <span>{label}</span>
       <span className={active ? "opacity-70" : "text-muted-foreground"}>{count}</span>
     </button>
   );
 }
+
