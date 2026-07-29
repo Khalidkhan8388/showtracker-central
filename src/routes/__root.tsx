@@ -13,6 +13,7 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/theme";
+import { ConfirmDialogHost } from "../components/ConfirmDialog";
 
 
 function NotFoundComponent() {
@@ -201,6 +202,7 @@ function RootComponent() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <Outlet />
+        <ConfirmDialogHost />
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>

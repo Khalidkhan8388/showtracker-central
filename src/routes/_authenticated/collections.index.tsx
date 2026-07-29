@@ -3,6 +3,7 @@ import { ChevronLeft, FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "
 import { useEffect, useState } from "react";
 import { useCollections, createCollection, deleteCollection, backfillMediaCollections, pruneEmptyCollections } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
+import { confirmDialog } from "@/components/ConfirmDialog";
 
 export const Route = createFileRoute("/_authenticated/collections/")({
   head: () => ({
@@ -63,7 +64,7 @@ function CollectionsPage() {
             <Link
               to="/home"
               aria-label="Back"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground press-bounce active:opacity-70"
             >
               <ChevronLeft className="h-5 w-5" />
             </Link>
@@ -108,7 +109,7 @@ function CollectionsPage() {
                 setCreating(false);
               }}
               aria-label="Cancel"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
             >
               <X className="h-4 w-4" />
             </button>
@@ -153,15 +154,18 @@ function CollectionsPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={(e) => {
+                    onClick={async (e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      if (confirm(`Delete "${c.title}"? Memories inside won't be deleted.`)) {
-                        void deleteCollection(c.id);
-                      }
+                      const ok = await confirmDialog({
+                        title: "Delete collection",
+                        message: `Delete "${c.title}"? Memories inside won't be deleted.`,
+                        destructive: true,
+                      });
+                      if (ok) void deleteCollection(c.id);
                     }}
                     aria-label="Delete collection"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

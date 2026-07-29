@@ -94,6 +94,55 @@ async function fetchHtml(url: string, ua: string): Promise<{ html: string; final
   }
 }
 
+/** Instagram blocks datacenter IPs often — retry the same URL through the
+ *  public reader proxy, asking it for raw HTML so the embed parser still works. */
+async function fetchHtmlViaReader(url: string): Promise<{ html: string; finalUrl: string } | null> {
+  const controller = new AbortController();
+  const to = setTimeout(() => controller.abort(), 20_000);
+  try {
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      signal: controller.signal,
+      headers: {
+        "x-return-format": "html",
+        "User-Agent": CRAWLER_UA,
+        Accept: "text/html,*/*",
+      },
+    });
+    if (!res.ok) return null;
+    const html = (await res.text()).slice(0, 2_000_000);
+    return { html, finalUrl: url };
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+/** Direct first, reader proxy second. */
+async function fetchAny(url: string): Promise<{ html: string; finalUrl: string } | null> {
+  for (const ua of UAS) {
+    const r = await fetchHtml(url, ua);
+    if (r && r.html.length > 500 && !/login|challenge/i.test(new URL(r.finalUrl).pathname)) return r;
+  }
+  return await fetchHtmlViaReader(url);
+}
+
+/** True for a real post image, not an avatar / sprite / spacer. */
+function looksLikeMedia(url: string | null | undefined): boolean {
+  if (!url || !/^https?:\/\//i.test(url)) return false;
+  if (/s150x150|s320x320|profile_pic|\/static\//i.test(url)) return false;
+  return /cdninstagram|fbcdn/i.test(url);
+}
+
+/** Instagram wraps captions in `"..."` inside og tags; strip the wrapper. */
+function unquoteCaption(s: string): string {
+  return s
+    .trim()
+    .replace(/^["“]/, "")
+    .replace(/["”]\s*[.。]?\s*$/, "")
+    .trim();
+}
+
 type EmbedData = {
   imageUrl: string | null;
   username: string | null;
@@ -150,36 +199,63 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
     let parsed = parsedInput;
     let finalUrl = startUrl;
     let ogHtml = "";
-    let ogTitle: string | null = null;
-    let ogDesc: string | null = null;
-    let ogImage: string | null = null;
-    let ogVideo: string | null = null;
-    let ogUrl: string | null = null;
+    const og: {
+      title: string | null;
+      desc: string | null;
+      image: string | null;
+      video: string | null;
+      url: string | null;
+    } = { title: null, desc: null, image: null, video: null, url: null };
+
+    const readOg = (html: string) => {
+      og.title = meta(html, "og:title") ?? og.title;
+      og.desc = meta(html, "og:description") ?? og.desc;
+      og.image = meta(html, "og:image") ?? og.image;
+      og.video = meta(html, "og:video") ?? meta(html, "og:video:secure_url") ?? og.video;
+      og.url = meta(html, "og:url") ?? og.url;
+    };
 
     for (const ua of UAS) {
       const r = await fetchHtml(startUrl, ua);
       if (!r) continue;
       ogHtml = r.html;
       finalUrl = r.finalUrl;
-      ogTitle = meta(ogHtml, "og:title");
-      ogDesc = meta(ogHtml, "og:description");
-      ogImage = meta(ogHtml, "og:image");
-      ogVideo = meta(ogHtml, "og:video") ?? meta(ogHtml, "og:video:secure_url");
-      ogUrl = meta(ogHtml, "og:url");
-      if (ogImage || ogTitle?.trim() || ogDesc?.trim()) break;
+      readOg(ogHtml);
+      if (looksLikeMedia(og.image) || og.desc?.trim()) break;
+    }
+    // Datacenter IPs sometimes get the login wall — retry through the reader.
+    if (!looksLikeMedia(og.image) && !og.desc?.trim()) {
+      const r = await fetchHtmlViaReader(startUrl);
+      if (r) {
+        finalUrl = r.finalUrl;
+        readOg(r.html);
+      }
     }
 
-    parsed = parsed ?? parseInstagram(ogUrl ?? "") ?? parseInstagram(finalUrl) ?? null;
+    parsed = parsed ?? parseInstagram(og.url ?? "") ?? parseInstagram(finalUrl) ?? null;
     if (!parsed) throw new Error("Could not resolve Instagram post");
     const canonical = instagramCanonicalUrl(parsed.shortcode, parsed.kind);
 
-    // --- Primary source: the embed page -------------------------------------
+    // --- Enrichment: the embed page (direct, then reader proxy) -------------
     let embed: EmbedData | null = null;
     for (const ua of UAS) {
       const r = await fetchHtml(`${canonical}embed/captioned/`, ua);
       if (!r) continue;
-      embed = parseEmbed(r.html);
-      if (embed?.caption || embed?.imageUrl) break;
+      embed = parseEmbed(r.html) ?? embed;
+      if (embed?.caption && looksLikeMedia(embed?.imageUrl)) break;
+    }
+    if (!embed?.caption || !looksLikeMedia(embed?.imageUrl)) {
+      const r = await fetchAny(`${canonical}embed/captioned/`);
+      const viaProxy = r ? parseEmbed(r.html) : null;
+      if (viaProxy) {
+        embed = {
+          imageUrl: looksLikeMedia(embed?.imageUrl) ? embed!.imageUrl : viaProxy.imageUrl,
+          username: embed?.username ?? viaProxy.username,
+          caption: embed?.caption ?? viaProxy.caption,
+          likeCount: embed?.likeCount ?? viaProxy.likeCount,
+          isVideo: embed?.isVideo || viaProxy.isVideo,
+        };
+      }
     }
 
     let username: string | null = embed?.username ?? null;
@@ -188,12 +264,17 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
     let commentCount: number | null = null;
     let postedAt: string | null = null;
     let caption: string | null = embed?.caption ?? null;
-    const imageUrl = embed?.imageUrl ?? ogImage ?? null;
+    // Prefer whichever source actually yielded a real media image.
+    const imageUrl = looksLikeMedia(og.image)
+      ? og.image
+      : looksLikeMedia(embed?.imageUrl)
+        ? embed!.imageUrl
+        : (og.image ?? embed?.imageUrl ?? null);
 
     // --- Fallback / enrichment from Open Graph ------------------------------
     // og:description => `1M likes, 3,709 comments - nasa on July 29, 2023: "caption"`
-    if (ogDesc) {
-      const m = ogDesc.match(
+    if (og.desc) {
+      const m = og.desc.match(
         /^([\d.,KMB]+)\s+likes?,\s*([\d.,KMB]+)\s+comments?\s*-\s*([^:]+?)\s+on\s+([^:]+?):\s*"([\s\S]*)"?\s*$/i,
       );
       if (m) {
@@ -203,14 +284,14 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
         const d = new Date(m[4].trim());
         postedAt = isNaN(d.getTime()) ? null : d.toISOString();
         if (!caption) caption = m[5];
-      } else if (!caption && !/log in|update your browser|browser/i.test(ogDesc)) {
-        caption = ogDesc;
+      } else if (!caption && !/log in|update your browser|browser/i.test(og.desc)) {
+        caption = og.desc;
       }
     }
 
     // og:title => `NASA on Instagram: "caption"`
-    if (ogTitle) {
-      const t = ogTitle.match(/^(.*?)\s+on Instagram:\s*"([\s\S]*?)"?\s*$/i);
+    if (og.title) {
+      const t = og.title.match(/^(.*?)\s+on Instagram:\s*"([\s\S]*?)"?\s*$/i);
       if (t) {
         displayName = t[1].trim() || null;
         if (!caption || t[2].length > caption.length) caption = t[2];
@@ -219,7 +300,7 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
 
     // Username fallback from the canonicalised og:url (`/<user>/p/<code>/`).
     if (!username) {
-      for (const cand of [ogUrl, finalUrl]) {
+      for (const cand of [og.url, finalUrl]) {
         if (!cand) continue;
         try {
           const p = new URL(cand).pathname.split("/").filter(Boolean);
@@ -231,7 +312,7 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
       }
     }
 
-    caption = caption ? cleanCaption(caption).slice(0, 5000) : null;
+    caption = caption ? unquoteCaption(cleanCaption(caption)).slice(0, 5000) || null : null;
 
     if (!imageUrl && !caption) throw new Error("No Instagram metadata found");
 
@@ -240,7 +321,7 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
       kind: parsed.kind as InstagramKind,
       canonicalUrl: canonical,
       imageUrl,
-      isVideo: embed?.isVideo || !!ogVideo || parsed.kind !== "post",
+      isVideo: embed?.isVideo || !!og.video || parsed.kind !== "post",
       username,
       displayName,
       caption,

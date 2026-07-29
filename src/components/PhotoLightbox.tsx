@@ -161,7 +161,7 @@ export function PhotoLightbox({ urls, startIndex = 0, open, onClose }: Props) {
           type="button"
           aria-label="Close"
           onClick={onClose}
-          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 active:opacity-70"
+          className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 press-bounce active:opacity-70"
         >
           <X className="h-5 w-5" />
         </button>
@@ -192,7 +192,7 @@ export function PhotoLightbox({ urls, startIndex = 0, open, onClose }: Props) {
             type="button"
             aria-label="Previous"
             onClick={goPrev}
-            className="absolute left-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white active:opacity-70 md:inline-flex"
+            className="absolute left-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white press-bounce active:opacity-70 md:inline-flex"
           >
             <ChevronLeft className="h-6 w-6" />
           </button>
@@ -202,7 +202,7 @@ export function PhotoLightbox({ urls, startIndex = 0, open, onClose }: Props) {
             type="button"
             aria-label="Next"
             onClick={goNext}
-            className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white active:opacity-70 md:inline-flex"
+            className="absolute right-2 top-1/2 hidden -translate-y-1/2 items-center justify-center rounded-full bg-white/10 p-2 text-white press-bounce active:opacity-70 md:inline-flex"
           >
             <ChevronRight className="h-6 w-6" />
           </button>

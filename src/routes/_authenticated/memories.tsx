@@ -180,7 +180,7 @@ function MemoriesPage() {
           <Link
             to="/home"
             aria-label="Back"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground press-bounce active:opacity-70"
           >
             <ChevronLeft className="h-5 w-5" />
           </Link>
@@ -243,11 +243,11 @@ function MemoriesPage() {
 
       {selectMode && (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
-          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill p-1">
+          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
             <button
               onClick={() => setSelected(new Set())}
               aria-label="Cancel selection"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
             >
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
@@ -255,7 +255,7 @@ function MemoriesPage() {
             <button
               onClick={togglePinSelected}
               aria-label="Pin selected"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
             >
               <Pin aria-hidden="true" className="h-3.5 w-3.5" />
               Pin
@@ -263,7 +263,7 @@ function MemoriesPage() {
             <button
               onClick={() => setShowAddToCollection(true)}
               aria-label="Add to collection"
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
             >
               <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
               Collect

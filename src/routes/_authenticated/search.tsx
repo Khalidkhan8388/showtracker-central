@@ -517,7 +517,7 @@ function SearchPage() {
   return (
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-background">
       {/* Minimal top bar */}
-      <header className="sticky top-0 z-30 bg-background/90 backdrop-blur-xl">
+      <header className="sticky top-0 z-30 glass-bar">
         <div className={`flex items-center gap-3 px-4 transition-all duration-200 ${collapsed ? "pb-2 pt-2" : "pb-3 pt-4"}`}>
           <button
             onClick={() => navigate({ to: "/home" })}
@@ -582,7 +582,7 @@ function SearchPage() {
           <div className="mb-3">
             <button
               onClick={() => setActiveTag(null)}
-              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[12px] font-medium text-primary-foreground active:opacity-70"
+              className="inline-flex items-center gap-1 rounded-full bg-primary px-3 py-1 text-[12px] font-medium text-primary-foreground press-bounce active:opacity-70"
             >
               #{activeTag}
               <X className="h-3 w-3" strokeWidth={3} />
@@ -810,7 +810,7 @@ function SearchPage() {
         <div className="pointer-events-auto px-4 pb-[max(env(safe-area-inset-bottom),24px)] pt-3 sm:px-5">
           {/* Tab switcher + inline result count — one row, always fits ≤360px */}
           <div className="mb-2 flex items-center justify-center gap-2">
-            <div className="pointer-events-auto inline-flex items-center rounded-full glass-pill p-1">
+            <div className="pointer-events-auto inline-flex items-center rounded-full glass-pill animate-bounce-up p-1">
               {(["memories", "media"] as const).map((t) => {
                 const active = tab === t;
                 return (
@@ -820,7 +820,7 @@ function SearchPage() {
                     className={`whitespace-nowrap rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-all duration-200 ${
                       active
                         ? "bg-foreground text-background shadow-sm"
-                        : "text-muted-foreground active:opacity-70"
+                        : "text-muted-foreground press-bounce active:opacity-70"
                     }`}
                   >
                     {t === "memories" ? "Memories" : "Movies & TV"}
@@ -829,7 +829,7 @@ function SearchPage() {
               })}
             </div>
             {(query.trim() || aiMode) && (
-              <div className="pointer-events-auto inline-flex shrink-0 items-center gap-1.5 rounded-full glass-pill px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
+              <div className="pointer-events-auto inline-flex shrink-0 items-center gap-1.5 rounded-full glass-pill animate-bounce-up px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                 {aiLoading ? (
                   <Loader2 aria-hidden="true" className="h-3 w-3 animate-spin" />
                 ) : (
@@ -902,7 +902,7 @@ function SearchPage() {
               onClick={() => runAiSearch()}
               disabled={aiLoading || !query.trim()}
               aria-label="Ask AI"
-              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/5 text-neutral-900 transition-opacity disabled:opacity-40 active:opacity-70 dark:bg-white/10 dark:text-white sm:h-11 sm:w-11"
+              className="relative grid h-10 w-10 shrink-0 place-items-center rounded-full bg-black/5 text-neutral-900 transition-opacity disabled:opacity-40 press-bounce active:opacity-70 dark:bg-white/10 dark:text-white sm:h-11 sm:w-11"
             >
               {aiLoading ? (
                 <Loader2 aria-hidden="true" className="h-4 w-4 animate-spin" />

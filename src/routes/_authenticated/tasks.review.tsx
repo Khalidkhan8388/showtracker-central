@@ -57,7 +57,7 @@ function ReviewPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background pb-24">
-      <header className="sticky top-0 z-10 bg-background/85 backdrop-blur-xl">
+      <header className="sticky top-0 z-10 glass-bar">
         <div className="flex items-center justify-between px-2 pt-3 pb-1">
           <Link
             to="/home"
@@ -122,7 +122,7 @@ function ReviewPage() {
                       <button
                         onClick={() => approveOne(s)}
                         aria-label="Approve"
-                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-70"
+                        className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce active:opacity-70"
                       >
                         <Check className="h-4 w-4" strokeWidth={3} />
                       </button>

@@ -392,7 +392,7 @@ function Home() {
           </div>
           <Link
             to="/profile"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold active:opacity-70"
+            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold press-bounce active:opacity-70"
             aria-label="Profile"
           >
             <ProfileInitial />
@@ -593,7 +593,7 @@ function Home() {
                 <div className="flex flex-col gap-3">
                   <Link
                     to="/memories"
-                    className="flex items-center justify-between active:opacity-70"
+                    className="flex items-center justify-between press-bounce active:opacity-70"
                   >
                     <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                       Memories
@@ -626,14 +626,14 @@ function Home() {
 
       {selectMode ? (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
-          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill p-1">
+          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
             <button
               onClick={() => {
                 setSelectedNotes(new Set());
                 setSelectedTasks(new Set());
               }}
               aria-label="Cancel selection"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
             >
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
@@ -641,7 +641,7 @@ function Home() {
               <button
                 onClick={noteSelectMode ? togglePinSelected : togglePinSelectedTasks}
                 aria-label="Pin selected"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
                 <Pin aria-hidden="true" className="h-3.5 w-3.5" />
                 Pin
@@ -651,7 +651,7 @@ function Home() {
               <button
                 onClick={() => setShowAddToCollection(true)}
                 aria-label="Add to collection"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 active:opacity-70 dark:text-white dark:hover:bg-white/10"
+                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
               >
                 <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
                 Collect
@@ -730,7 +730,7 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
         <Link
           to="/collections"
           aria-label="Open collections"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
+          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
         >
           <ChevronRight className="h-4 w-4" />
         </Link>

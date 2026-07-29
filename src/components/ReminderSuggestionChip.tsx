@@ -223,7 +223,7 @@ export function ReminderSuggestionChip({ text, existing, dismissed, onAccept, on
                 });
                 void onAccept(s.iso, s.title);
               }}
-              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] font-semibold text-white active:opacity-70"
+              className="inline-flex h-6 shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2 text-[11px] font-semibold text-white press-bounce active:opacity-70"
               style={{ background: color }}
               aria-label={`Set reminder ${label}`}
               title={label}
