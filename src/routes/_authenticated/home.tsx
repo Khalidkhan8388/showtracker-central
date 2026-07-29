@@ -893,6 +893,7 @@ const TaskRow = memo(function TaskRow({
     >
 
       <button
+        onPointerDown={() => void haptic.tap()}
         onClick={(e) => {
           e.stopPropagation();
           if (selectMode) {
