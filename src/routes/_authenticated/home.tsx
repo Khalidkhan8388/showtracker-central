@@ -453,6 +453,7 @@ function Home() {
             {derived.suggested.length > 0 && (
               <Link
                 to="/tasks/review"
+                onPointerDown={() => void haptic.tap()}
                 className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
               >
                 <div className="flex items-center gap-2">
