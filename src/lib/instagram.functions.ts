@@ -372,7 +372,7 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
       );
       if (m) {
         likeCount = likeCount ?? parseCount(m[1]);
-        commentCount = parseCount(m[2]);
+        commentCount = commentCount ?? parseCount(m[2]);
         username = username ?? (m[3].trim().replace(/^@/, "") || null);
         const d = new Date(m[4].trim());
         postedAt = isNaN(d.getTime()) ? null : d.toISOString();
