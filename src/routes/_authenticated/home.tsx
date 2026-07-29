@@ -940,6 +940,7 @@ const TaskRow = memo(function TaskRow({
       </div>
       {!selectMode && onPin && (
         <button
+          onPointerDown={() => void haptic.tap()}
           onClick={(e) => {
             e.stopPropagation();
             onPin();
