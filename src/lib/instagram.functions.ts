@@ -210,7 +210,7 @@ function mdLinksToText(s: string): string {
 }
 
 /** Parses the reader-proxy markdown of `/embed/captioned/`. */
-export function parseReaderMarkdown(md: string): EmbedData & { commentCount: number | null } {
+function parseReaderMarkdown(md: string): EmbedData & { commentCount: number | null } {
   const lines = md.split(/\r?\n/);
 
   // Image: the post media, never the s100x100 avatar.
