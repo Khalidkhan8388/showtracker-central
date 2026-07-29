@@ -183,6 +183,79 @@ function parseEmbed(html: string): EmbedData | null {
   return { imageUrl, username, caption, likeCount, isVideo };
 }
 
+/** Reader proxy rendering of a page as markdown (JS executed server-side). */
+async function fetchReaderMarkdown(url: string): Promise<string | null> {
+  const controller = new AbortController();
+  const to = setTimeout(() => controller.abort(), 30_000);
+  try {
+    const res = await fetch(`https://r.jina.ai/${url}`, {
+      signal: controller.signal,
+      headers: { "User-Agent": CRAWLER_UA, Accept: "text/plain,*/*" },
+    });
+    if (!res.ok) return null;
+    const md = (await res.text()).slice(0, 500_000);
+    return md.length > 100 ? md : null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(to);
+  }
+}
+
+function mdLinksToText(s: string): string {
+  return s
+    .replace(/!\[[^\]]*\]\([^)]*\)/g, "")
+    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1")
+    .replace(/^_+|_+$/g, "");
+}
+
+/** Parses the reader-proxy markdown of `/embed/captioned/`. */
+function parseReaderMarkdown(md: string): EmbedData & { commentCount: number | null } {
+  const lines = md.split(/\r?\n/);
+
+  // Image: the post media, never the s100x100 avatar.
+  let imageUrl: string | null = null;
+  const imgRe = /!\[([^\]]*)\]\((https?:\/\/[^)\s]+)\)/g;
+  const imgs: { alt: string; url: string }[] = [];
+  let m: RegExpExecArray | null;
+  while ((m = imgRe.exec(md))) imgs.push({ alt: m[1], url: m[2] });
+  const media = imgs.filter((i) => looksLikeMedia(i.url) && !/t51\.2885-19|s100x100/i.test(i.url));
+  imageUrl = media.find((i) => /shared by|post|reel/i.test(i.alt))?.url ?? media[0]?.url ?? null;
+
+  const username =
+    md.match(/\[View profile\]\(https:\/\/www\.instagram\.com\/([^/?)]+)/i)?.[1] ??
+    md.match(/https:\/\/www\.instagram\.com\/([^/?)]+)\/\?utm_source=ig_embed/i)?.[1] ??
+    null;
+
+  const likeCount = parseCount(md.match(/\[([\d.,KMB]+)\s+likes?\]/i)?.[1] ?? "");
+  const commentCount = parseCount(md.match(/View all ([\d.,KMB]+) comments?/i)?.[1] ?? "");
+
+  // Caption: everything between the author line that follows the likes line and
+  // the comments footer.
+  let start = -1;
+  const likeIdx = lines.findIndex((l) => /\[[\d.,KMB]+\s+likes?\]/i.test(l));
+  for (let i = Math.max(likeIdx, 0) + 1; i < lines.length; i++) {
+    if (/^\[[^\]]+\]\(https:\/\/www\.instagram\.com\/[^/]+\/\?utm_source=ig_embed/i.test(lines[i].trim())) {
+      start = i + 1;
+      break;
+    }
+  }
+  let caption: string | null = null;
+  if (start > 0) {
+    const out: string[] = [];
+    for (let i = start; i < lines.length; i++) {
+      const l = lines[i];
+      if (/View all [\d.,KMB]+ comments?|^\[Add a comment/i.test(l)) break;
+      out.push(mdLinksToText(l));
+    }
+    caption = cleanCaption(out.join("\n"));
+    if (!caption) caption = null;
+  }
+
+  const isVideo = /\/reel\/|Play\b|<video/i.test(md);
+  return { imageUrl, username, caption, likeCount, isVideo, commentCount };
+}
+
 export const fetchInstagramFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
