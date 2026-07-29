@@ -15,6 +15,9 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { ReminderHero } from "@/components/ReminderHero";
+import { DailyRecall } from "@/components/DailyRecall";
+import { MemoriesSection } from "@/components/MemoriesSection";
+
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
 import { toast } from "sonner";
