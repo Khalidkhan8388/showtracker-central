@@ -810,7 +810,7 @@ function SearchPage() {
         <div className="pointer-events-auto px-4 pb-[max(env(safe-area-inset-bottom),24px)] pt-3 sm:px-5">
           {/* Tab switcher + inline result count — one row, always fits ≤360px */}
           <div className="mb-2 flex items-center justify-center gap-2">
-            <div className="pointer-events-auto inline-flex items-center rounded-full bg-white/90 p-1 shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/10">
+            <div className="pointer-events-auto inline-flex items-center rounded-full glass-pill p-1">
               {(["memories", "media"] as const).map((t) => {
                 const active = tab === t;
                 return (
@@ -829,7 +829,7 @@ function SearchPage() {
               })}
             </div>
             {(query.trim() || aiMode) && (
-              <div className="pointer-events-auto inline-flex shrink-0 items-center gap-1.5 rounded-full bg-white/90 px-2.5 py-1 text-[11px] font-medium text-muted-foreground shadow-[0_6px_20px_-8px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/10">
+              <div className="pointer-events-auto inline-flex shrink-0 items-center gap-1.5 rounded-full glass-pill px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
                 {aiLoading ? (
                   <Loader2 aria-hidden="true" className="h-3 w-3 animate-spin" />
                 ) : (
@@ -849,7 +849,7 @@ function SearchPage() {
           <div
             role="search"
             aria-label="Search captures"
-            className="flex items-center gap-1.5 rounded-full bg-white/90 pl-4 pr-1 py-1 shadow-[0_10px_30px_-10px_rgba(0,0,0,0.25)] ring-1 ring-black/10 backdrop-blur-xl dark:bg-[#1a1a1a]/90 dark:ring-white/5 dark:shadow-[0_10px_30px_-10px_rgba(0,0,0,0.45)] sm:gap-2 sm:pl-5 sm:pr-1.5 sm:py-1.5"
+            className="flex items-center gap-1.5 rounded-full glass-pill pl-4 pr-1 py-1 sm:gap-2 sm:pl-5 sm:pr-1.5 sm:py-1.5"
           >
             <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
             <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>

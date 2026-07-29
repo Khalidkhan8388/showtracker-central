@@ -327,7 +327,7 @@ function CollectionDetail() {
             </div>
             {hasMedia && (
             <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
+              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill p-1">
                 <button
                   type="button"
                   onClick={() => setTvView("posters")}
@@ -551,7 +551,7 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1.5 text-foreground shadow-xl backdrop-blur-xl">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full glass-pill px-2 py-1.5 text-foreground">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}

@@ -1680,7 +1680,7 @@ function NoteDetail() {
                   onChange={onPickImages}
                 />
                 {addingLink && (
-                  <div className="flex items-center gap-1 rounded-full border border-border bg-background/95 p-1 pl-3 shadow-xl backdrop-blur-xl">
+                  <div className="flex items-center gap-1 rounded-full glass-pill p-1 pl-3">
                     <Link2 className="h-4 w-4 shrink-0 text-muted-foreground" />
                     <input
                       autoFocus
@@ -1711,7 +1711,7 @@ function NoteDetail() {
                     </button>
                   </div>
                 )}
-                <div className="mx-auto inline-flex items-center gap-1 rounded-full border border-border/70 bg-background/90 p-1.5 shadow-xl backdrop-blur-xl">
+                <div className="mx-auto inline-flex items-center gap-1 rounded-full glass-pill p-1.5">
                   <button
                     type="button"
                     onClick={() => editFileRef.current?.click()}
@@ -1810,7 +1810,7 @@ function NoteDetail() {
           <div
             role="toolbar"
             aria-label="Note actions"
-            className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-2xl backdrop-saturate-150 dark:bg-neutral-900/85 dark:ring-white/10"
+            className="pointer-events-auto inline-flex items-center gap-1 rounded-full glass-pill p-1.5"
           >
             <button
               onClick={startEdit}
