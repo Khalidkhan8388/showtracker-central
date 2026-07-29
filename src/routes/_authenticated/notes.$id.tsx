@@ -1486,7 +1486,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {(isVoice || igPost) && note.key_points && note.key_points.length > 0 && (
+        {(isVoice || igPost || isLink) && note.key_points && note.key_points.length > 0 && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Key points
