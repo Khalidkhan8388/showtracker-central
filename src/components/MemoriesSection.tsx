@@ -1,8 +1,9 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "@tanstack/react-router";
-import { Pin } from "lucide-react";
+import { Pin, ChevronRight } from "lucide-react";
 import type { LocalNote } from "@/lib/local-db";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
+import { haptic } from "@/lib/haptics";
 
 type Kind = "note" | "image" | "instagram" | "youtube" | "web" | "voice" | "media";
 
@@ -29,11 +30,11 @@ export function kindOf(n: LocalNote): Kind {
 
 /**
  * Memories — inline section that lives under Collections on the home feed.
- * One flat, newest-first grid (no date grouping); pinned entries render at
- * double width in place, and a "Pinned" filter pill sits with the type
- * filters. Selection is owned by the parent so the bulk action
-
- * pill (pin / collect / delete) stays shared with the rest of home.
+ * - A horizontal "Pinned" strip sits at the top so pinned items are glanceable
+ *   without disrupting the grid rhythm.
+ * - The main grid is newest-first and can be limited (e.g. home preview shows
+ *   the most recent 6, with a "See all" gateway to the full archive).
+ * - A "Pinned" filter pill still lets you jump to every pinned item.
  */
 export function MemoriesSection({
   notes,
@@ -41,12 +42,18 @@ export function MemoriesSection({
   selected,
   selectMode,
   onToggleSel,
+  limit,
+  onSeeAll,
+  expanded = false,
 }: {
   notes: LocalNote[];
   thumbs: Record<string, string>;
   selected: Set<string>;
   selectMode: boolean;
   onToggleSel: (id: string) => void;
+  limit?: number;
+  onSeeAll?: () => void;
+  expanded?: boolean;
 }) {
   const navigate = useNavigate();
   const [active, setActive] = useState<Kind | "pinned" | null>(null);
@@ -65,13 +72,21 @@ export function MemoriesSection({
     return m;
   }, [all]);
 
-  const pinnedCount = all.filter((n) => n.pinned).length;
-  const filtered =
+  const pinned = useMemo(() => all.filter((n) => n.pinned), [all]);
+  const pinnedCount = pinned.length;
+  const unpinned = useMemo(() => all.filter((n) => !n.pinned), [all]);
+
+  const gridSource =
     active === "pinned"
-      ? all.filter((n) => n.pinned)
+      ? pinned
       : active
-        ? all.filter((n) => kindOf(n) === active)
-        : all;
+        ? unpinned.filter((n) => kindOf(n) === active)
+        : unpinned;
+
+  const grid =
+    limit && !expanded ? gridSource.slice(0, Math.max(0, limit - (active ? 0 : pinned.length > 0 ? 1 : 0))) : gridSource;
+
+  const hasMore = limit && !expanded ? gridSource.length > grid.length : false;
 
   if (all.length === 0) return null;
 
@@ -87,14 +102,25 @@ export function MemoriesSection({
       </div>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <FilterPill label="All" count={all.length} active={active === null} onClick={() => setActive(null)} />
+        <FilterPill
+          label="All"
+          count={all.length}
+          active={active === null}
+          onClick={() => {
+            void haptic.tap();
+            setActive(null);
+          }}
+        />
         {pinnedCount > 0 && (
           <FilterPill
             label="Pinned"
             icon={<Pin aria-hidden="true" className="h-3 w-3" />}
             count={pinnedCount}
             active={active === "pinned"}
-            onClick={() => setActive(active === "pinned" ? null : "pinned")}
+            onClick={() => {
+              void haptic.tap();
+              setActive(active === "pinned" ? null : "pinned");
+            }}
           />
         )}
         {KIND_LABELS.filter((k) => (counts.get(k.key) ?? 0) > 0).map((k) => (
@@ -103,33 +129,109 @@ export function MemoriesSection({
             label={k.label}
             count={counts.get(k.key) ?? 0}
             active={active === k.key}
-            onClick={() => setActive(active === k.key ? null : k.key)}
+            onClick={() => {
+              void haptic.tap();
+              setActive(active === k.key ? null : k.key);
+            }}
           />
         ))}
       </div>
 
+      {active !== "pinned" && pinnedCount > 0 && !expanded && (
+        <PinnedStrip
+          pinned={pinned}
+          thumbs={thumbs}
+          selected={selected}
+          selectMode={selectMode}
+          onToggleSel={onToggleSel}
+        />
+      )}
+
       <div className="grid grid-cols-2 items-start gap-3">
-        {filtered.map((n) => (
-          <div key={n.id} className={n.pinned ? "col-span-2" : ""}>
+        {grid.map((n) => (
+          <div key={n.id}>
             <NoteCard
               note={n as any}
-              variant={n.pinned ? "hero" : "masonry"}
+              variant="masonry"
               thumbUrl={thumbs[n.id]}
               selected={selected.has(n.id)}
               selectMode={selectMode}
               hideYouTubeThumb={!n.pinned}
-              onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-              onLongPress={() => onToggleSel(n.id)}
+              onOpen={() => {
+                void haptic.tap();
+                navigate({ to: "/notes/$id", params: { id: n.id } });
+              }}
+              onLongPress={() => {
+                void haptic.select();
+                onToggleSel(n.id);
+              }}
               onToggleSel={() => onToggleSel(n.id)}
             />
           </div>
         ))}
+        {hasMore && onSeeAll && (
+          <button
+            type="button"
+            onClick={() => {
+              void haptic.tap();
+              onSeeAll();
+            }}
+            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-[15px] bg-card ring-1 ring-border/60 text-center transition-transform active:scale-[0.97]"
+          >
+            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
+              <ChevronRight className="h-4 w-4" />
+            </span>
+            <span className="text-[12px] font-semibold text-foreground">See all</span>
+            <span className="text-[11px] text-muted-foreground">{gridSource.length - grid.length} more</span>
+          </button>
+        )}
       </div>
 
-      {filtered.length === 0 && (
+      {grid.length === 0 && (
         <p className="py-10 text-center text-[13px] text-muted-foreground">Nothing here yet.</p>
       )}
     </section>
+  );
+}
+
+function PinnedStrip({
+  pinned,
+  thumbs,
+  selected,
+  selectMode,
+  onToggleSel,
+}: {
+  pinned: LocalNote[];
+  thumbs: Record<string, string>;
+  selected: Set<string>;
+  selectMode: boolean;
+  onToggleSel: (id: string) => void;
+}) {
+  const navigate = useNavigate();
+  return (
+    <div className="-mx-4 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      {pinned.map((n) => (
+        <div key={n.id} className="w-32 shrink-0 snap-start">
+          <NoteCard
+            note={n as any}
+            variant="masonry"
+            thumbUrl={thumbs[n.id]}
+            selected={selected.has(n.id)}
+            selectMode={selectMode}
+            hideYouTubeThumb={!n.pinned}
+            onOpen={() => {
+              void haptic.tap();
+              navigate({ to: "/notes/$id", params: { id: n.id } });
+            }}
+            onLongPress={() => {
+              void haptic.select();
+              onToggleSel(n.id);
+            }}
+            onToggleSel={() => onToggleSel(n.id)}
+          />
+        </div>
+      ))}
+    </div>
   );
 }
 
@@ -150,7 +252,7 @@ function FilterPill({
     <button
       type="button"
       onClick={onClick}
-      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium ring-1 transition active:scale-95 ${
+      className={`inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-[12px] font-medium ring-1 transition active:scale-95 press-bounce ${
         active
           ? "bg-primary text-primary-foreground ring-transparent"
           : "bg-card text-foreground ring-border/60"
@@ -162,4 +264,3 @@ function FilterPill({
     </button>
   );
 }
-
