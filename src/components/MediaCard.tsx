@@ -72,11 +72,11 @@ export function MediaCard({
       {selectMode ? (
         <div className="absolute right-2 top-2 z-10">
           {selected ? (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black ring-2 ring-white">
+            <div className="flex h-5 w-5 items-center justify-center rounded-[7px] bg-white text-black ring-2 ring-white">
               <Check className="h-3 w-3" strokeWidth={3} />
             </div>
           ) : (
-            <div className="h-5 w-5 rounded-full bg-black/40 ring-2 ring-white/70" />
+            <div className="h-5 w-5 rounded-[7px] bg-black/40 ring-2 ring-white/70" />
           )}
         </div>
       ) : (
@@ -190,11 +190,11 @@ function HeroMedia({
         </div>
         {selectMode ? (
           selected ? (
-            <div className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-black ring-2 ring-white">
+            <div className="flex h-5 w-5 items-center justify-center rounded-[7px] bg-white text-black ring-2 ring-white">
               <Check className="h-3 w-3" strokeWidth={3} />
             </div>
           ) : (
-            <div className="h-5 w-5 rounded-full bg-black/40 ring-2 ring-white/70" />
+            <div className="h-5 w-5 rounded-[7px] bg-black/40 ring-2 ring-white/70" />
           )
         ) : pinned ? (
           <div className="rounded-full bg-black/55 p-1 backdrop-blur-sm">
