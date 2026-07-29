@@ -286,7 +286,7 @@ function CollectionDetail() {
                         }`}
                       >
                         <div
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border ${
                             sel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
                           }`}
                         >
@@ -1448,7 +1448,7 @@ function MediaListRow({
           </div>
         )}
         {selectMode && (
-          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow ring-1 ring-border">
+          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-[8px] bg-background/90 shadow ring-1 ring-border">
             {selected ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
           </div>
         )}
@@ -1557,7 +1557,7 @@ function MediaGridTile({
           </div>
         )}
         {selectMode && (
-          <div className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow ring-1 ring-border">
+          <div className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-[8px] bg-background/90 shadow ring-1 ring-border">
             {selected ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
           </div>
         )}
