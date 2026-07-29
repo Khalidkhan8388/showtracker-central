@@ -500,21 +500,16 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           ?.replace(/\s+/g, " ")
           .slice(0, 90) || `${author} on Instagram`;
       let summary: string | null = caption ? caption.replace(/\s+/g, " ").slice(0, 280) : null;
-      if (caption.length >= 60) {
-        try {
-          const ai = await analyzeTextFn({ data: { heading: "", body: caption } });
-          if (ai.heading) heading = ai.heading.slice(0, 90);
-          if (ai.summary) summary = ai.summary;
-        } catch {
-          /* keep caption-derived fallbacks */
-        }
-      }
-      // Persist the post image locally so the card works offline.
+
+      // Persist the post image locally so the card works offline — and keep the
+      // bytes around so the AI can look at the photo too.
       let imagePaths: string[] = [];
+      let imageForAi: { base64: string; mime: string } | null = null;
       if (ig.imageUrl) {
         try {
           const img = await fetchLinkImageFn({ data: { url: ig.imageUrl } });
           if (img.ok) {
+            imageForAi = { base64: img.base64, mime: img.mime };
             const bin = atob(img.base64);
             const bytes = new Uint8Array(bin.length);
             for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
@@ -524,18 +519,42 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           /* image is optional */
         }
       }
-      const tags = Array.from(
-        new Set(
-          (caption.match(/#[\p{L}\p{N}_]{2,30}/gu) ?? [])
-            .map((t) => t.slice(1).toLowerCase())
-            .slice(0, 6),
-        ),
-      );
+
+      let keyPoints: string[] = [];
+      let tasksPayload: LocalTask[] = [];
+      let places: { name: string; detail: string | null }[] = [];
+      let aiTags: string[] = [];
+      if (caption.length >= 20 || imageForAi) {
+        try {
+          const { analyzeInstagramFn } = await import("./ai.functions");
+          const ai = await analyzeInstagramFn({
+            data: {
+              caption: caption || null,
+              username: ig.username,
+              kind: ig.kind,
+              url: ig.canonicalUrl,
+              image: imageForAi,
+            },
+          });
+          if (ai.heading) heading = ai.heading.slice(0, 90);
+          if (ai.summary) summary = ai.summary;
+          keyPoints = ai.key_points ?? [];
+          places = ai.places ?? [];
+          aiTags = ai.tags ?? [];
+          tasksPayload = ai.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
+        } catch (aiErr) {
+          console.error("[instagram] AI analysis failed, keeping caption-only card", aiErr);
+        }
+      }
+      const hashTags = (caption.match(/#[\p{L}\p{N}_]{2,30}/gu) ?? []).map((t) => t.slice(1).toLowerCase());
+      const tags = Array.from(new Set([...aiTags, ...hashTags])).slice(0, 6);
       await updateNote(note.id, {
         status: "ready",
         heading,
         summary,
         transcript: caption || null,
+        tasks: tasksPayload,
+        key_points: keyPoints,
         image_paths: imagePaths,
         tags,
         source_url: normalizeUrl(ig.canonicalUrl),
@@ -551,9 +570,11 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
           thumbnail_url: ig.imageUrl ?? null,
+          places,
         },
       });
       return { ok: true as const, noteId: note.id, instagram: true as const };
+
     }
   } catch (igErr) {
     console.error("[instagram] fetch failed", igErr);

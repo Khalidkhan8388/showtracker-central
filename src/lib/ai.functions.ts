@@ -484,6 +484,84 @@ export const analyzeYouTubeFn = createServerFn({ method: "POST" })
     };
   });
 
+// ---------- instagram -----------------------------------------------------
+
+const IG_SYSTEM_PROMPT = `You turn an Instagram post (caption + optional image) into a structured saved note.
+Return ONE JSON object with keys: heading, summary, key_points, tasks, places, tags. No prose, no code fences.
+
+- heading: short (max ~9 words), title case, describing what the post is actually about. Never "Instagram post".
+- summary: 2-4 sentences. Combine what the caption says with what is visible in the image. Do not mention "this post".
+- key_points: 0-6 short bullets (≤ 110 chars) with the concrete facts, tips, steps, prices or recommendations.
+- tasks: concrete actionable to-dos this post implies (e.g. "Try the pasta at Bar Luca in Milan", "Book tickets for the exhibit"). Imperative. Cap at 6. [] if nothing is actionable.
+- places: real-world places named or clearly identifiable — restaurants, cafés, hotels, cities, landmarks, shops, trails. Each item: { "name": string, "detail": string } where detail is a short locality/description ("Bandra, Mumbai" or "rooftop bar"). Return [] if none.
+- tags: 3-6 lowercase topic tags, no '#'.
+
+Respond with ONLY the JSON object.`;
+
+const InstagramAnalyzeInput = z.object({
+  caption: z.string().trim().max(8000).nullable().optional(),
+  username: z.string().trim().max(120).nullable().optional(),
+  kind: z.string().trim().max(20).nullable().optional(),
+  url: z.string().trim().max(2000),
+  image: ImageSchema.nullable().optional(),
+});
+
+export const analyzeInstagramFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => InstagramAnalyzeInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const parts: string[] = [`URL: ${data.url}`];
+    if (data.username) parts.push(`Author: @${data.username}`);
+    if (data.kind) parts.push(`Type: ${data.kind}`);
+    parts.push(data.caption ? `Caption:\n${data.caption.slice(0, 6000)}` : "(No caption available — rely on the image.)");
+
+    const content: any[] = [{ type: "text", text: parts.join("\n\n") }];
+    if (data.image) {
+      content.push({ type: "image_url", image_url: { url: `data:${data.image.mime};base64,${data.image.base64}` } });
+    }
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: IG_SYSTEM_PROMPT },
+          { role: "user", content },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 120_000);
+    if (!res.ok) throw new Error(`AI failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+
+    const keyPoints: string[] = Array.isArray(parsed.key_points)
+      ? parsed.key_points.map((s: unknown) => String(s ?? "").trim()).filter(Boolean).slice(0, 6)
+      : [];
+    const places = (Array.isArray(parsed.places) ? parsed.places : [])
+      .map((p: any) => {
+        if (typeof p === "string") return { name: p.trim(), detail: null as string | null };
+        return { name: String(p?.name ?? "").trim(), detail: String(p?.detail ?? "").trim() || null };
+      })
+      .filter((p: { name: string }) => p.name.length > 0)
+      .slice(0, 8);
+
+    return {
+      heading: String(parsed.heading ?? "").slice(0, 140),
+      summary: String(parsed.summary ?? "").slice(0, 1600),
+      key_points: keyPoints,
+      tasks: tasksFromRaw(parsed.tasks),
+      places,
+      tags: parseTags(parsed.tags),
+    };
+  });
+
+
 
 // ---------- link label ----------------------------------------------------
 
