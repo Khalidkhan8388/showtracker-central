@@ -15,6 +15,9 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { ReminderHero } from "@/components/ReminderHero";
+import { DailyRecall } from "@/components/DailyRecall";
+import { MemoriesSection } from "@/components/MemoriesSection";
+
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
 import { toast } from "sonner";
@@ -428,35 +431,8 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            {hasReminders && <ReminderHero />}
+            {hasReminders ? <ReminderHero /> : <DailyRecall />}
 
-            {derived.hasPinned && (
-              <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-1.5">
-                  <Pin aria-hidden="true" className="h-3.5 w-3.5 fill-primary text-primary" />
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                    Pinned{derived.pinnedNotes.length > 1 ? ` · ${derived.pinnedNotes.length}` : ""}
-                  </span>
-                </div>
-                <div className="columns-2 gap-3 [column-fill:_balance]">
-                  {derived.pinnedNotes.map((n) => (
-                    <div key={n.id} className="mb-3 break-inside-avoid">
-                      <NoteCard
-                        note={n}
-                        variant="masonry"
-                        thumbUrl={thumbs[n.id]}
-                        selected={selectedNotes.has(n.id)}
-                        selectMode={noteSelectMode}
-                        hideYouTubeThumb
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => toggleNoteSel(n.id)}
-                        onToggleSel={() => toggleNoteSel(n.id)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
 
 
 
@@ -564,58 +540,14 @@ function Home() {
 
             <CollectionsRow notes={localNotes ?? []} />
 
-            {(derived.strip.length > 0 || derived.grid.length > 0) && (() => {
-              const all = [...derived.strip, ...derived.grid];
-              const startOfToday = new Date();
-              startOfToday.setHours(0, 0, 0, 0);
-              const today = all.filter((n) => new Date(n.created_at).getTime() >= startOfToday.getTime());
-              const earlier = all.filter((n) => new Date(n.created_at).getTime() < startOfToday.getTime());
-              const renderGrid = (items: typeof all) => (
-                <div className="columns-2 gap-3 [column-fill:_balance]">
-                  {items.map((n) => (
-                    <div key={n.id} className="mb-3 break-inside-avoid">
-                      <NoteCard
-                        note={n}
-                        variant="masonry"
-                        thumbUrl={thumbs[n.id]}
-                        selected={selectedNotes.has(n.id)}
-                        selectMode={noteSelectMode}
-                        hideYouTubeThumb
-                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                        onLongPress={() => toggleNoteSel(n.id)}
-                        onToggleSel={() => toggleNoteSel(n.id)}
-                      />
-                    </div>
-                  ))}
-                </div>
-              );
-              return (
-                <div className="flex flex-col gap-3">
-                  <Link
-                    to="/memories"
-                    className="flex items-center justify-between press-bounce active:opacity-70"
-                  >
-                    <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      Memories
-                    </span>
-                    <span className="inline-flex items-center gap-1 text-[11px] text-muted-foreground">
-                      {all.length}
-                      <ChevronRight aria-hidden="true" className="h-3.5 w-3.5" />
-                    </span>
-                  </Link>
-                  {today.length > 0 ? (
-                    <div className="flex flex-col gap-2">
-                      <span className="text-[12px] font-semibold text-foreground">Today</span>
-                      {renderGrid(today)}
-                    </div>
-                  ) : (
-                    <p className="text-[12px] text-muted-foreground">
-                      Nothing saved today — {earlier.length} earlier {earlier.length === 1 ? "memory" : "memories"}.
-                    </p>
-                  )}
-                </div>
-              );
-            })()}
+            <MemoriesSection
+              notes={derived.displayNotes as any}
+              thumbs={thumbs}
+              selected={selectedNotes}
+              selectMode={noteSelectMode}
+              onToggleSel={toggleNoteSel}
+            />
+
 
           </div>
         )}
