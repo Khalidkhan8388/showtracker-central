@@ -144,6 +144,8 @@ function Home() {
     const cur = note?.tasks?.find((t) => t.id === taskId);
     const nextDone = !(cur?.done ?? false);
     await patchLocalTask(noteId, taskId, { done: nextDone });
+    if (nextDone) void haptic.success();
+    else void haptic.impact();
     try {
       await toggleFn({ data: { noteId, taskId, done: nextDone } });
     } catch {
@@ -154,6 +156,7 @@ function Home() {
   async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
     const nextPinned = !pinned;
     await patchLocalTask(noteId, taskId, { pinned: nextPinned });
+    void haptic.impact();
     try {
       await pinTask({ data: { noteId, taskId, pinned: nextPinned } });
     } catch {
