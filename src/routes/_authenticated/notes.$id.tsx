@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle } from "lucide-react";
+import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle, MapPin } from "lucide-react";
 import { formatIgCount } from "@/components/FeedNoteCard";
 import type { LocalYouTube, LocalInstagram } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
@@ -657,6 +657,7 @@ function NoteDetail() {
           posted_at: ig.postedAt,
           is_video: ig.isVideo,
           thumbnail_url: ig.imageUrl ?? null,
+          places: igPost.places ?? [],
         },
       } as any);
       toast.success("Instagram data refreshed");
@@ -1480,7 +1481,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isVoice && note.key_points && note.key_points.length > 0 && (
+        {(isVoice || igPost) && note.key_points && note.key_points.length > 0 && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Key points
