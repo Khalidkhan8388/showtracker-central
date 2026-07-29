@@ -258,6 +258,26 @@ export const fetchInstagramFn = createServerFn({ method: "POST" })
       }
     }
 
+    // Last, most reliable resort: the reader proxy renders the embed page and
+    // returns clean markdown containing handle, likes, comments and the full
+    // caption even when Instagram serves us the login wall / JS-only bundle.
+    let readerCommentCount: number | null = null;
+    if (!embed?.caption || !looksLikeMedia(embed?.imageUrl)) {
+      const md = await fetchReaderMarkdown(`${canonical}embed/captioned/`);
+      const viaReader = md ? parseReaderMarkdown(md) : null;
+      if (viaReader) {
+        readerCommentCount = viaReader.commentCount;
+        embed = {
+          imageUrl: looksLikeMedia(embed?.imageUrl) ? embed!.imageUrl : viaReader.imageUrl,
+          username: embed?.username ?? viaReader.username,
+          caption: embed?.caption ?? viaReader.caption,
+          likeCount: embed?.likeCount ?? viaReader.likeCount,
+          isVideo: embed?.isVideo || viaReader.isVideo,
+        };
+      }
+    }
+
+
     let username: string | null = embed?.username ?? null;
     let displayName: string | null = null;
     let likeCount: number | null = embed?.likeCount ?? null;
