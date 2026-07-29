@@ -251,6 +251,7 @@ function Home() {
   async function confirmDeleteNotes() {
     const ids = Array.from(selectedNotes);
     if (ids.length === 0) return;
+    void haptic.heavy();
     await deleteLocalNotes(ids);
     setSelectedNotes(new Set());
     try {
@@ -267,6 +268,7 @@ function Home() {
       return { noteId, taskId };
     });
     if (items.length === 0) return;
+    void haptic.heavy();
     await deleteLocalTasks(items);
     setSelectedTasks(new Set());
     try {
@@ -279,6 +281,7 @@ function Home() {
   async function togglePinSelected() {
     const ids = Array.from(selectedNotes);
     if (ids.length === 0 || !notes) return;
+    void haptic.impact();
     // If any selected is unpinned, pin all; otherwise unpin all.
     const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
     const nextPinned = anyUnpinned;
@@ -294,6 +297,7 @@ function Home() {
   async function togglePinSelectedTasks() {
     const keys = Array.from(selectedTasks);
     if (keys.length === 0 || !notes) return;
+    void haptic.impact();
     const items = keys
       .map((k) => {
         const [noteId, taskId] = k.split("::");
