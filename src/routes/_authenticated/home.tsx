@@ -496,7 +496,10 @@ function Home() {
                 ) : (
                   <button
                     type="button"
-                    onClick={() => setAddingTask(true)}
+                    onClick={() => {
+                      void haptic.tap();
+                      setAddingTask(true);
+                    }}
                     className="flex w-full items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
                   >
                     <div className="flex items-center gap-2">
