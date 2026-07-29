@@ -698,7 +698,10 @@ function MemoriesOverlay({
         </div>
         <button
           type="button"
-          onClick={onClose}
+          onClick={() => {
+            void haptic.tap();
+            onClose();
+          }}
           className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
           aria-label="Close"
         >
