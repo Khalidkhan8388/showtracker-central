@@ -112,6 +112,7 @@ function Home() {
     setAddingTask(false);
     try {
       await addCustomTask({ data: { text } });
+      void haptic.success();
       void resync();
     } catch {
       setNewTaskText(text);
