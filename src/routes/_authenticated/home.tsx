@@ -432,7 +432,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            {hasReminders ? <ReminderHero /> : <DailyRecall />}
+            <NowLane />
 
 
 
