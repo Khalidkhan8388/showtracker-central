@@ -85,6 +85,8 @@ export type LocalInstagram = {
   is_video: boolean;
   /** Remote CDN image, used when the local cached copy is unavailable. */
   thumbnail_url?: string | null;
+  /** Real-world places mentioned in / visible in the post (AI extracted). */
+  places?: { name: string; detail: string | null }[] | null;
 };
 
 
