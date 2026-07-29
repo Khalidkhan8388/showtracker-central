@@ -230,6 +230,7 @@ function Home() {
 
 
   function toggleNoteSel(id: string) {
+    void haptic.select();
     setSelectedNotes((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -238,6 +239,7 @@ function Home() {
     });
   }
   function toggleTaskSel(key: TaskKey) {
+    void haptic.select();
     setSelectedTasks((prev) => {
       const next = new Set(prev);
       if (next.has(key)) next.delete(key);
