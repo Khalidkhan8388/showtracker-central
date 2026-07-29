@@ -27,27 +27,12 @@ export function kindOf(n: LocalNote): Kind {
   return "note";
 }
 
-function unusedDayLabel(iso: string): string {
-  const d = new Date(iso);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const yest = new Date(today);
-  yest.setDate(yest.getDate() - 1);
-  const t = new Date(d);
-  t.setHours(0, 0, 0, 0);
-  if (t.getTime() === today.getTime()) return "Today";
-  if (t.getTime() === yest.getTime()) return "Yesterday";
-  return d.toLocaleDateString(undefined, {
-    day: "numeric",
-    month: "short",
-    year: d.getFullYear() === today.getFullYear() ? undefined : "numeric",
-  });
-}
-
 /**
  * Memories — inline section that lives under Collections on the home feed.
- * Pinned entries sit on top, then everything else grouped by day, with
- * type filter pills. Selection is owned by the parent so the bulk action
+ * One flat, newest-first grid (no date grouping); pinned entries render at
+ * double width in place, and a "Pinned" filter pill sits with the type
+ * filters. Selection is owned by the parent so the bulk action
+
  * pill (pin / collect / delete) stays shared with the rest of home.
  */
 export function MemoriesSection({
