@@ -650,8 +650,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         }}
         className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 transition-transform duration-200 ease-out motion-reduce:transition-none ${
           recording
-            ? "bg-destructive/85 ring-destructive/30 animate-pulse"
-            : "bg-white/95 ring-black/10 dark:bg-neutral-900/95 dark:ring-white/10"
+            ? "bg-destructive/70 ring-destructive/30 backdrop-blur-2xl backdrop-saturate-150 animate-pulse"
+            : "glass-pill ring-transparent"
         }`}
       >
 
@@ -701,7 +701,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="group inline-flex items-center gap-2.5 rounded-full bg-black/5 py-2 pl-3 pr-5 text-neutral-900 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+          className="group inline-flex items-center gap-2.5 glass-item rounded-full py-2 pl-3 pr-5 text-foreground active:scale-[0.97] disabled:cursor-default"
         >
 
 
