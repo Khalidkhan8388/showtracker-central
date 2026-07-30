@@ -1,9 +1,10 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
+import { CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
 import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalTask, deleteLocalTasks, resync } from "@/lib/sync-engine";
+import { PageHeader } from "@/components/PageHeader";
 
 const CUSTOM_HEADING = "__custom__";
 

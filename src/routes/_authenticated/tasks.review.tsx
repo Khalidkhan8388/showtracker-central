@@ -1,8 +1,9 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { approveTasks, dismissTasks } from "@/lib/notes.functions";
-import { ChevronLeft, Check, X } from "lucide-react";
+import { Check, X } from "lucide-react";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/tasks/review")({
   head: () => ({ meta: [{ title: "Review suggested tasks — Braintape" }] }),
