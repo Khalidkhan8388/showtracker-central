@@ -1,5 +1,5 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin } from "lucide-react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
