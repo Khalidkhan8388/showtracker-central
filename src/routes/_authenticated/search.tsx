@@ -13,7 +13,6 @@ import { PageHeader } from "@/components/PageHeader";
 
 import {
   Search,
-  ArrowLeft,
   Sparkles,
   Loader2,
   Circle,
