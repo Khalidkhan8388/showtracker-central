@@ -517,19 +517,7 @@ function SearchPage() {
 
   return (
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-background">
-      {/* Minimal top bar */}
-      <header className="sticky top-0 z-30 glass-bar">
-        <div className={`flex items-center gap-3 px-4 transition-all duration-200 ${collapsed ? "pb-2 pt-2" : "pb-3 pt-4"}`}>
-          <button
-            onClick={() => navigate({ to: "/home" })}
-            aria-label="Back"
-            className="grid h-9 w-9 -ml-1.5 place-items-center rounded-full text-foreground active:bg-muted"
-          >
-            <ArrowLeft className="h-5 w-5" strokeWidth={2} />
-          </button>
-          <h1 className={`font-medium tracking-tight text-foreground leading-none transition-all duration-200 ${collapsed ? "text-[17px]" : "text-[24px]"}`}>Search</h1>
-        </div>
-      </header>
+      <PageHeader title="Search" backTo="/home" />
 
       {/* Scroll body — content is bottom-anchored so results sit above the search pill */}
       <div

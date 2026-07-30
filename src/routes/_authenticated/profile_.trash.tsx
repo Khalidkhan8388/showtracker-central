@@ -142,16 +142,7 @@ function TrashPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
-        <Link
-          to="/profile"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
-          aria-label="Back"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-[17px] font-semibold">Recently Deleted</h1>
-      </header>
+      <PageHeader title="Recently deleted" backTo="/profile" />
 
       <div className="px-4 pt-3 text-[13px] text-muted-foreground">
         Notes here are permanently removed after 30 days. Long-press to select.
