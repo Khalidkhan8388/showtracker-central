@@ -185,20 +185,15 @@ function CollectionDetail() {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center gap-2 px-4 py-3">
-          <button
-            type="button"
+          <PageHeaderBack
             onClick={() => {
               if (typeof window !== "undefined" && window.history.length > 1) {
                 window.history.back();
               } else {
-                navigate({ to: "/collections" });
+                void navigate({ to: "/collections" });
               }
             }}
-            aria-label="Back"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground press-bounce active:opacity-70"
-          >
-            <ChevronLeft className="h-5 w-5" />
-          </button>
+          />
           {editingTitle ? (
             <form
               className="flex flex-1 items-center gap-2"
@@ -216,7 +211,7 @@ function CollectionDetail() {
                   if (title.trim()) await renameCollection(id, title);
                   setEditingTitle(false);
                 }}
-                className="flex-1 bg-transparent text-[22px] font-bold tracking-tight outline-none"
+                className="flex-1 bg-transparent text-[17px] font-semibold outline-none"
                 maxLength={80}
               />
             </form>
@@ -227,7 +222,7 @@ function CollectionDetail() {
                 setTitle(collection.title);
                 setEditingTitle(true);
               }}
-              className="flex-1 truncate text-left text-[22px] font-bold tracking-tight"
+              className="flex-1 truncate text-left text-[17px] font-semibold"
             >
               {collection.title}
             </button>
