@@ -96,9 +96,59 @@ function CollectionDetail() {
           const m = (n as any).media;
           return m && m.watch_status === statusFilter;
         });
-    // pinned first, stable
-    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)));
-  }, [allMembers, hasMedia, statusFilter]);
+
+    const md = (n: any): LocalMedia | null => (n?.media ?? null) as LocalMedia | null;
+    const releaseMs = (n: any) => {
+      const m = md(n);
+      const d = m?.release_date || (m as any)?.last_air_date || null;
+      const t = d ? Date.parse(d) : NaN;
+      return Number.isNaN(t) ? null : t;
+    };
+    const titleOf = (n: any) => (md(n)?.title || n.heading || "").toLowerCase();
+    const progressOf = (n: any) => {
+      const m = md(n);
+      if (!m || m.type !== "tv") return -1;
+      const total = mediaTotal(m);
+      return total ? mediaDone(m) / total : 0;
+    };
+    const STATUS_ORDER: Record<string, number> = { watching: 0, watchlist: 1, watched: 2, dropped: 3 };
+
+    const cmp = (a: any, b: any) => {
+      switch (sort) {
+        case "release-desc": {
+          const x = releaseMs(a), y = releaseMs(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return y - x;
+        }
+        case "release-asc": {
+          const x = releaseMs(a), y = releaseMs(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return x - y;
+        }
+        case "title":
+          return titleOf(a).localeCompare(titleOf(b));
+        case "rating":
+          return (md(b)?.vote_average ?? -1) - (md(a)?.vote_average ?? -1);
+        case "status":
+          return (STATUS_ORDER[md(a)?.watch_status ?? ""] ?? 9) - (STATUS_ORDER[md(b)?.watch_status ?? ""] ?? 9);
+        case "progress":
+          return progressOf(b) - progressOf(a);
+        case "added-asc":
+          return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+        case "added-desc":
+        default:
+          return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      }
+    };
+
+    // pinned first, then chosen sort
+    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || cmp(a, b));
+  }, [allMembers, hasMedia, statusFilter, sort]);
+
   const allSelectedPinned = useMemo(() => {
     if (removeSel.size === 0) return false;
     for (const id of removeSel) {
