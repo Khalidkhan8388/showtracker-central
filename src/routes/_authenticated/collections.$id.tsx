@@ -29,6 +29,27 @@ import { fetchTmdbLogoFn } from "@/lib/tmdb.functions";
 
 
 
+type SortKey =
+  | "added-desc"
+  | "added-asc"
+  | "release-desc"
+  | "release-asc"
+  | "title"
+  | "rating"
+  | "status"
+  | "progress";
+
+const SORT_LABEL: Record<SortKey, string> = {
+  "added-desc": "Recently added",
+  "added-asc": "Oldest added",
+  "release-desc": "Release date — newest",
+  "release-asc": "Release date — oldest",
+  title: "Title A–Z",
+  rating: "Rating",
+  status: "Watch status",
+  progress: "Progress",
+};
+
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
     meta: [
