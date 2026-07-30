@@ -186,21 +186,6 @@ export function MemoriesSection({
             />
           </div>
         ))}
-        {hasMore && onSeeAll && (
-          <button
-            type="button"
-            onClick={() => {
-              void haptic.tap();
-              onSeeAll();
-            }}
-            className="col-span-1 flex items-center justify-center gap-1 rounded-[15px] bg-card px-3 py-2 text-center ring-1 ring-border/60 transition-transform active:scale-[0.97]"
-          >
-            <span className="text-[12px] font-semibold text-foreground">See all</span>
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-foreground/10 text-foreground">
-              <ChevronRight className="h-3 w-3" />
-            </span>
-            <span className="text-[11px] text-muted-foreground">({gridSource.length - grid.length})</span>
-          </button>
         )}
       </div>
 
