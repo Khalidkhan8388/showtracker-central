@@ -559,6 +559,39 @@ function CollectionDetail() {
                 </div>
               </div>
             )}
+            {hasMedia && (
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  {members.length} {members.length === 1 ? "title" : "titles"}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="press-bounce inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-[12px] font-semibold text-muted-foreground ring-1 ring-border/60 active:opacity-70"
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      {SORT_LABEL[sort]}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-52 rounded-2xl">
+                    {(Object.keys(SORT_LABEL) as SortKey[])
+                      .filter((k) => (k === "progress" ? hasTv : true))
+                      .map((k) => (
+                        <DropdownMenuItem
+                          key={k}
+                          onSelect={() => setSortMode(k)}
+                          className="flex items-center justify-between gap-3 rounded-xl text-[13px]"
+                        >
+                          {SORT_LABEL[k]}
+                          {sort === k && <Check className="h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+            )}
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
                 {hasMedia && statusFilter !== "all" ? "Nothing here for this status." : "This collection is empty."}
