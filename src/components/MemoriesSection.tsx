@@ -186,7 +186,6 @@ export function MemoriesSection({
             />
           </div>
         ))}
-        )}
       </div>
 
       {grid.length === 0 && (
