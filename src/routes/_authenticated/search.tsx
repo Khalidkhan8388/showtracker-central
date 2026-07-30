@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { addTmdbMedia, searchEverything } from "@/lib/notes.functions";
@@ -9,6 +9,7 @@ import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cach
 import { MediaCard } from "@/components/MediaCard";
 import type { LocalMedia } from "@/lib/local-db";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
+import { PageHeader } from "@/components/PageHeader";
 
 import {
   Search,
