@@ -1,9 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ChevronLeft, FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
+import { FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCollections, createCollection, deleteCollection, backfillMediaCollections, pruneEmptyCollections } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { confirmDialog } from "@/components/ConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
+import { BackButton } from "@/components/BackButton";
 
 export const Route = createFileRoute("/_authenticated/collections/")({
   head: () => ({
