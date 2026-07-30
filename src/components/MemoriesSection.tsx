@@ -93,29 +93,21 @@ export function MemoriesSection({
 
   return (
     <section aria-label="Memories" className="flex flex-col gap-3">
-      <button
-        type="button"
-        disabled={!hasMore}
-        onClick={() => {
+      <SectionHeader
+        label="Memories"
+        count={all.length}
+        onClick={hasMore ? () => {
           void haptic.tap();
           onSeeAll?.();
-        }}
-        className="group flex items-baseline justify-between text-left"
-      >
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Memories
-        </span>
-        <span
-          className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground transition-colors group-active:text-foreground"
-        >
-          {all.length} {all.length === 1 ? "entry" : "entries"}
-          {hasMore && (
+        } : undefined}
+        action={
+          hasMore ? (
             <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-foreground/10 text-foreground">
               <ChevronRight className="h-3 w-3" />
             </span>
-          )}
-        </span>
-      </button>
+          ) : undefined
+        }
+      />
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <FilterPill
