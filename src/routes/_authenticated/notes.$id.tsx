@@ -720,21 +720,13 @@ function NoteDetail() {
   if (media) {
     return (
       <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
-        <header className="sticky top-0 z-10 glass-bar">
-          <div className="flex items-center justify-between px-2 pt-3 pb-2">
-            <button
-              type="button"
-              aria-label="Back"
-              onClick={() => {
-                if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
-                else void navigate({ to: "/home" });
-              }}
-              className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
-            >
-              <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-              <span>Back</span>
-            </button>
-          </div>
+        <header className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
+          <BackButton
+            onClick={() => {
+              if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
+              else void navigate({ to: "/home" });
+            }}
+          />
         </header>
         <div className="px-5">
           <MediaDetail
@@ -753,27 +745,16 @@ function NoteDetail() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-24">
-      {/* iOS nav bar */}
-      <header className="sticky top-0 z-10 glass-bar">
-        <div className="flex items-center justify-between px-2 pt-3 pb-2">
-          <button
-            type="button"
-            aria-label="Back"
-            onClick={() => {
-              if (typeof window !== "undefined" && window.history.length > 1) {
-                window.history.back();
-              } else {
-                void navigate({ to: "/home" });
-              }
-            }}
-            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
-          >
-            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-            <span>Back</span>
-          </button>
-          <div />
-
-        </div>
+      <header className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
+        <BackButton
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              window.history.back();
+            } else {
+              void navigate({ to: "/home" });
+            }
+          }}
+        />
       </header>
 
       <div className="px-5 pt-3">
