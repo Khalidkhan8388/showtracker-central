@@ -1,5 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin } from "lucide-react";
+import { Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin, ArrowUpDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
@@ -28,6 +29,27 @@ import { fetchTmdbLogoFn } from "@/lib/tmdb.functions";
 
 
 
+
+type SortKey =
+  | "added-desc"
+  | "added-asc"
+  | "release-desc"
+  | "release-asc"
+  | "title"
+  | "rating"
+  | "status"
+  | "progress";
+
+const SORT_LABEL: Record<SortKey, string> = {
+  "added-desc": "Recently added",
+  "added-asc": "Oldest added",
+  "release-desc": "Release date — newest",
+  "release-asc": "Release date — oldest",
+  title: "Title A–Z",
+  rating: "Rating",
+  status: "Watch status",
+  progress: "Progress",
+};
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
@@ -67,7 +89,16 @@ function CollectionDetail() {
     [notes, memberIds],
   );
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "added-desc";
+    return ((localStorage.getItem("collection-sort") as SortKey) ?? "added-desc");
+  });
+  function setSortMode(s: SortKey) {
+    setSort(s);
+    if (typeof window !== "undefined") localStorage.setItem("collection-sort", s);
+  }
   const [tvView, setTvView] = useState<"posters" | "episodes" | "stats">("posters");
+
   const mediaMembers = useMemo(
     () => allMembers.filter((n) => !!(n as any).media),
     [allMembers],
@@ -96,9 +127,59 @@ function CollectionDetail() {
           const m = (n as any).media;
           return m && m.watch_status === statusFilter;
         });
-    // pinned first, stable
-    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)));
-  }, [allMembers, hasMedia, statusFilter]);
+
+    const md = (n: any): LocalMedia | null => (n?.media ?? null) as LocalMedia | null;
+    const releaseMs = (n: any) => {
+      const m = md(n);
+      const d = m?.release_date || (m as any)?.last_air_date || null;
+      const t = d ? Date.parse(d) : NaN;
+      return Number.isNaN(t) ? null : t;
+    };
+    const titleOf = (n: any) => (md(n)?.title || n.heading || "").toLowerCase();
+    const progressOf = (n: any) => {
+      const m = md(n);
+      if (!m || m.type !== "tv") return -1;
+      const total = mediaTotal(m);
+      return total ? mediaDone(m) / total : 0;
+    };
+    const STATUS_ORDER: Record<string, number> = { watching: 0, watchlist: 1, watched: 2, dropped: 3 };
+
+    const cmp = (a: any, b: any) => {
+      switch (sort) {
+        case "release-desc": {
+          const x = releaseMs(a), y = releaseMs(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return y - x;
+        }
+        case "release-asc": {
+          const x = releaseMs(a), y = releaseMs(b);
+          if (x === null && y === null) return 0;
+          if (x === null) return 1;
+          if (y === null) return -1;
+          return x - y;
+        }
+        case "title":
+          return titleOf(a).localeCompare(titleOf(b));
+        case "rating":
+          return (md(b)?.vote_average ?? -1) - (md(a)?.vote_average ?? -1);
+        case "status":
+          return (STATUS_ORDER[md(a)?.watch_status ?? ""] ?? 9) - (STATUS_ORDER[md(b)?.watch_status ?? ""] ?? 9);
+        case "progress":
+          return progressOf(b) - progressOf(a);
+        case "added-asc":
+          return (a.created_at ?? "").localeCompare(b.created_at ?? "");
+        case "added-desc":
+        default:
+          return (b.created_at ?? "").localeCompare(a.created_at ?? "");
+      }
+    };
+
+    // pinned first, then chosen sort
+    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || cmp(a, b));
+  }, [allMembers, hasMedia, statusFilter, sort]);
+
   const allSelectedPinned = useMemo(() => {
     if (removeSel.size === 0) return false;
     for (const id of removeSel) {
@@ -478,6 +559,39 @@ function CollectionDetail() {
                   })}
                 </div>
               </div>
+            )}
+            {hasMedia && (
+              <div className="mb-3 flex items-center justify-between">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
+                  {members.length} {members.length === 1 ? "title" : "titles"}
+                </span>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      type="button"
+                      className="press-bounce inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-[12px] font-semibold text-muted-foreground ring-1 ring-border/60 active:opacity-70"
+                    >
+                      <ArrowUpDown className="h-3.5 w-3.5" />
+                      {SORT_LABEL[sort]}
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-52 rounded-2xl">
+                    {(Object.keys(SORT_LABEL) as SortKey[])
+                      .filter((k) => (k === "progress" ? hasTv : true))
+                      .map((k) => (
+                        <DropdownMenuItem
+                          key={k}
+                          onSelect={() => setSortMode(k)}
+                          className="flex items-center justify-between gap-3 rounded-xl text-[13px]"
+                        >
+                          {SORT_LABEL[k]}
+                          {sort === k && <Check className="h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
             )}
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
