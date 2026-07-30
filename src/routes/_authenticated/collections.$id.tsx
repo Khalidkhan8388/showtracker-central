@@ -67,7 +67,16 @@ function CollectionDetail() {
     [notes, memberIds],
   );
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
+  const [sort, setSort] = useState<SortKey>(() => {
+    if (typeof window === "undefined") return "added-desc";
+    return ((localStorage.getItem("collection-sort") as SortKey) ?? "added-desc");
+  });
+  function setSortMode(s: SortKey) {
+    setSort(s);
+    if (typeof window !== "undefined") localStorage.setItem("collection-sort", s);
+  }
   const [tvView, setTvView] = useState<"posters" | "episodes" | "stats">("posters");
+
   const mediaMembers = useMemo(
     () => allMembers.filter((n) => !!(n as any).media),
     [allMembers],
