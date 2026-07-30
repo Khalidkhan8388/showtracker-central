@@ -2,7 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Local-only app — no auth/user identity.
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
+import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
@@ -17,7 +17,7 @@ import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { NowLane } from "@/components/NowLane";
 import { MemoriesSection } from "@/components/MemoriesSection";
 import { haptic } from "@/lib/haptics";
-import { SectionHeader } from "@/components/SectionLabel";
+import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
 
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
@@ -753,9 +753,7 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
   return (
     <div className="-mx-4">
       <div className="flex items-center justify-between px-5 pb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Collections
-        </span>
+        <UISectionHeader label="Collections" />
         <Link
           to="/collections"
           aria-label="Open collections"
