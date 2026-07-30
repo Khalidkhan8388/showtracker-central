@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
 import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
-import { ChevronLeft, Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle, MapPin } from "lucide-react";
+import { Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle, MapPin } from "lucide-react";
 import { formatIgCount } from "@/components/FeedNoteCard";
 import type { LocalYouTube, LocalInstagram } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
@@ -11,6 +11,7 @@ import { YouTubeThumbImg } from "@/components/YouTubeCard";
 import { ReminderPicker } from "@/components/ReminderPicker";
 import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 import { confirmDialog } from "@/components/ConfirmDialog";
+import { BackButton } from "@/components/BackButton";
 
 
 
