@@ -155,9 +155,9 @@ export function MemoriesSection({
         />
       )}
 
-      <div className="grid grid-cols-2 items-start gap-3">
-        {grid.map((n) => (
-          <div key={n.id}>
+      <div className="columns-2 gap-3">
+        {grid.map((n, i) => (
+          <div key={n.id} className={`break-inside-avoid ${i === grid.length - 1 ? "" : "mb-3"}`}>
             <NoteCard
               note={n as any}
               variant="masonry"
