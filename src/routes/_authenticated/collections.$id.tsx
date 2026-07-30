@@ -186,7 +186,7 @@ function CollectionDetail() {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center gap-2 px-4 py-3">
-          <PageHeaderBack
+          <BackButton
             onClick={() => {
               if (typeof window !== "undefined" && window.history.length > 1) {
                 window.history.back();
