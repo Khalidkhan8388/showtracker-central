@@ -60,28 +60,16 @@ function CollectionsPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
-        <div className="flex items-center justify-between gap-2 px-4 py-3">
-          <div className="flex min-w-0 items-center gap-2">
-            <Link
-              to="/home"
-              aria-label="Back"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground press-bounce active:opacity-70"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-            <h1 className="text-[22px] font-bold tracking-tight">Collections</h1>
-          </div>
-          <button
-            type="button"
-            onClick={() => setCreating(true)}
-            aria-label="New collection"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
-          >
-            <Plus className="h-5 w-5" />
-          </button>
-        </div>
-      </header>
+      <PageHeader title="Collections" backTo="/home">
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          aria-label="New collection"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
+        >
+          <Plus className="h-5 w-5" />
+        </button>
+      </PageHeader>
 
       <section className="flex-1 px-4 pb-24 pt-4">
         {creating && (
