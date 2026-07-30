@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCollections, createCollection, deleteCollection, backfillMediaCollections, pruneEmptyCollections } from "@/lib/collections";
