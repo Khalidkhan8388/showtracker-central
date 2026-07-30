@@ -58,33 +58,16 @@ function ReviewPage() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-background pb-24">
-      <header className="sticky top-0 z-10 glass-bar">
-        <div className="flex items-center justify-between px-2 pt-3 pb-1">
-          <Link
-            to="/home"
-            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
+      <PageHeader title="Suggested" backTo="/home">
+        {items.length > 0 && (
+          <button
+            onClick={approveAll}
+            className="rounded-full px-3 py-1 text-[13px] font-semibold text-primary active:opacity-60"
           >
-            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-            <span>Home</span>
-          </Link>
-          {items.length > 0 && (
-            <button
-              onClick={approveAll}
-              className="rounded-full px-3 py-1 text-[17px] font-semibold text-primary active:opacity-60"
-            >
-              Approve All
-            </button>
-          )}
-        </div>
-        <div className="px-4 pt-1 pb-3">
-          <h1 className="text-[34px] font-bold tracking-tight">Suggested</h1>
-          {items.length > 0 && (
-            <p className="mt-0.5 text-[13px] text-muted-foreground">
-              {items.length} pending suggestion{items.length === 1 ? "" : "s"}
-            </p>
-          )}
-        </div>
-      </header>
+            Approve All
+          </button>
+        )}
+      </PageHeader>
 
       <div className="flex-1 px-4 pt-2">
         {notes === undefined ? (
