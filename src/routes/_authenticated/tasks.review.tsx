@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMemo } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { approveTasks, dismissTasks } from "@/lib/notes.functions";

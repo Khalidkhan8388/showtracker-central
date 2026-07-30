@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { addTmdbMedia, searchEverything } from "@/lib/notes.functions";
