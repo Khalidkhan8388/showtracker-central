@@ -99,15 +99,13 @@ export function MemoriesSection({
           void haptic.tap();
           onSeeAll?.();
         }}
-        className="flex items-baseline justify-between text-left"
+        className="group flex items-baseline justify-between text-left"
       >
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Memories
         </span>
         <span
-          className={`inline-flex items-center gap-0.5 text-[11px] text-muted-foreground ${
-            hasMore ? "transition-colors group-active:text-foreground" : ""
-          }`}
+          className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground transition-colors group-active:text-foreground"
         >
           {all.length} {all.length === 1 ? "entry" : "entries"}
           {hasMore && (
