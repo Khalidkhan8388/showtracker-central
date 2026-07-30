@@ -92,14 +92,29 @@ export function MemoriesSection({
 
   return (
     <section aria-label="Memories" className="flex flex-col gap-3">
-      <div className="flex items-baseline justify-between">
+      <button
+        type="button"
+        disabled={!hasMore}
+        onClick={() => {
+          void haptic.tap();
+          onSeeAll?.();
+        }}
+        className="group flex items-baseline justify-between text-left"
+      >
         <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Memories
         </span>
-        <span className="text-[11px] text-muted-foreground">
+        <span
+          className="inline-flex items-center gap-0.5 text-[11px] text-muted-foreground transition-colors group-active:text-foreground"
+        >
           {all.length} {all.length === 1 ? "entry" : "entries"}
+          {hasMore && (
+            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+              <ChevronRight className="h-3 w-3" />
+            </span>
+          )}
         </span>
-      </div>
+      </button>
 
       <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <FilterPill
@@ -169,22 +184,6 @@ export function MemoriesSection({
             />
           </div>
         ))}
-        {hasMore && onSeeAll && (
-          <button
-            type="button"
-            onClick={() => {
-              void haptic.tap();
-              onSeeAll();
-            }}
-            className="flex aspect-square flex-col items-center justify-center gap-1 rounded-[15px] bg-card ring-1 ring-border/60 text-center transition-transform active:scale-[0.97]"
-          >
-            <span className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground">
-              <ChevronRight className="h-4 w-4" />
-            </span>
-            <span className="text-[12px] font-semibold text-foreground">See all</span>
-            <span className="text-[11px] text-muted-foreground">{gridSource.length - grid.length} more</span>
-          </button>
-        )}
       </div>
 
       {grid.length === 0 && (
