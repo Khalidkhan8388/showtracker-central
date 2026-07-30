@@ -4,6 +4,7 @@ import { Pin, ChevronRight } from "lucide-react";
 import type { LocalNote } from "@/lib/local-db";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { haptic } from "@/lib/haptics";
+import { SectionHeader } from "@/components/SectionLabel";
 
 type Kind = "note" | "image" | "instagram" | "youtube" | "web" | "voice" | "media";
 
