@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { ChevronLeft, RotateCcw, Trash2, Loader2, X } from "lucide-react";
+import { RotateCcw, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocalDeletedNotes } from "@/hooks/use-local-notes";
 import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
@@ -8,6 +8,7 @@ import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functio
 import { NoteCard, type Note } from "@/components/NoteCard";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { confirmDialog } from "@/components/ConfirmDialog";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
@@ -141,16 +142,7 @@ function TrashPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
-        <Link
-          to="/profile"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
-          aria-label="Back"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-[17px] font-semibold">Recently Deleted</h1>
-      </header>
+      <PageHeader title="Recently deleted" backTo="/profile" />
 
       <div className="px-4 pt-3 text-[13px] text-muted-foreground">
         Notes here are permanently removed after 30 days. Long-press to select.

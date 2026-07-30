@@ -1,10 +1,11 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload } from "lucide-react";
+import { Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import { useTheme } from "@/lib/theme";
 import { toast } from "sonner";
+import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
@@ -87,16 +88,7 @@ function ProfilePage() {
 
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
-      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
-        <Link
-          to="/home"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
-          aria-label="Back"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </Link>
-        <h1 className="text-[17px] font-semibold">Profile</h1>
-      </header>
+      <PageHeader title="Profile" backTo="/home" />
 
       {/* Identity */}
       <section className="px-4 pt-6">

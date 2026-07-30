@@ -17,6 +17,7 @@ import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { NowLane } from "@/components/NowLane";
 import { MemoriesSection } from "@/components/MemoriesSection";
 import { haptic } from "@/lib/haptics";
+import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
 
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
@@ -687,26 +688,26 @@ function MemoriesOverlay({
 }) {
   return (
     <div className="fixed inset-0 z-30 flex flex-col bg-background animate-bounce-in">
-      <header className="sticky top-0 z-10 flex items-center justify-between border-b border-border/60 bg-background px-4 py-3">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            All memories
-          </span>
-          <span className="text-[13px] text-muted-foreground">
-            {notes.length} {notes.length === 1 ? "entry" : "entries"}
-          </span>
+      <header className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex flex-col">
+            <SectionLabel>All memories</SectionLabel>
+            <span className="text-[13px] text-muted-foreground">
+              {notes.length} {notes.length === 1 ? "entry" : "entries"}
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              void haptic.tap();
+              onClose();
+            }}
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
+            aria-label="Close"
+          >
+            <X className="h-4 w-4" />
+          </button>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            void haptic.tap();
-            onClose();
-          }}
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
-          aria-label="Close"
-        >
-          <X className="h-4 w-4" />
-        </button>
       </header>
       <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4">
         <MemoriesSection
@@ -752,9 +753,7 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
   return (
     <div className="-mx-4">
       <div className="flex items-center justify-between px-5 pb-2">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Collections
-        </span>
+        <UISectionHeader label="Collections" />
         <Link
           to="/collections"
           aria-label="Open collections"
@@ -812,15 +811,6 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
   );
 }
 
-
-function SectionHeader({ children }: { children: React.ReactNode }) {
-
-  return (
-    <h2 className="mb-2 px-1 text-[13px] font-normal uppercase tracking-wide text-muted-foreground">
-      {children}
-    </h2>
-  );
-}
 
 
 function useLongPress(onLongPress: () => void, ms = 450) {

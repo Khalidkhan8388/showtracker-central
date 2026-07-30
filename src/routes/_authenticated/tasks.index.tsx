@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
+import { CheckCircle2, Circle, Pin, PinOff, Trash2, X, Pencil, Plus, Check } from "lucide-react";
 import { toggleTask, deleteTasks, pinTask, editTaskText, addCustomTask } from "@/lib/notes.functions";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { patchLocalTask, deleteLocalTasks, resync } from "@/lib/sync-engine";
+import { PageHeader } from "@/components/PageHeader";
 
 const CUSTOM_HEADING = "__custom__";
 
@@ -176,25 +177,11 @@ function TasksPage() {
 
   return (
     <main className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      {/* iOS large-title header */}
-      <header className="sticky top-0 z-10 glass-bar">
-        <div className="flex items-center justify-between px-2 pt-3 pb-1">
-          <Link
-            to="/home"
-            aria-label="Back"
-            className="inline-flex items-center gap-0.5 rounded-full px-2 py-1 text-[17px] text-primary active:opacity-60"
-          >
-            <ChevronLeft className="h-6 w-6 -ml-1" strokeWidth={2.5} />
-            <span>Home</span>
-          </Link>
-          <span className="px-3 text-[15px] tabular-nums text-muted-foreground">
-            {done.length}/{allTasks.length}
-          </span>
-        </div>
-        <div className="px-4 pt-1 pb-3">
-          <h1 className="text-[34px] font-bold tracking-tight">Tasks</h1>
-        </div>
-      </header>
+      <PageHeader title="Tasks" backTo="/home">
+        <span className="px-3 text-[15px] tabular-nums text-muted-foreground">
+          {done.length}/{allTasks.length}
+        </span>
+      </PageHeader>
 
       <div className="flex-1 px-4 pt-2">
         {!selectMode && (
