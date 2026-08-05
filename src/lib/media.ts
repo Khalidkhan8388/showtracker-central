@@ -38,18 +38,47 @@ export const WATCH_COLORS: Record<WatchStatus, string> = {
 async function patchMedia(noteId: string, patch: Partial<LocalMedia>) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
-  const media: LocalMedia = { ...n.media, ...patch };
-  await db.notes.update(noteId, { media, updated_at: new Date().toISOString() } as Partial<LocalNote>);
+  const all = await db.notes.toArray();
+  const targets = all.filter(
+    (x) =>
+      !x.deleted_at &&
+      !!x.media &&
+      x.media.type === n.media!.type &&
+      x.media.tmdb_id === n.media!.tmdb_id,
+  );
+  const now = new Date().toISOString();
+  for (const t of (targets.length ? targets : [n])) {
+    if (!t.media) continue;
+    const media: LocalMedia = { ...t.media, ...patch };
+    await db.notes.update(t.id, { media, updated_at: now } as Partial<LocalNote>);
+  }
 }
+
 
 export async function setWatchStatus(noteId: string, status: WatchStatus | null) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
-  await patchMedia(noteId, {
-    watch_status: status,
-    watched_at: status === "watched" ? new Date().toISOString() : n.media.watched_at,
-  });
+  const watchedAt = status === "watched" ? new Date().toISOString() : n.media.watched_at;
+
+  // Apply to every note that points at the same title so the status is
+  // identical no matter which collection/filter you're looking at.
+  const all = await db.notes.toArray();
+  const siblings = all.filter(
+    (x) =>
+      !x.deleted_at &&
+      !!x.media &&
+      x.media.type === n.media!.type &&
+      x.media.tmdb_id === n.media!.tmdb_id,
+  );
+  const targets = siblings.length ? siblings : [n];
+  const now = new Date().toISOString();
+  for (const t of targets) {
+    if (!t.media) continue;
+    const media: LocalMedia = { ...t.media, watch_status: status, watched_at: watchedAt };
+    await db.notes.update(t.id, { media, updated_at: now } as Partial<LocalNote>);
+  }
 }
+
 
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
   const n = await db.notes.get(noteId);
