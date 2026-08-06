@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Local-only app — no auth/user identity.
-import { Recorder } from "@/components/Recorder";
+import { BottomNav } from "@/components/BottomNav";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
@@ -645,7 +645,7 @@ function Home() {
           </div>
         </div>
       ) : !memoriesExpanded ? (
-        <Recorder onNoteReady={() => { void haptic.success(); void resync(); }} />
+        <BottomNav onLibrary={() => setMemoriesExpanded(true)} />
       ) : null}
 
       {showAddToCollection && (
