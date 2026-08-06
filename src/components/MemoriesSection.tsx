@@ -93,71 +93,12 @@ export function MemoriesSection({
 
   return (
     <section aria-label="Memories" className="flex flex-col gap-3">
-      <SectionHeader
-        label="Memories"
-        count={all.length}
-        onClick={hasMore ? () => {
-          void haptic.tap();
-          onSeeAll?.();
-        } : undefined}
-        action={
-          hasMore ? (
-            <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-foreground/10 text-foreground">
-              <ChevronRight className="h-3 w-3" />
-            </span>
-          ) : undefined
-        }
-      />
-
-      <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-        <FilterPill
-          label="All"
-          count={all.length}
-          active={active === null}
-          onClick={() => {
-            void haptic.tap();
-            setActive(null);
-          }}
-        />
-        {pinnedCount > 0 && (
-          <FilterPill
-            label="Pinned"
-            icon={<Pin aria-hidden="true" className="h-3 w-3" />}
-            count={pinnedCount}
-            active={active === "pinned"}
-            onClick={() => {
-              void haptic.tap();
-              setActive(active === "pinned" ? null : "pinned");
-            }}
-          />
-        )}
-        {KIND_LABELS.filter((k) => (counts.get(k.key) ?? 0) > 0).map((k) => (
-          <FilterPill
-            key={k.key}
-            label={k.label}
-            count={counts.get(k.key) ?? 0}
-            active={active === k.key}
-            onClick={() => {
-              void haptic.tap();
-              setActive(active === k.key ? null : k.key);
-            }}
-          />
-        ))}
-      </div>
-
-      {active !== "pinned" && pinnedCount > 0 && !expanded && (
-        <PinnedStrip
-          pinned={pinned}
-          thumbs={thumbs}
-          selected={selected}
-          selectMode={selectMode}
-          onToggleSel={onToggleSel}
-        />
-      )}
-
       <div className="columns-2 gap-3">
         {grid.map((n, i) => (
-          <div key={n.id} className={`break-inside-avoid ${i === grid.length - 1 ? "" : "mb-3"}`}>
+          <div
+            key={n.id}
+            className={`break-inside-avoid ${n.pinned ? "[column-span:all]" : ""} ${i === grid.length - 1 ? "" : "mb-3"}`}
+          >
             <NoteCard
               note={n as any}
               variant="masonry"
