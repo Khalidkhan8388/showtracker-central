@@ -50,7 +50,6 @@ type Note = {
   transcript: string | null;
 };
 
-type TaskKey = string; // `${noteId}::${taskId}`
 
 function Home() {
   const localNotes = useLocalNotes();
