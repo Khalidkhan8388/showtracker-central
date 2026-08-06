@@ -30,7 +30,7 @@ export function BottomNav({ onLibrary }: { onLibrary: () => void }) {
         <Link to="/collections" aria-label="Collections" onClick={() => void haptic.tap()} className={item}>
           <FolderOpen aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
         </Link>
-        <Link to="/search" aria-label="Search" onClick={() => void haptic.tap()} className={item}>
+        <Link to="/search" search={{ tab: "memories" as const }} aria-label="Search" onClick={() => void haptic.tap()} className={item}>
           <Search aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
         </Link>
       </nav>
