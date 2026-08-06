@@ -37,4 +37,3 @@ export function BottomNav({ onLibrary }: { onLibrary: () => void }) {
     </div>
   );
 }
-}
