@@ -2,7 +2,7 @@
 // exposes optimistic write helpers on top of Dexie and stubs the legacy
 // sync surface so nothing needs to import supabase.
 
-import { db, type LocalNote, type LocalTask } from "./local-db";
+import { db, type LocalNote } from "./local-db";
 import { evictAudio } from "./audio-cache";
 import { evictPhoto } from "./photo-cache";
 
@@ -51,27 +51,3 @@ export async function hardDeleteLocalNotes(ids: string[]): Promise<void> {
   await db.notes.bulkDelete(ids);
 }
 
-export async function patchLocalTask(
-  noteId: string,
-  taskId: string,
-  patch: Partial<LocalTask>,
-): Promise<void> {
-  const note = await db.notes.get(noteId);
-  if (!note) return;
-  const tasks = (note.tasks ?? []).map((t) => (t.id === taskId ? { ...t, ...patch } : t));
-  await patchLocalNote(noteId, { tasks });
-}
-
-export async function deleteLocalTasks(items: Array<{ noteId: string; taskId: string }>): Promise<void> {
-  const byNote = new Map<string, Set<string>>();
-  for (const { noteId, taskId } of items) {
-    if (!byNote.has(noteId)) byNote.set(noteId, new Set());
-    byNote.get(noteId)!.add(taskId);
-  }
-  for (const [noteId, taskIds] of byNote) {
-    const note = await db.notes.get(noteId);
-    if (!note) continue;
-    const tasks = (note.tasks ?? []).filter((t) => !taskIds.has(t.id));
-    await patchLocalNote(noteId, { tasks });
-  }
-}

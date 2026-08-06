@@ -690,28 +690,7 @@ export async function searchEverything({
         .toLowerCase();
       return hay.includes(needle);
     });
-    const tasks: Array<{
-      noteId: string;
-      taskId: string;
-      text: string;
-      done: boolean;
-      noteHeading: string | null;
-    }> = [];
-    for (const n of all) {
-      if (n.deleted_at) continue;
-      for (const t of n.tasks ?? []) {
-        if (t.text.toLowerCase().includes(needle)) {
-          tasks.push({
-            noteId: n.id,
-            taskId: t.id,
-            text: t.text,
-            done: !!t.done,
-            noteHeading: n.heading === "__custom__" ? null : n.heading,
-          });
-        }
-      }
-    }
-    return { noteIds: noteMatches.map((n) => n.id), tasks, reasoning: null };
+    return { noteIds: noteMatches.map((n) => n.id), tasks: [] as any[], reasoning: null };
   }
 
   const catalog = notes.slice(0, 200).map((n) => ({
