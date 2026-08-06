@@ -43,7 +43,6 @@ type Note = {
   heading: string | null;
   summary: string | null;
   duration_seconds: number | null;
-  duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
   image_paths: string[] | null;
