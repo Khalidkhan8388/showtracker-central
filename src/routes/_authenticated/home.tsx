@@ -78,7 +78,6 @@ function Home() {
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
   const [showAddToCollection, setShowAddToCollection] = useState(false);
-  const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const allCollections = useCollections();
 
 
@@ -388,9 +387,9 @@ function Home() {
             </button>
           </div>
         </div>
-      ) : !memoriesExpanded ? (
-        <BottomNav onLibrary={() => setMemoriesExpanded(true)} />
-      ) : null}
+      ) : (
+        <BottomNav onLibrary={() => window.scrollTo({ top: 0, behavior: "smooth" })} />
+      )}
 
       {showAddToCollection && (
         <AddToCollectionSheet
@@ -415,58 +414,6 @@ function Home() {
   );
 }
 
-function MemoriesOverlay({
-  notes,
-  thumbs,
-  selected,
-  selectMode,
-  onToggleSel,
-  onClose,
-}: {
-  notes: import("@/lib/local-db").LocalNote[];
-  thumbs: Record<string, string>;
-  selected: Set<string>;
-  selectMode: boolean;
-  onToggleSel: (id: string) => void;
-  onClose: () => void;
-}) {
-  return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-background animate-bounce-in">
-      <header className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <SectionLabel>All memories</SectionLabel>
-            <span className="text-[13px] text-muted-foreground">
-              {notes.length} {notes.length === 1 ? "entry" : "entries"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              void haptic.tap();
-              onClose();
-            }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-      <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4">
-        <MemoriesSection
-          notes={notes}
-          thumbs={thumbs}
-          selected={selected}
-          selectMode={selectMode}
-          onToggleSel={onToggleSel}
-          expanded
-        />
-      </div>
-    </div>
-  );
-}
-
 function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: string; className?: string }) {
   return (
     <span className={`inline-flex items-center gap-1.5 ${className}`}>
@@ -480,80 +427,6 @@ function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: strin
   );
 }
 
-
-
-
-function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[] }) {
-  const collections = useCollections();
-  const list = collections ?? [];
-
-  // Build a quick lookup: noteId -> note
-  const noteById = useMemo(() => {
-    const m = new Map<string, import("@/lib/local-db").LocalNote>();
-    for (const n of notes) m.set(n.id, n);
-    return m;
-  }, [notes]);
-
-  return (
-    <div className="-mx-4">
-      <div className="flex items-center justify-between px-5 pb-2">
-        <UISectionHeader label="Collections" />
-        <Link
-          to="/collections"
-          aria-label="Open collections"
-          className="inline-flex h-7 w-7 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </Link>
-      </div>
-      <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
-
-        {list.map((c) => {
-          const ids = c.note_ids ?? [];
-          // Prefer a media poster from any member note
-          let posterUrl: string | null = null;
-          for (const nid of ids) {
-            const n = noteById.get(nid);
-            const media = (n as any)?.media as import("@/lib/local-db").LocalMedia | undefined;
-            if (media?.poster_path) {
-              posterUrl = tmdbPoster(media.poster_path, "w342");
-              break;
-            }
-          }
-          return (
-            <Link
-              key={c.id}
-              to="/collections/$id"
-              params={{ id: c.id }}
-              style={{ borderRadius: 15 }}
-              className="relative flex aspect-[2/3] w-28 shrink-0 snap-start overflow-hidden bg-card ring-1 ring-border/60 active:opacity-80"
-            >
-              {posterUrl ? (
-                <img
-                  src={posterUrl}
-                  alt={c.title}
-                  loading="lazy"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
-                <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
-              )}
-              <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-6">
-                <span className="mb-0.5 inline-block rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">
-                  {ids.length}
-                </span>
-                <p className="line-clamp-2 text-[12px] font-semibold leading-tight scrim-fg">
-                  {c.title}
-                </p>
-              </div>
-
-            </Link>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 
 
