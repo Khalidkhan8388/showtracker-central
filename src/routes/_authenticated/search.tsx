@@ -37,7 +37,7 @@ export const Route = createFileRoute("/_authenticated/search")({
   head: () => ({
     meta: [
       { title: "Search — Braintape" },
-      { name: "description", content: "Search all your notes and tasks with AI or tags." },
+      { name: "description", content: "Search all your memories with AI or tags." },
     ],
   }),
   component: SearchPage,
@@ -48,7 +48,6 @@ type Note = {
   heading: string | null;
   summary: string | null;
   tags: string[] | null;
-  tasks: Array<{ id: string; text: string; done: boolean }> | null;
   audio_path: string | null;
   image_paths: string[] | null;
   source_url: string | null;
@@ -464,20 +463,6 @@ function SearchPage() {
     return list.slice(0, 60);
   }, [notes, activeTag, query, aiMode, aiIds, tab]);
 
-  const matchingTasks = useMemo(() => {
-    const q = query.trim().toLowerCase();
-    if (!q || aiMode || tab !== "memories") return [];
-    const out: Array<{ noteId: string; taskId: string; text: string; done: boolean; noteHeading: string | null }> = [];
-    for (const n of notes) {
-      if (activeTag && !(n.tags ?? []).includes(activeTag)) continue;
-      for (const t of n.tasks ?? []) {
-        if (t.text.toLowerCase().includes(q)) {
-          out.push({ noteId: n.id, taskId: t.id, text: t.text, done: t.done, noteHeading: n.heading });
-        }
-      }
-    }
-    return out.slice(0, 20);
-  }, [notes, query, activeTag, aiMode, tab]);
 
   // Keep the top of the results visible above the keyboard while typing.
   useEffect(() => {
@@ -488,7 +473,7 @@ function SearchPage() {
       root.scrollTo({ top: root.scrollHeight, behavior: "smooth" });
     });
     return () => cancelAnimationFrame(id);
-  }, [query, filteredNotes.length, matchingTasks.length, kbOffset]);
+  }, [query, filteredNotes.length, kbOffset]);
 
 
 
@@ -512,7 +497,6 @@ function SearchPage() {
   }
 
   const idle = !query.trim() && !activeTag && !aiMode;
-  const showTasks = matchingTasks.length > 0;
 
   return (
     <div className="relative mx-auto flex h-[100dvh] w-full max-w-md flex-col overflow-hidden bg-background">
@@ -560,7 +544,7 @@ function SearchPage() {
           </span>
           {(query.trim() || aiMode) && (
             <span className="text-[10px] tabular-nums text-muted-foreground">
-              {filteredNotes.length + matchingTasks.length}
+              {filteredNotes.length}
             </span>
           )}
         </div>
@@ -578,44 +562,13 @@ function SearchPage() {
           </div>
         )}
 
-        {/* Task matches */}
-        {showTasks && (
-          <div className="mb-4 overflow-hidden rounded-2xl bg-card">
-            {matchingTasks.map((t, i) => (
-              <div key={`${t.noteId}::${t.taskId}`}>
-                <Link
-                  to="/notes/$id"
-                  params={{ id: t.noteId }}
-                  className="flex items-start gap-3 px-3.5 py-2.5 active:bg-muted"
-                >
-                  {t.done ? (
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
-                  ) : (
-                    <Circle className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  )}
-                  <div className="min-w-0 flex-1">
-                    <div
-                      className={`text-[14px] leading-snug ${
-                        t.done ? "line-through text-muted-foreground" : "text-foreground"
-                      }`}
-                    >
-                      {highlight(t.text, query)}
-                    </div>
-                  </div>
-                </Link>
-                {i < matchingTasks.length - 1 && <div className="ml-10 h-px bg-border" />}
-              </div>
-            ))}
-          </div>
-        )}
-
         {/* Masonry captures */}
         {aiLoading ? (
           <div className="flex items-center justify-center gap-2 rounded-2xl bg-card px-4 py-14 text-[13px] text-muted-foreground">
             <Loader2 className="h-4 w-4 animate-spin" />
             Reading your notes…
           </div>
-        ) : filteredNotes.length === 0 && !showTasks ? (
+        ) : filteredNotes.length === 0 ? (
           idle ? (
             <div className="mt-6 rounded-2xl bg-card px-5 py-10 text-center">
               <div className="mx-auto mb-3 grid h-11 w-11 place-items-center rounded-full bg-primary/10">
@@ -824,7 +777,7 @@ function SearchPage() {
                   <span className="tabular-nums">
                     {aiMode
                       ? filteredNotes.length
-                      : filteredNotes.length + matchingTasks.length}
+                      : filteredNotes.length}
                   </span>
                 )}
                 {!aiMode && query.trim() && (
@@ -840,7 +793,7 @@ function SearchPage() {
             className="flex items-center gap-1.5 rounded-full glass-pill pl-4 pr-1 py-1 sm:gap-2 sm:pl-5 sm:pr-1.5 sm:py-1.5"
           >
             <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
-            <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>
+            <label htmlFor="search-input" className="sr-only">Search captures, tags</label>
             <input
               id="search-input"
               ref={inputRef}
@@ -868,7 +821,7 @@ function SearchPage() {
                   setAiMode(false);
                 }
               }}
-              placeholder="Search captures, tasks, tags…"
+              placeholder="Search captures, tags…"
               className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/40"
             />
 

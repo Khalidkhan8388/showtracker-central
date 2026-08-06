@@ -5,7 +5,6 @@ import {
   Mic,
   Film,
   Link as LinkIcon,
-  CheckSquare,
   Bell,
   Moon,
   Sun,
@@ -16,7 +15,6 @@ import {
   Check,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
-import { recordActivityPing } from "@/lib/activity";
 
 export const ONBOARDING_KEY = "braintape.onboarded.v1";
 
@@ -24,9 +22,9 @@ export const Route = createFileRoute("/onboarding")({
   head: () => ({
     meta: [
       { title: "Welcome — Braintape" },
-      { name: "description", content: "Your second brain for notes, media, links, and reminders — all local, all yours." },
+      { name: "description", content: "Your second brain for notes, media, and links — all local, all yours." },
       { property: "og:title", content: "Welcome to Braintape" },
-      { property: "og:description", content: "Capture voice, movies, articles, and tasks in one calm place." },
+      { property: "og:description", content: "Capture voice, movies, articles, and links in one calm place." },
       { name: "robots", content: "noindex" },
     ],
   }),
@@ -55,7 +53,6 @@ function OnboardingPage() {
         void navigate({ to: "/home", replace: true });
       }
     } catch {}
-    recordActivityPing();
   }, [navigate]);
 
   const slides = useMemo<Slide[]>(
@@ -66,7 +63,7 @@ function OnboardingPage() {
           icon={<Mic className="h-6 w-6" />}
           eyebrow="Capture"
           title="Speak your thoughts"
-          body="Record a voice memo and Braintape transcribes it, writes a summary, and pulls out the tasks buried in your ramble."
+          body="Record a voice memo and Braintape transcribes it and writes a clean summary of your ramble."
           bullets={["Auto transcript & summary", "Continue-recording append", "Waveform scrub + speed toggle"]}
         /> },
       { id: "media", render: (c) => <FeatureSlide
@@ -84,14 +81,6 @@ function OnboardingPage() {
           title="Web links & YouTube"
           body="Share any URL and Braintape distills it. YouTube videos get a compact card with channel, duration, and AI key points."
           bullets={["Reader view for articles", "YouTube summary + captions", "Photos ingest with OCR"]}
-        /> },
-      { id: "tasks", render: (c) => <FeatureSlide
-          {...c}
-          icon={<CheckSquare className="h-6 w-6" />}
-          eyebrow="Follow up"
-          title="Tasks & smart reminders"
-          body="Natural-language dates in any note become one-tap reminders. Smart snooze picks a time when you're likely to be free."
-          bullets={["Chrono-node date detection", "Contextual: “next time I open the app”", "Reminders sync into tasks"]}
         /> },
       { id: "theme", render: (c) => <ThemeSlide {...c} /> },
       { id: "notify", render: (c) => <NotificationsSlide {...c} /> },
@@ -290,9 +279,9 @@ function NotificationsSlide({ goNext }: SlideCtx) {
         <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-foreground/50">
           Stay in the loop
         </p>
-        <h2 className="mt-1.5 text-[30px] font-bold leading-[1.1] tracking-tight">Turn on reminders</h2>
+        <h2 className="mt-1.5 text-[30px] font-bold leading-[1.1] tracking-tight">Turn on notifications</h2>
         <p className="mt-4 text-[15px] leading-relaxed text-foreground/70">
-          Get a gentle nudge when a follow-up is due, a shared link is saved in the background, or a new episode of a show you're watching is out.
+          Get a gentle nudge when a shared link finishes saving in the background.
         </p>
 
         <div className="mt-8">
