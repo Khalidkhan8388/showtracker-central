@@ -36,7 +36,5 @@ export function BottomNav({ onLibrary }: { onLibrary: () => void }) {
       </nav>
     </div>
   );
-
-    </div>
-  );
+}
 }
