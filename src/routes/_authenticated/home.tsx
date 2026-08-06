@@ -321,34 +321,14 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            <CollectionsRow notes={localNotes ?? []} />
-
             <MemoriesSection
               notes={derived.displayNotes as any}
               thumbs={thumbs}
               selected={selectedNotes}
               selectMode={noteSelectMode}
               onToggleSel={toggleNoteSel}
-              limit={6}
-              onSeeAll={() => {
-                void haptic.tap();
-                setMemoriesExpanded(true);
-              }}
             />
 
-            {memoriesExpanded && (
-              <MemoriesOverlay
-                notes={derived.displayNotes as any}
-                thumbs={thumbs}
-                selected={selectedNotes}
-                selectMode={noteSelectMode}
-                onToggleSel={toggleNoteSel}
-                onClose={() => {
-                  void haptic.tap();
-                  setMemoriesExpanded(false);
-                }}
-              />
-            )}
           </div>
         )}
       </section>
