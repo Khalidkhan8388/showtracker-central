@@ -684,15 +684,3 @@ export const fetchReaderViewFn = createServerFn({ method: "POST" })
       throw new Error(e?.message ?? "Reader view failed");
     }
   });
-
-// ---------- reminder verification ----------------------------------------
-
-const VerifyRemindersInput = z.object({
-  text: z.string().max(20000),
-  nowIso: z.string(),
-  candidates: z
-    .array(z.object({ iso: z.string(), title: z.string().optional() }))
-    .max(20),
-  existing: z.array(z.string()).max(50).optional().default([]),
-});
-

@@ -5,7 +5,6 @@ import {
   Mic,
   Film,
   Link as LinkIcon,
-  CheckSquare,
   Bell,
   Moon,
   Sun,
@@ -16,7 +15,6 @@ import {
   Check,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
-import { recordActivityPing } from "@/lib/activity";
 
 export const ONBOARDING_KEY = "braintape.onboarded.v1";
 
@@ -55,7 +53,6 @@ function OnboardingPage() {
         void navigate({ to: "/home", replace: true });
       }
     } catch {}
-    recordActivityPing();
   }, [navigate]);
 
   const slides = useMemo<Slide[]>(
