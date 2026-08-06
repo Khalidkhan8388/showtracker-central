@@ -12,7 +12,6 @@ export type Note = {
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean; pinned?: boolean; pending?: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
@@ -299,12 +298,6 @@ export const NoteCard = memo(function NoteCard({
             <div className={`${isHero ? "mt-3" : "mt-2"} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
               {imageCount > 0 && !isLink && (
                 <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{imageCount}</span>
               )}
@@ -359,12 +352,6 @@ export const NoteCard = memo(function NoteCard({
           )}
 
           <div className="relative z-10 mt-auto flex flex-col gap-1 text-[10px] text-muted-foreground">
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
-              </span>
-            )}
             <div className="flex items-center gap-2">
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && (
