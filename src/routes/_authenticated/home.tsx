@@ -4,17 +4,16 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
+import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync, clearPendingDelete } from "@/lib/sync-engine";
+import { patchLocalNote, deleteLocalNotes, resync, clearPendingDelete } from "@/lib/sync-engine";
 import { useCollections, addNotesToCollection, createCollection, backfillMediaCollections } from "@/lib/collections";
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { NowLane } from "@/components/NowLane";
 import { MemoriesSection } from "@/components/MemoriesSection";
 import { haptic } from "@/lib/haptics";
 import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
@@ -22,7 +21,7 @@ import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/Sec
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
 import { toast } from "sonner";
-import { useReminders } from "@/lib/reminders";
+
 
 
 
