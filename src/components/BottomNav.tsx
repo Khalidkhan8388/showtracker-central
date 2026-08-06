@@ -8,32 +8,30 @@ import { haptic } from "@/lib/haptics";
  */
 export function BottomNav({ onLibrary }: { onLibrary: () => void }) {
   const item =
-    "inline-flex flex-1 flex-col items-center justify-center gap-1 rounded-full px-4 py-2 text-[11px] font-semibold text-neutral-900 press-bounce active:scale-90 active:opacity-70 dark:text-white";
+    "inline-flex h-12 w-16 items-center justify-center rounded-full text-neutral-900 press-bounce active:scale-90 active:opacity-70 dark:text-white";
 
   return (
     <div className="pointer-events-none fixed inset-x-0 bottom-6 z-40 flex justify-center px-5">
       <nav
         aria-label="Primary"
-        className="pointer-events-auto flex w-full max-w-sm items-center gap-1 rounded-full glass-pill p-1.5"
+        className="pointer-events-auto flex items-center gap-3 rounded-full glass-pill px-3 py-1"
       >
         <button
           type="button"
+          aria-label="Library"
           onClick={() => {
             void haptic.tap();
             onLibrary();
           }}
           className={item}
         >
-          <Library aria-hidden="true" className="h-5 w-5" />
-          Library
+          <Library aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
         </button>
-        <Link to="/collections" onClick={() => void haptic.tap()} className={item}>
-          <FolderOpen aria-hidden="true" className="h-5 w-5" />
-          Collections
+        <Link to="/collections" aria-label="Collections" onClick={() => void haptic.tap()} className={item}>
+          <FolderOpen aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
         </Link>
-        <Link to="/search" onClick={() => void haptic.tap()} className={item}>
-          <Search aria-hidden="true" className="h-5 w-5" />
-          Search
+        <Link to="/search" aria-label="Search" onClick={() => void haptic.tap()} className={item}>
+          <Search aria-hidden="true" className="h-6 w-6" strokeWidth={1.75} />
         </Link>
       </nav>
     </div>
