@@ -776,7 +776,7 @@ function SearchPage() {
                   <span className="tabular-nums">
                     {aiMode
                       ? filteredNotes.length
-                      : filteredNotes.length + matchingTasks.length}
+                      : filteredNotes.length}
                   </span>
                 )}
                 {!aiMode && query.trim() && (
@@ -792,7 +792,7 @@ function SearchPage() {
             className="flex items-center gap-1.5 rounded-full glass-pill pl-4 pr-1 py-1 sm:gap-2 sm:pl-5 sm:pr-1.5 sm:py-1.5"
           >
             <Search aria-hidden="true" className="h-[18px] w-[18px] shrink-0 text-neutral-600 dark:text-white/70" strokeWidth={2.25} />
-            <label htmlFor="search-input" className="sr-only">Search captures, tasks, tags</label>
+            <label htmlFor="search-input" className="sr-only">Search captures, tags</label>
             <input
               id="search-input"
               ref={inputRef}
@@ -820,7 +820,7 @@ function SearchPage() {
                   setAiMode(false);
                 }
               }}
-              placeholder="Search captures, tasks, tags…"
+              placeholder="Search captures, tags…"
               className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-neutral-900 placeholder:text-neutral-500 outline-none dark:text-white dark:placeholder:text-white/40"
             />
 
