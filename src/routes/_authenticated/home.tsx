@@ -223,7 +223,7 @@ function Home() {
     const pinnedNotes = displayNotes.filter((n) => n.pinned);
     const hasPinned = pinnedNotes.length > 0;
     const latest = displayNotes[0];
-    // No hero card: pinned entries render as a feed block above tasks, and every
+    // No hero card: pinned entries render as a feed block, and every
     // unpinned note flows into the normal memories feed.
     const stripSource = displayNotes.filter((n) => !n.pinned);
     const stripIds = new Set<string>();
