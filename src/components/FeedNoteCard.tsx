@@ -14,7 +14,6 @@ export type FeedNote = {
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean; pinned?: boolean; pending?: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
@@ -406,12 +405,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             )}
             <div className={`mt-1 flex items-center gap-2 text-[11px] ${isDark ? "text-white/60" : "text-neutral-500"}`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
             </div>
           </div>
         </>
@@ -480,12 +473,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             {note.summary && (
               <p className="text-[13px] leading-snug text-muted-foreground line-clamp-2">{note.summary}</p>
             )}
-            {note.tasks && note.tasks.length > 0 && (
-              <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                <CheckCircle2 className="h-3.5 w-3.5" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
-              </div>
-            )}
           </div>
         </>
       ) : isWideLike ? (
@@ -547,12 +534,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             <div className={`${isHero ? "mt-3" : "mt-2"} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
               {imageCount > 0 && !isLink && (
                 <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{imageCount}</span>
               )}
@@ -614,12 +595,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
               </h3>
             )}
 
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
-              </span>
-            )}
             <div className="flex items-center gap-2">
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && (
