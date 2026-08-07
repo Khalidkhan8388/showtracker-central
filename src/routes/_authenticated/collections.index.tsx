@@ -112,7 +112,7 @@ function CollectionsPage() {
             </div>
             <p className="text-[17px] font-semibold text-foreground">No collections yet</p>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Group notes, tasks, and links into collections.
+              Group notes, media, and links into collections.
             </p>
             <button
               type="button"

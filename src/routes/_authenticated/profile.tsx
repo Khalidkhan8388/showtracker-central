@@ -245,7 +245,7 @@ function ProfilePage() {
           </button>
         </div>
         <p className="mt-2 px-1 text-[12px] text-muted-foreground">
-          This permanently removes every note, task, photo, and voice clip from this device.
+          This permanently removes every note, photo, and voice clip from this device.
         </p>
       </section>
 
@@ -255,7 +255,7 @@ function ProfilePage() {
           <div className="w-full max-w-sm rounded-3xl bg-card p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-[17px] font-semibold">Wipe all data?</h3>
             <p className="mt-2 text-[14px] text-muted-foreground">
-              This permanently removes every note, task, photo, and voice clip from this device. This cannot be undone.
+              This permanently removes every note, photo, and voice clip from this device. This cannot be undone.
             </p>
             <div className="mt-5 flex gap-2">
               <button
