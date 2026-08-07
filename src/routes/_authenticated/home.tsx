@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 // Local-only app — no auth/user identity.
 import { Recorder } from "@/components/Recorder";
-import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
+import { CheckCircle2, Loader2, AlertCircle, Mic, Trash2, X, ChevronRight, Pin, FolderPlus } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
@@ -573,33 +573,6 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
   );
 }
 
-
-
-function useLongPress(onLongPress: () => void, ms = 450) {
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const triggered = useRef(false);
-  const start = () => {
-    triggered.current = false;
-    timer.current = setTimeout(() => {
-      triggered.current = true;
-      onLongPress();
-    }, ms);
-  };
-  const clear = () => {
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = null;
-  };
-  return {
-    handlers: {
-      onPointerDown: start,
-      onPointerUp: clear,
-      onPointerLeave: clear,
-      onPointerCancel: clear,
-      onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
-    },
-    wasLongPress: () => triggered.current,
-  };
-}
 
 
 function StatusIcon({ status }: { status: Note["status"] }) {
