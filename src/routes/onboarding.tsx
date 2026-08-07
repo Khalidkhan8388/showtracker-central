@@ -54,7 +54,6 @@ function OnboardingPage() {
         void navigate({ to: "/home", replace: true });
       }
     } catch {}
-    recordActivityPing();
   }, [navigate]);
 
   const slides = useMemo<Slide[]>(
