@@ -4,17 +4,16 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
+import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, patchLocalTask, deleteLocalNotes, deleteLocalTasks, resync, clearPendingDelete } from "@/lib/sync-engine";
+import { patchLocalNote, deleteLocalNotes, resync, clearPendingDelete } from "@/lib/sync-engine";
 import { useCollections, addNotesToCollection, createCollection, backfillMediaCollections } from "@/lib/collections";
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { NowLane } from "@/components/NowLane";
 import { MemoriesSection } from "@/components/MemoriesSection";
 import { haptic } from "@/lib/haptics";
 import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
@@ -22,7 +21,6 @@ import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/Sec
 import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
 
 import { toast } from "sonner";
-import { useReminders } from "@/lib/reminders";
 
 
 
@@ -43,7 +41,6 @@ type Note = {
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean; pinned?: boolean; pending?: boolean }> | null;
   duration_seconds: number | null;
   created_at: string;
   pinned: boolean;
@@ -52,14 +49,10 @@ type Note = {
   transcript: string | null;
 };
 
-type TaskKey = string; // `${noteId}::${taskId}`
-
 function Home() {
   const localNotes = useLocalNotes();
   const notes = (localNotes ?? null) as Note[] | null;
   const [hideMedia, setHideMedia] = useState(false);
-  const reminders = useReminders();
-  const hasReminders = reminders.length > 0;
   useEffect(() => {
     const read = () => {
       setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
@@ -79,23 +72,13 @@ function Home() {
 
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
-  const [selectedTasks, setSelectedTasks] = useState<Set<TaskKey>>(new Set());
-  const toggleFn = toggleTask;
   const delNotesFn = deleteNotes;
-  const delTasksFn = deleteTasks;
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
-  const [addingTask, setAddingTask] = useState(false);
-  const [newTaskText, setNewTaskText] = useState("");
-  const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
   const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const allCollections = useCollections();
 
-
-  useEffect(() => {
-    if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
-  }, [addingTask]);
 
   // Auto-file existing movie/TV notes into their collections (one-time per mount).
   useEffect(() => {
@@ -103,26 +86,8 @@ function Home() {
   }, []);
 
 
-  async function submitNewTask() {
-    const text = newTaskText.trim();
-    if (!text) {
-      setAddingTask(false);
-      return;
-    }
-    setNewTaskText("");
-    setAddingTask(false);
-    try {
-      await addCustomTask({ data: { text } });
-      void haptic.success();
-      void resync();
-    } catch {
-      setNewTaskText(text);
-      setAddingTask(true);
-    }
-  }
 
   const noteSelectMode = selectedNotes.size > 0;
-  const taskSelectMode = selectedTasks.size > 0;
 
   const [collapsed, setCollapsed] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
@@ -140,30 +105,6 @@ function Home() {
   }, []);
 
 
-  async function onToggle(noteId: string, taskId: string) {
-    const note = notes?.find((n) => n.id === noteId);
-    const cur = note?.tasks?.find((t) => t.id === taskId);
-    const nextDone = !(cur?.done ?? false);
-    await patchLocalTask(noteId, taskId, { done: nextDone });
-    if (nextDone) void haptic.success();
-    else void haptic.impact();
-    try {
-      await toggleFn({ data: { noteId, taskId, done: nextDone } });
-    } catch {
-      void resync();
-    }
-  }
-
-  async function onPinTask(noteId: string, taskId: string, pinned: boolean) {
-    const nextPinned = !pinned;
-    await patchLocalTask(noteId, taskId, { pinned: nextPinned });
-    void haptic.impact();
-    try {
-      await pinTask({ data: { noteId, taskId, pinned: nextPinned } });
-    } catch {
-      void resync();
-    }
-  }
 
 
   // Sign only images we haven't signed yet — cache is keyed by storage path so
@@ -239,15 +180,6 @@ function Home() {
       return next;
     });
   }
-  function toggleTaskSel(key: TaskKey) {
-    void haptic.select();
-    setSelectedTasks((prev) => {
-      const next = new Set(prev);
-      if (next.has(key)) next.delete(key);
-      else next.add(key);
-      return next;
-    });
-  }
 
   async function confirmDeleteNotes() {
     const ids = Array.from(selectedNotes);
@@ -263,21 +195,6 @@ function Home() {
     }
   }
 
-  async function confirmDeleteTasks() {
-    const items = Array.from(selectedTasks).map((k) => {
-      const [noteId, taskId] = k.split("::");
-      return { noteId, taskId };
-    });
-    if (items.length === 0) return;
-    void haptic.heavy();
-    await deleteLocalTasks(items);
-    setSelectedTasks(new Set());
-    try {
-      await delTasksFn({ data: { tasks: items } });
-    } catch {
-      void resync();
-    }
-  }
 
   async function togglePinSelected() {
     const ids = Array.from(selectedNotes);
@@ -295,34 +212,9 @@ function Home() {
     }
   }
 
-  async function togglePinSelectedTasks() {
-    const keys = Array.from(selectedTasks);
-    if (keys.length === 0 || !notes) return;
-    void haptic.impact();
-    const items = keys
-      .map((k) => {
-        const [noteId, taskId] = k.split("::");
-        const n = notes.find((x) => x.id === noteId);
-        const t = n?.tasks?.find((x: any) => x.id === taskId);
-        return t ? { noteId, taskId, pinned: !!t.pinned } : null;
-      })
-      .filter(Boolean) as { noteId: string; taskId: string; pinned: boolean }[];
-    if (items.length === 0) return;
-    const anyUnpinned = items.some((t) => !t.pinned);
-    const nextPinned = anyUnpinned;
-    await Promise.all(items.map((t) => patchLocalTask(t.noteId, t.taskId, { pinned: nextPinned })));
-    setSelectedTasks(new Set());
-    try {
-      await Promise.all(
-        items.map((t) => pinTask({ data: { noteId: t.noteId, taskId: t.taskId, pinned: nextPinned } })),
-      );
-    } catch {
-      void resync();
-    }
-  }
 
 
-  const selectMode = noteSelectMode || taskSelectMode;
+  const selectMode = noteSelectMode;
 
   // Memoized derivations — only recompute when notes actually change.
   const derived = useMemo(() => {
@@ -345,19 +237,6 @@ function Home() {
     const grid = stripSource.slice(5);
 
 
-    const allTasksRaw = notes.flatMap((n) =>
-      (n.tasks ?? []).map((t) => ({
-        ...t,
-        noteId: n.id,
-        noteHeading: n.heading === "__custom__" ? null : n.heading,
-      })),
-    );
-    const suggested = allTasksRaw.filter((t) => t.pending);
-    const allTasks = allTasksRaw.filter((t) => !t.pending);
-    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
-    const openT = allTasks.filter((t) => !t.pinned && !t.done);
-    const doneT = allTasks.filter((t) => t.done);
-    const visible = [...pinnedT, ...openT, ...doneT].slice(0, 3);
 
     return {
       displayNotes,
