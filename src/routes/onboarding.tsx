@@ -16,7 +16,6 @@ import {
   Check,
 } from "lucide-react";
 import { useTheme } from "@/lib/theme";
-import { recordActivityPing } from "@/lib/activity";
 
 export const ONBOARDING_KEY = "braintape.onboarded.v1";
 
