@@ -16,9 +16,7 @@ import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
-import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
-import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
@@ -58,21 +56,10 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
 const AuthenticatedCollectionsIndexRoute =
   AuthenticatedCollectionsIndexRouteImport.update({
     id: '/collections/',
     path: '/collections/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedTasksReviewRoute =
-  AuthenticatedTasksReviewRouteImport.update({
-    id: '/tasks/review',
-    path: '/tasks/review',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedProfileTrashRoute =
@@ -110,9 +97,7 @@ export interface FileRoutesByFullPath {
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
-  '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/collections/': typeof AuthenticatedCollectionsIndexRoute
-  '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -125,9 +110,7 @@ export interface FileRoutesByTo {
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
-  '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/collections': typeof AuthenticatedCollectionsIndexRoute
-  '/tasks': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -142,9 +125,7 @@ export interface FileRoutesById {
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
-  '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/_authenticated/collections/': typeof AuthenticatedCollectionsIndexRoute
-  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -159,9 +140,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
-    | '/tasks/review'
     | '/collections/'
-    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -174,9 +153,7 @@ export interface FileRouteTypes {
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
-    | '/tasks/review'
     | '/collections'
-    | '/tasks'
   id:
     | '__root__'
     | '/'
@@ -190,9 +167,7 @@ export interface FileRouteTypes {
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
     | '/_authenticated/profile_/trash'
-    | '/_authenticated/tasks/review'
     | '/_authenticated/collections/'
-    | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -252,25 +227,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/tasks/': {
-      id: '/_authenticated/tasks/'
-      path: '/tasks'
-      fullPath: '/tasks/'
-      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
     '/_authenticated/collections/': {
       id: '/_authenticated/collections/'
       path: '/collections'
       fullPath: '/collections/'
       preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/tasks/review': {
-      id: '/_authenticated/tasks/review'
-      path: '/tasks/review'
-      fullPath: '/tasks/review'
-      preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile_/trash': {
@@ -313,9 +274,7 @@ interface AuthenticatedRouteChildren {
   AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
   AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
-  AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
   AuthenticatedCollectionsIndexRoute: typeof AuthenticatedCollectionsIndexRoute
-  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
@@ -327,9 +286,7 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
   AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
-  AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
   AuthenticatedCollectionsIndexRoute: AuthenticatedCollectionsIndexRoute,
-  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
