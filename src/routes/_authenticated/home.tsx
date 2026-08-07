@@ -245,14 +245,9 @@ function Home() {
       hasPinned,
       strip,
       grid,
-
-      suggested,
-      allTasks,
-      visible,
-      doneCount: doneT.length,
-      hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
+      hasAnyContent: displayNotes.length > 0,
     };
-  }, [notes, hideMedia, hasReminders]);
+  }, [notes, hideMedia]);
 
 
 
@@ -324,117 +319,6 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            <NowLane />
-
-
-
-
-
-            {derived.suggested.length > 0 && (
-              <Link
-                to="/tasks/review"
-                onPointerDown={() => void haptic.tap()}
-                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
-                  <span className="text-[15px] font-semibold text-primary-foreground">
-                    {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-              </Link>
-            )}
-
-            {derived.visible.length === 0 && (
-              <>
-                {addingTask ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void submitNewTask();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-[28px] bg-primary px-5 py-3.5 shadow-sm"
-                  >
-                    <Plus className="h-4 w-4 shrink-0 text-primary-foreground" />
-                    <input
-                      ref={newTaskInputRef}
-                      value={newTaskText}
-                      onChange={(e) => setNewTaskText(e.target.value)}
-                      onBlur={() => void submitNewTask()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setNewTaskText("");
-                          setAddingTask(false);
-                        }
-                      }}
-                      placeholder="Add a task"
-                      maxLength={500}
-                      className="flex-1 bg-transparent text-[15px] font-semibold text-primary-foreground outline-none placeholder:text-primary-foreground/60"
-                    />
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      void haptic.tap();
-                      setAddingTask(true);
-                    }}
-                    className="flex w-full items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4 text-primary-foreground" />
-                      <span className="text-[15px] font-semibold text-primary-foreground">Add a task</span>
-                    </div>
-                    <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-                  </button>
-                )}
-              </>
-            )}
-
-            {derived.visible.length > 0 && (
-              <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[13px] text-muted-foreground">
-                    {derived.doneCount} of {derived.allTasks.length} completed
-                  </span>
-                  <Link
-                    to="/tasks"
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
-                    aria-label="Go to tasks"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
-                <ul>
-                  {derived.visible.map((t) => {
-                    const key: TaskKey = `${t.noteId}::${t.id}`;
-                    const isSel = selectedTasks.has(key);
-                    return (
-                      <li key={key}>
-                        <TaskRow
-                          selectMode={taskSelectMode}
-                          selected={isSel}
-                          done={t.done}
-                          pinned={Boolean(t.pinned)}
-                          text={t.text}
-                          noteHeading={t.noteHeading}
-                          noteId={t.noteId}
-                          hideNoteHeading
-                          compact
-                          onToggleDone={() => onToggle(t.noteId, t.id)}
-                          onPin={() => onPinTask(t.noteId, t.id, !!t.pinned)}
-                          onLongPress={() => toggleTaskSel(key)}
-                          onSelectTap={() => toggleTaskSel(key)}
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
-              </div>
-            )}
-
-
             <CollectionsRow notes={localNotes ?? []} />
 
             <MemoriesSection
@@ -477,18 +361,17 @@ function Home() {
               onClick={() => {
                 void haptic.tap();
                 setSelectedNotes(new Set());
-                setSelectedTasks(new Set());
               }}
               aria-label="Cancel selection"
               className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
             >
               <X aria-hidden="true" className="h-4 w-4" />
             </button>
-            {(noteSelectMode || taskSelectMode) && (
+            {noteSelectMode && (
               <button
                 onClick={() => {
                   void haptic.impact();
-                  noteSelectMode ? togglePinSelected() : togglePinSelectedTasks();
+                  void togglePinSelected();
                 }}
                 aria-label="Pin selected"
                 className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
@@ -514,7 +397,7 @@ function Home() {
             <button
               onClick={() => {
                 void haptic.heavy();
-                noteSelectMode ? confirmDeleteNotes() : confirmDeleteTasks();
+                void confirmDeleteNotes();
               }}
               className="inline-flex items-center gap-1.5 rounded-full bg-destructive/90 px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm active:scale-90 active:opacity-90"
             >
@@ -717,117 +600,6 @@ function useLongPress(onLongPress: () => void, ms = 450) {
     wasLongPress: () => triggered.current,
   };
 }
-
-
-const TaskRow = memo(function TaskRow({
-  selectMode,
-  selected,
-  done,
-  pinned,
-  text,
-  noteHeading,
-  noteId,
-  onToggleDone,
-  onPin,
-  onLongPress,
-  onSelectTap,
-  hideNoteHeading,
-  compact,
-}: {
-  selectMode: boolean;
-  selected: boolean;
-  done: boolean;
-  pinned?: boolean;
-  text: string;
-  noteHeading: string | null;
-  noteId: string;
-  onToggleDone: () => void;
-  onPin?: () => void;
-  onLongPress: () => void;
-  onSelectTap: () => void;
-  hideNoteHeading?: boolean;
-  compact?: boolean;
-}) {
-  const lp = useLongPress(onLongPress);
-  return (
-    <div
-      {...lp.handlers}
-      onClick={(e) => {
-        if (lp.wasLongPress()) {
-          e.preventDefault();
-          return;
-        }
-        if (selectMode) onSelectTap();
-      }}
-      className={`flex items-start gap-3 ${compact ? "px-1 py-1.5" : "px-4 py-3"} select-none transition-colors ${
-        selected ? "bg-muted" : "active:bg-muted"
-      }`}
-    >
-
-      <button
-        onPointerDown={() => void haptic.tap()}
-        onClick={(e) => {
-          e.stopPropagation();
-          if (selectMode) {
-            onSelectTap();
-            return;
-          }
-          onToggleDone();
-        }}
-        aria-label={done ? "Mark as not done" : "Mark as done"}
-        className="mt-0.5 shrink-0"
-      >
-        {done ? (
-          <CheckCircle2 className="h-5 w-5 text-primary" />
-        ) : (
-          <Circle className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
-        )}
-      </button>
-      <div className="min-w-0 flex-1">
-        <p
-          className={`${compact ? "text-[14px]" : "text-[17px]"} leading-snug line-clamp-2 ${
-            done ? "text-muted-foreground line-through" : "text-foreground"
-          }`}
-        >
-          {pinned && <Pin className="mr-1 inline h-3.5 w-3.5 -translate-y-0.5 fill-primary text-primary" />}
-          {text}
-        </p>
-        {!hideNoteHeading && noteHeading && (
-          selectMode ? (
-            <span className="mt-0.5 block truncate text-[13px] text-muted-foreground">
-              {noteHeading}
-            </span>
-          ) : (
-            <Link
-              to="/notes/$id"
-              params={{ id: noteId }}
-              onClick={(e) => e.stopPropagation()}
-              className="mt-0.5 block truncate text-[13px] text-muted-foreground active:underline"
-            >
-              {noteHeading}
-            </Link>
-          )
-        )}
-
-      </div>
-      {!selectMode && onPin && (
-        <button
-          onPointerDown={() => void haptic.tap()}
-          onClick={(e) => {
-            e.stopPropagation();
-            onPin();
-          }}
-          aria-label={pinned ? "Unpin task" : "Pin task"}
-          className={`mt-0.5 shrink-0 rounded-full p-1 active:opacity-60 ${
-            pinned ? "text-primary" : "text-muted-foreground"
-          }`}
-        >
-          {pinned ? <PinOff className="h-4 w-4" /> : <Pin className="h-4 w-4" />}
-        </button>
-      )}
-    </div>
-  );
-});
 
 
 function StatusIcon({ status }: { status: Note["status"] }) {
