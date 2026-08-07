@@ -32,7 +32,7 @@ export const haptic = {
   heavy: () => run(() => Haptics.impact({ style: ImpactStyle.Heavy })),
   /** Long-press / selection feedback. */
   select: () => run(() => Haptics.selectionStart()),
-  /** Success: task done, saved, completed. */
+  /** Success: saved, completed. */
   success: () => run(() => Haptics.notification({ type: NotificationType.Success })),
   /** Error / failure. */
   error: () => run(() => Haptics.notification({ type: NotificationType.Error })),

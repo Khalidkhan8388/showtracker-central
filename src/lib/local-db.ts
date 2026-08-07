@@ -2,15 +2,6 @@ import Dexie, { type Table } from "dexie";
 
 export const LOCAL_UID = "local";
 
-export type LocalTask = {
-  id: string;
-  text: string;
-  done: boolean;
-  pinned?: boolean;
-  pending?: boolean;
-  reminder_at?: string | null;
-};
-
 export type WatchStatus = "watchlist" | "watching" | "watched" | "dropped";
 
 export type LocalMediaEpisode = {
@@ -97,7 +88,6 @@ export type LocalNote = {
   heading: string | null;
   summary: string | null;
   transcript: string | null;
-  tasks: LocalTask[];
   duration_seconds: number | null;
   created_at: string;
   updated_at: string;
@@ -116,19 +106,9 @@ export type LocalNote = {
   /** Real-world places extracted from a link's content (AI extracted). */
   places?: { name: string; detail: string | null }[] | null;
 
-  reminder_at?: string | null;
-  reminders?: string[];
-  hidden_episode_reminders?: string[];
   ocr_text?: string | null;
   ocr_hidden?: boolean;
-  reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
-  reminder_titles?: Record<string, string>;
-  /** Contextual reminders — fire based on behavior rather than a fixed time.
-   *  Supported ids: "next-open" (fires on next app open during active hours). */
-  contextual_reminders?: string[];
-  /** Metadata for contextual reminders (title + creation time), keyed by id above. */
-  contextual_meta?: Record<string, { title: string; created_at: string }>;
 
 
 
@@ -232,12 +212,6 @@ class BraintapeDB extends Dexie {
       photos: "path, cachedAt, size",
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
-    }).upgrade(async (tx) => {
-      await tx.table("notes").toCollection().modify((n: any) => {
-        if (!Array.isArray(n.reminders)) {
-          n.reminders = n.reminder_at ? [n.reminder_at] : [];
-        }
-      });
     });
     // v11: optional YouTube payload on link notes. No new index.
     this.version(11).stores({
@@ -272,7 +246,6 @@ export function newNote(patch: Partial<LocalNote> = {}): LocalNote {
     heading: null,
     summary: null,
     transcript: null,
-    tasks: [],
     duration_seconds: null,
     created_at: now,
     updated_at: now,

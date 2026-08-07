@@ -2,14 +2,12 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { storeLocalAudio } from "@/lib/audio-cache";
-import { toggleTask, deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
+import { deleteNote, processVoiceNote, pinNote, updateTextNote, appendImagesToNote, transcribeAudioClip, extractOcrForNote, updateImagePaths } from "@/lib/notes.functions";
 import { Loader2, AlertCircle, Trash2, RefreshCw, Pin, CheckCircle2, Circle, Link2, Pencil, ImagePlus, X, Share2, Copy, Mic, Square, FileText, Globe, Image as ImageIcon, ExternalLink, BookOpen, Play, ChevronDown, Youtube as YoutubeIcon, Instagram as InstagramIcon, Heart, MessageCircle, MapPin } from "lucide-react";
 import { formatIgCount } from "@/components/FeedNoteCard";
 import type { LocalYouTube, LocalInstagram } from "@/lib/local-db";
 import { formatYtDuration } from "@/lib/youtube";
 import { YouTubeThumbImg } from "@/components/YouTubeCard";
-import { ReminderPicker } from "@/components/ReminderPicker";
-import { ReminderSuggestionChip } from "@/components/ReminderSuggestionChip";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { BackButton } from "@/components/BackButton";
 
@@ -24,8 +22,7 @@ import { VoicePlayer, HighlightedTranscript } from "@/components/VoicePlayer";
 import { PhotoLightbox } from "@/components/PhotoLightbox";
 import { generateLinkLabel } from "@/lib/notes.functions";
 import { useLocalNote, useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, patchLocalTask, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
-import { getNoteReminders, addNoteReminder, removeNoteReminder, clearNoteReminders, addContextualReminder } from "@/lib/reminders";
+import { patchLocalNote, resync, deleteLocalNotes, clearPendingDelete } from "@/lib/sync-engine";
 
 
 
@@ -40,7 +37,6 @@ type Note = {
   heading: string | null;
   summary: string | null;
   transcript: string | null;
-  tasks: Array<{ id: string; text: string; done: boolean }> | null;
   duration_seconds: number | null;
   error: string | null;
   created_at: string;
@@ -52,11 +48,8 @@ type Note = {
   key_points?: string[] | null;
   ocr_text?: string | null;
   ocr_hidden?: boolean;
-  reminder_at?: string | null;
-  reminders?: string[];
   youtube?: LocalYouTube | null;
 
-  reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
 
 
@@ -94,7 +87,6 @@ function NoteDetail() {
   const [saving, setSaving] = useState(false);
   
 
-  const toggleFn = toggleTask;
   const deleteFn = deleteNote;
   const processFn = processVoiceNote;
   const pinFn = pinNote;
@@ -134,19 +126,6 @@ function NoteDetail() {
     for (const n of allNotes) m.set(n.heading.toLowerCase(), n.id);
     return m;
   }, [allNotes]);
-
-  async function onToggle(taskId: string) {
-    if (!note) return;
-    const cur = note.tasks?.find((t) => t.id === taskId);
-    const nextDone = !(cur?.done ?? false);
-    await patchLocalTask(id, taskId, { done: nextDone });
-    try {
-      await toggleFn({ data: { noteId: id, taskId, done: nextDone } });
-    } catch (e: any) {
-      toast.error(e?.message ?? "Failed");
-      void resync();
-    }
-  }
 
 
 
@@ -470,7 +449,7 @@ function NoteDetail() {
       const nextPaths = [...existing, path];
       await patchLocalNote(id, { audio_paths: nextPaths });
       toast.loading("Analyzing new clip…", { id });
-      // Re-run AI over ALL segments so summary, key points, tasks, and
+      // Re-run AI over ALL segments so summary, key points, and
       // transcript reflect the extended recording.
       await processFn({ data: { noteId: id } });
       toast.success("Note updated", { id });
@@ -623,8 +602,6 @@ function NoteDetail() {
   const readingMinutes = note.transcript
     ? Math.max(1, Math.round(note.transcript.trim().split(/\s+/).length / 220))
     : 0;
-  const doneCount = note.tasks?.filter((t) => t.done).length ?? 0;
-  const taskTotal = note.tasks?.length ?? 0;
 
   async function onShare() {
     const url = typeof window !== "undefined" ? window.location.href : "";
@@ -694,7 +671,7 @@ function NoteDetail() {
       await appendImagesFn({ data: { noteId: id, imagePaths: paths } });
       await load();
       toast.success(files.length === 1 ? "Image added — refreshing…" : `${files.length} images added — refreshing…`);
-      // Re-run AI so summary/tasks reflect the new photos.
+      // Re-run AI so the summary reflects the new photos.
       try {
         await processFn({ data: { noteId: id } });
         await load();
@@ -761,7 +738,7 @@ function NoteDetail() {
         {processing && (
           <div className="mb-4 flex items-center gap-2 rounded-2xl bg-card px-4 py-2.5 text-[13px] text-muted-foreground shadow-sm">
             <Loader2 className="h-4 w-4 animate-spin" />
-            {note.status === "transcribing" ? "Transcribing audio…" : note.status === "processing" ? "Extracting summary & tasks…" : "Getting started…"}
+            {note.status === "transcribing" ? "Transcribing audio…" : note.status === "processing" ? "Extracting summary…" : "Getting started…"}
           </div>
         )}
 
@@ -1433,146 +1410,6 @@ function NoteDetail() {
         )}
 
 
-        {note.tasks && note.tasks.length > 0 && (
-          <section className="mt-6">
-            <div className="mb-2 flex items-center justify-between px-1">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                Tasks
-              </h2>
-              <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground tabular-nums">
-                {doneCount}/{taskTotal}
-              </span>
-            </div>
-            <ul className="overflow-hidden rounded-2xl bg-card shadow-sm">
-              {note.tasks.map((t, i) => (
-                <li key={t.id}>
-                  <button
-                    onClick={() => onToggle(t.id)}
-                    className="flex w-full items-start gap-3 px-4 py-3.5 text-left active:bg-muted"
-                  >
-                    {t.done ? (
-                      <CheckCircle2 className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
-                    ) : (
-                      <Circle className="mt-0.5 h-5 w-5 shrink-0 text-muted-foreground" strokeWidth={1.5} />
-                    )}
-                    <span
-                      className={`text-[17px] leading-tight ${
-                        t.done ? "text-muted-foreground line-through" : "text-foreground"
-                      }`}
-                    >
-                      {t.text}
-                    </span>
-                  </button>
-                  {i < note.tasks!.length - 1 && <div className="ml-12 h-px bg-border" />}
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-        {isVoice && (note.audio_path || (note.audio_paths && note.audio_paths.length > 0)) && (
-          <section className="mt-5">
-            <VoicePlayer
-              audioPaths={
-                note.audio_paths && note.audio_paths.length > 0
-                  ? note.audio_paths
-                  : note.audio_path
-                    ? [note.audio_path]
-                    : []
-              }
-              fallbackDuration={note.duration_seconds}
-              onTimeUpdate={onPlayerTime}
-            />
-          </section>
-        )}
-
-        {isVoice && note.summary && (
-          <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Summary
-            </h2>
-            <p className="text-[16px] leading-[1.6] text-foreground">{note.summary}</p>
-          </section>
-        )}
-
-        {(isVoice || igPost || isLink) && note.key_points && note.key_points.length > 0 && (
-          <section className="mt-6">
-            <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              Key points
-            </h2>
-            <ul className="space-y-1.5">
-              {note.key_points.map((k, i) => (
-                <li key={i} className="flex gap-2 text-[15px] leading-[1.55] text-foreground">
-                  <span className="mt-[9px] inline-block h-1 w-1 shrink-0 rounded-full bg-foreground/60" />
-                  <span>{k}</span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-
-
-        {note.transcript && renderedBody && (
-          <section className="mt-6">
-            {isVoice && (
-              <div className="mb-2 flex items-center justify-between px-1">
-                <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-                  Transcript
-                </h2>
-                <button
-                  onClick={copyTranscript}
-                  className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium text-muted-foreground active:opacity-60"
-                  aria-label="Copy transcript"
-                >
-                  <Copy className="h-3 w-3" /> Copy
-                </button>
-              </div>
-            )}
-            {isVoice ? (
-              <HighlightedTranscript
-                text={transcriptForRender}
-                currentTime={playerTime}
-                duration={playerDuration || (note.duration_seconds ?? 0)}
-                playing={playerPlaying}
-              />
-            ) : (
-              <Markdown className="text-[16px] leading-[1.65] text-foreground">{renderedBody}</Markdown>
-            )}
-          </section>
-        )}
-
-        {isVoice && !editing && (
-          <section className="mt-5">
-            <button
-              type="button"
-              onClick={contRecording ? stopContinueRecording : startContinueRecording}
-              disabled={contBusy}
-              className={`inline-flex w-full items-center justify-center gap-2 rounded-full py-3 text-[14px] font-semibold shadow-sm press-bounce active:opacity-70 disabled:opacity-50 ${
-                contRecording
-                  ? "bg-red-500 text-white"
-                  : "bg-card text-foreground ring-1 ring-border"
-              }`}
-            >
-              {contBusy ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" /> Transcribing…
-                </>
-              ) : contRecording ? (
-                <>
-                  <Square className="h-4 w-4 fill-current" /> Stop · {contElapsed}s
-                </>
-              ) : (
-                <>
-                  <Mic className="h-4 w-4" /> Continue recording
-                </>
-              )}
-            </button>
-          </section>
-        )}
-
-
-
-        {/* Reminder suggestion chip moved above the floating action pill */}
 
       </div>
 
@@ -1635,21 +1472,6 @@ function NoteDetail() {
                 />
               </div>
 
-              {!media && (
-                <ReminderSuggestionChip
-                  text={[draftHeading, draftBody, note.ocr_text ?? ""].filter(Boolean).join("\n")}
-                  existing={getNoteReminders(note as any)}
-                  dismissed={!!note.reminder_suggestion_dismissed}
-                  onAccept={async (iso, title) => {
-                    await addNoteReminder(id, iso, title);
-                    toast.success(title ? `Reminder set · ${title}` : "Reminder set");
-                  }}
-                  onDismiss={async () => {
-                    await patchLocalNote(id, { reminder_suggestion_dismissed: true });
-                  }}
-                />
-
-              )}
 
 
 
@@ -1793,31 +1615,6 @@ function NoteDetail() {
         </div>
       )}
 
-      {!editing && !media && (
-        <div className="pointer-events-none fixed inset-x-0 bottom-28 z-40 flex justify-center px-5">
-          <div className="pointer-events-auto max-w-full">
-            <ReminderSuggestionChip
-              text={[
-                note.heading ?? "",
-                note.transcript ?? "",
-                note.summary ?? "",
-                note.ocr_text ?? "",
-                readerData?.markdown ?? "",
-              ].filter(Boolean).join("\n")}
-              existing={getNoteReminders(note as any)}
-              dismissed={!!note.reminder_suggestion_dismissed}
-              onAccept={async (iso, title) => {
-                await addNoteReminder(id, iso, title);
-                toast.success(title ? `Reminder set · ${title}` : "Reminder set");
-              }}
-              onDismiss={async () => {
-                await patchLocalNote(id, { reminder_suggestion_dismissed: true });
-              }}
-            />
-
-          </div>
-        </div>
-      )}
 
       {!editing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
@@ -1858,34 +1655,6 @@ function NoteDetail() {
             >
               <Pin aria-hidden="true" className={`h-5 w-5 ${note.pinned ? "fill-current" : ""}`} />
             </button>
-            <ReminderPicker
-              values={getNoteReminders(note as any)}
-              noteContext={[
-                (note as any).heading,
-                (note as any).summary,
-                (note as any).body,
-                (note as any).content,
-                (note as any).transcript,
-                (note as any).ocr_text,
-                (note as any).reader_markdown,
-              ].filter(Boolean).join("\n\n")}
-              onAdd={async (iso) => {
-                await addNoteReminder(id, iso);
-                toast.success("Reminder added");
-              }}
-              onRemove={async (iso) => {
-                await removeNoteReminder(id, iso);
-                toast.success("Reminder removed");
-              }}
-              onClearAll={async () => {
-                await clearNoteReminders(id);
-                toast.success("Reminders cleared");
-              }}
-              onAddContextual={async (cid, title) => {
-                await addContextualReminder(id, cid, title);
-                toast.success("Smart reminder set");
-              }}
-            />
 
 
             <div aria-hidden="true" className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />

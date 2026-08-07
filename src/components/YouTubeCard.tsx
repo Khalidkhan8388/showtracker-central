@@ -11,7 +11,6 @@ type Note = {
   summary: string | null;
   created_at: string;
   pinned: boolean;
-  tasks: Array<{ id: string; text: string; done: boolean }> | null;
   youtube?: LocalYouTube | null;
 };
 
@@ -152,12 +151,6 @@ export const YouTubeCard = memo(function YouTubeCard({
             {duration && <span className="rounded bg-black/10 dark:bg-white/10 px-1 py-0.5 font-medium tabular-nums">{duration}</span>}
             <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
             {yt.captions_available && <span className="rounded bg-muted px-1 py-0.5 font-medium">CC</span>}
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-              </span>
-            )}
           </div>
         </div>
       </div>
@@ -262,12 +255,6 @@ export const YouTubeCard = memo(function YouTubeCard({
           <div className="mt-auto flex items-center gap-2 pt-0.5 text-[9px] text-muted-foreground">
             <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
             {yt.captions_available && <span className="rounded bg-muted px-1 py-0.5 font-medium">CC</span>}
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-              </span>
-            )}
           </div>
         </div>
       </div>
