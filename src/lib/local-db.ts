@@ -250,9 +250,19 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v13: watch history ("ticket stubs") for movies + episodes.
+    this.version(13).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+      watchlog: "id, at, tmdb_id, type, note_id",
+    });
 
   }
 }
+
 
 
 
