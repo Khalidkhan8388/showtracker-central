@@ -97,7 +97,10 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
   const shouldBe = watched ?? !set.has(key);
   if (shouldBe) set.add(key);
   else set.delete(key);
+  if (shouldBe) await logEpisodeWatched(n, n.media, season, episode);
+  else await unlogEpisode(n.media.tmdb_id, season, episode);
   const arr = Array.from(set);
+
   // Auto-promote status
   let status: WatchStatus | null = n.media.watch_status;
   const total = totalEpisodes(n.media);
