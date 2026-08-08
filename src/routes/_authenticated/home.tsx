@@ -15,6 +15,7 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
 import { MemoriesSection } from "@/components/MemoriesSection";
+import { WatchHistorySection } from "@/components/WatchHistorySection";
 import { haptic } from "@/lib/haptics";
 import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
 
