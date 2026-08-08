@@ -1,4 +1,6 @@
 import { db, type LocalMedia, type LocalNote, type WatchStatus } from "./local-db";
+import { logEpisodeWatched, logMovieWatched, unlogEpisode, unlogMovie } from "./watch-history";
+
 
 export const TMDB_IMG = "https://image.tmdb.org/t/p";
 export const poster = (path: string | null, size: "w185" | "w342" | "w500" | "original" = "w342") =>
@@ -60,6 +62,12 @@ export async function setWatchStatus(noteId: string, status: WatchStatus | null)
   if (!n?.media) return;
   const watchedAt = status === "watched" ? new Date().toISOString() : n.media.watched_at;
 
+  // Ticket-stub history for movies (TV history is tracked per episode).
+  if (n.media.type === "movie") {
+    if (status === "watched") await logMovieWatched(n, n.media, watchedAt ?? new Date().toISOString());
+    else await unlogMovie(n.media.tmdb_id);
+  }
+
   // Apply to every note that points at the same title so the status is
   // identical no matter which collection/filter you're looking at.
   const all = await db.notes.toArray();
@@ -80,6 +88,7 @@ export async function setWatchStatus(noteId: string, status: WatchStatus | null)
 }
 
 
+
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
@@ -88,7 +97,10 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
   const shouldBe = watched ?? !set.has(key);
   if (shouldBe) set.add(key);
   else set.delete(key);
+  if (shouldBe) await logEpisodeWatched(n, n.media, season, episode);
+  else await unlogEpisode(n.media.tmdb_id, season, episode);
   const arr = Array.from(set);
+
   // Auto-promote status
   let status: WatchStatus | null = n.media.watch_status;
   const total = totalEpisodes(n.media);
@@ -110,9 +122,15 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
   const set = new Set(n.media.watched_episodes);
   for (const ep of s.episodes) {
     const k = epKey(season, ep.episode_number);
-    if (watched) set.add(k);
-    else set.delete(k);
+    if (watched) {
+      set.add(k);
+      await logEpisodeWatched(n, n.media, season, ep.episode_number);
+    } else {
+      set.delete(k);
+      await unlogEpisode(n.media.tmdb_id, season, ep.episode_number);
+    }
   }
+
   const arr = Array.from(set);
   const total = totalEpisodes(n.media);
   let status: WatchStatus | null = n.media.watch_status;

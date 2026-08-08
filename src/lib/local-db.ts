@@ -134,12 +134,33 @@ export type LocalCollection = {
   updated_at: string;
 };
 
+/** One "ticket stub" — a movie or an episode you finished watching. */
+export type WatchLogEntry = {
+  id: string;
+  at: string;               // ISO timestamp of when it was marked watched
+  note_id: string;
+  type: "movie" | "tv";
+  tmdb_id: number;
+  title: string;
+  poster_path: string | null;
+  backdrop_path: string | null;
+  /** tv only */
+  season: number | null;
+  episode: number | null;
+  episode_title: string | null;
+  runtime: number | null;   // minutes
+  year: string | null;
+  vote_average: number | null;
+};
+
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
   photos!: Table<LocalBlob, string>;
   audios!: Table<LocalBlob, string>;
   collections!: Table<LocalCollection, string>;
+  watchlog!: Table<WatchLogEntry, string>;
+
 
   constructor() {
     super("braintape");
@@ -229,9 +250,19 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
+    // v13: watch history ("ticket stubs") for movies + episodes.
+    this.version(13).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+      watchlog: "id, at, tmdb_id, type, note_id",
+    });
 
   }
 }
+
 
 
 

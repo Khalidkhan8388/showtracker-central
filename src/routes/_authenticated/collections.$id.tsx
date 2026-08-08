@@ -12,6 +12,7 @@ import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 import { NoteCard, useLongPress } from "@/components/NoteCard";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
+import { WatchHistorySection } from "@/components/WatchHistorySection";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -530,6 +531,15 @@ function CollectionDetail() {
             ) : (
             <>
             {hasMedia && (
+              <div className="mb-3">
+                <WatchHistorySection
+                  tmdbIds={mediaMembers.map((m) => m.media?.tmdb_id).filter((x): x is number => typeof x === "number")}
+                  limit={12}
+                />
+              </div>
+            )}
+            {hasMedia && (
+
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
                   {((hasTv
