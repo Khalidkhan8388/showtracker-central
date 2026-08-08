@@ -166,7 +166,7 @@ function TicketStubModal({ entry, onClose }: { entry: WatchLogEntry; onClose: ()
           <button
             type="button"
             onClick={() => close()}
-            className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur-md press-bounce"
+            className="absolute top-3 right-3 flex h-9 w-9 items-center justify-center rounded-full bg-foreground/50 text-background backdrop-blur-md press-bounce"
             aria-label="Close ticket"
           >
             <X className="h-4 w-4" />
