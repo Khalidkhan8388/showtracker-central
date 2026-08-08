@@ -122,9 +122,15 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
   const set = new Set(n.media.watched_episodes);
   for (const ep of s.episodes) {
     const k = epKey(season, ep.episode_number);
-    if (watched) set.add(k);
-    else set.delete(k);
+    if (watched) {
+      set.add(k);
+      await logEpisodeWatched(n, n.media, season, ep.episode_number);
+    } else {
+      set.delete(k);
+      await unlogEpisode(n.media.tmdb_id, season, ep.episode_number);
+    }
   }
+
   const arr = Array.from(set);
   const total = totalEpisodes(n.media);
   let status: WatchStatus | null = n.media.watch_status;
