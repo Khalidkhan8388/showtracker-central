@@ -1,4 +1,6 @@
 import { db, type LocalMedia, type LocalNote, type WatchStatus } from "./local-db";
+import { logEpisodeWatched, logMovieWatched, unlogEpisode, unlogMovie } from "./watch-history";
+
 
 export const TMDB_IMG = "https://image.tmdb.org/t/p";
 export const poster = (path: string | null, size: "w185" | "w342" | "w500" | "original" = "w342") =>
