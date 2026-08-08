@@ -62,6 +62,12 @@ export async function setWatchStatus(noteId: string, status: WatchStatus | null)
   if (!n?.media) return;
   const watchedAt = status === "watched" ? new Date().toISOString() : n.media.watched_at;
 
+  // Ticket-stub history for movies (TV history is tracked per episode).
+  if (n.media.type === "movie") {
+    if (status === "watched") await logMovieWatched(n, n.media, watchedAt ?? new Date().toISOString());
+    else await unlogMovie(n.media.tmdb_id);
+  }
+
   // Apply to every note that points at the same title so the status is
   // identical no matter which collection/filter you're looking at.
   const all = await db.notes.toArray();
@@ -80,6 +86,7 @@ export async function setWatchStatus(noteId: string, status: WatchStatus | null)
     await db.notes.update(t.id, { media, updated_at: now } as Partial<LocalNote>);
   }
 }
+
 
 
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
