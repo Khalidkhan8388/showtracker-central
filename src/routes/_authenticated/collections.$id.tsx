@@ -12,6 +12,7 @@ import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
 import { NoteCard, useLongPress } from "@/components/NoteCard";
 import { FeedNoteCard } from "@/components/FeedNoteCard";
+import { WatchHistorySection } from "@/components/WatchHistorySection";
 import {
   AlertDialog,
   AlertDialogAction,
