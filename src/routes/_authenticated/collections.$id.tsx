@@ -479,50 +479,10 @@ function CollectionDetail() {
 
 
             {!hasMedia ? (
-              members.length === 0 ? (
-                <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
-                  This collection is empty.
-                </p>
-              ) : (
-                <div className="columns-2 gap-3 [column-fill:_balance]">
-                  {members.map((n) => {
-                    const sel = removeSel.has(n.id);
-                    return (
-                      <div key={n.id} className="mb-3 break-inside-avoid">
-                        <FeedNoteCard
-                          note={n as any}
-                          variant="masonry"
-                          fullWidth
-                          thumbUrl={thumbs[n.id]}
-                          selected={sel}
-                          selectMode={removing}
-                          onOpen={() => {
-                            if (removing) {
-                              setRemoveSel((prev) => {
-                                const next = new Set(prev);
-                                next.has(n.id) ? next.delete(n.id) : next.add(n.id);
-                                return next;
-                              });
-                            } else {
-                              navigate({ to: "/notes/$id", params: { id: n.id } });
-                            }
-                          }}
-                          onLongPress={() => {
-                            setRemoving(true);
-                            setRemoveSel(new Set([n.id]));
-                          }}
-                          onToggleSel={() => {
-                            setRemoveSel((prev) => {
-                              const next = new Set(prev);
-                              next.has(n.id) ? next.delete(n.id) : next.add(n.id);
-                              return next;
-                            });
-                          }}
-                        />
-                      </div>
-                    );
-                  })}
-                </div>
+              <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
+                This collection is empty.
+              </p>
+
               )
             ) : hasMedia && tvView === "stats" ? (
               <MediaStats members={mediaMembers} />
