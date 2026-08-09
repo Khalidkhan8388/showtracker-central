@@ -1116,24 +1116,37 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
 
   return (
     <div className="pb-24">
-      {/* Overall hero */}
-      <div className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-sm">
-        <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">Time watched</p>
-        <p className="mt-1 text-[34px] font-bold leading-none tracking-tight tabular-nums">
-          {fmtMinutes(stats.totals.mins)}
-        </p>
-        <p className="mt-2 text-[12px] opacity-80">
-          {(() => {
-            const parts: string[] = [];
-            if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
-            if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
-            return parts.length ? `Across ${parts.join(" · ")}` : "Nothing watched yet";
-          })()}
-        </p>
+      {/* Ticket stubs deck */}
+      <div className="mb-4">
+        <WatchHistorySection
+          tmdbIds={members.map((m) => m.media?.tmdb_id).filter((x): x is number => typeof x === "number")}
+          limit={50}
+          variant="deck"
+        />
       </div>
 
       {/* Watched shelf */}
       <WatchedShelf members={members} />
+
+      {/* Time watched — compact */}
+      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-border/60">
+        <div className="min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time watched</p>
+          <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
+            {(() => {
+              const parts: string[] = [];
+              if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
+              if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
+              return parts.length ? parts.join(" · ") : "Nothing watched yet";
+            })()}
+          </p>
+        </div>
+        <p className="shrink-0 text-[18px] font-bold leading-none tracking-tight tabular-nums text-foreground">
+          {fmtMinutes(stats.totals.mins)}
+        </p>
+      </div>
+
+
 
 
       {stats.hasMovies && (
