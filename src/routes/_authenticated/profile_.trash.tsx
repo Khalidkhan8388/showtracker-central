@@ -36,51 +36,15 @@ function TrashPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void purgeExpiredNotes().catch(() => {});
   }, []);
 
-  const items = useMemo(() => (deleted ?? []) as Note[], [deleted]);
+  const items = useMemo(() => (deleted ?? []) as LocalNote[], [deleted]);
   const selectMode = selected.size > 0;
 
-  const signInFlightRef = useRef<Set<string>>(new Set());
-  const signThumbsFor = useCallback((rows: Note[]) => {
-    const paths: string[] = [];
-    const toFetch: Array<{ id: string; path: string }> = [];
-    for (const n of rows) {
-      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
-      if (!p) continue;
-      paths.push(p);
-      const cached = getCachedPhotoUrl(p);
-      if (cached) {
-        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
-        continue;
-      }
-      if (signInFlightRef.current.has(p)) continue;
-      signInFlightRef.current.add(p);
-      toFetch.push({ id: n.id, path: p });
-    }
-    if (paths.length) void warmPhotoCache(paths);
-    if (toFetch.length === 0) return;
-    Promise.all(
-      toFetch.map(async ({ id, path }) => ({ id, path, url: await getPhotoUrl(path) })),
-    ).then((pairs) => {
-      setThumbs((cur) => {
-        const next = { ...cur };
-        for (const { id, path, url } of pairs) {
-          signInFlightRef.current.delete(path);
-          if (url) next[id] = url;
-        }
-        return next;
-      });
-    });
-  }, []);
 
-  useEffect(() => {
-    if (items.length) signThumbsFor(items);
-  }, [items, signThumbsFor]);
 
   function toggle(id: string) {
     setSelected((prev) => {
