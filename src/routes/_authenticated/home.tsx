@@ -320,7 +320,7 @@ function Home() {
           </div>
         ) : (
           <div className="space-y-4">
-            <WatchHistorySection limit={12} />
+            <WatchHistorySection limit={7} />
 
             <CollectionsRow notes={localNotes ?? []} />
 
