@@ -530,14 +530,7 @@ function CollectionDetail() {
               <EpisodeTracker members={mediaMembers} />
             ) : (
             <>
-            {hasMedia && (
-              <div className="mb-3">
-                <WatchHistorySection
-                  tmdbIds={mediaMembers.map((m) => m.media?.tmdb_id).filter((x): x is number => typeof x === "number")}
-                  limit={12}
-                />
-              </div>
-            )}
+
             {hasMedia && (
 
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
