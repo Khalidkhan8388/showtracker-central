@@ -1,5 +1,5 @@
 import { SectionLabel } from "@/components/SectionLabel";
-import { WatchHistoryStrip } from "@/components/TicketStub";
+import { WatchHistoryDeck, WatchHistoryStrip } from "@/components/TicketStub";
 import { useWatchHistory, useWatchHistoryFor } from "@/lib/watch-history";
 
 /** Recently watched stubs. Pass `tmdbIds` to scope it to one collection. */
@@ -7,10 +7,12 @@ export function WatchHistorySection({
   tmdbIds,
   limit = 12,
   label = "Recently watched",
+  variant = "strip",
 }: {
   tmdbIds?: number[];
   limit?: number;
   label?: string;
+  variant?: "strip" | "deck";
 }) {
   const scoped = useWatchHistoryFor(tmdbIds ?? [], limit);
   const global = useWatchHistory(limit);
@@ -26,7 +28,8 @@ export function WatchHistorySection({
           {entries.length} {entries.length === 1 ? "stub" : "stubs"}
         </span>
       </div>
-      <WatchHistoryStrip entries={entries} />
+      {variant === "deck" ? <WatchHistoryDeck entries={entries} /> : <WatchHistoryStrip entries={entries} />}
     </section>
   );
 }
+
