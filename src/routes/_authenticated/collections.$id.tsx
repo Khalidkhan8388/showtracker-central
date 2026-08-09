@@ -482,8 +482,6 @@ function CollectionDetail() {
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
                 This collection is empty.
               </p>
-
-              )
             ) : hasMedia && tvView === "stats" ? (
               <MediaStats members={mediaMembers} />
             ) : hasTv && tvView === "episodes" ? (
