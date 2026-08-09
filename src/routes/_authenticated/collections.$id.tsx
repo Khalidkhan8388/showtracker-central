@@ -10,8 +10,8 @@ import { BackButton } from "@/components/BackButton";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched, setWatchStatus } from "@/lib/media";
 import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
-import { NoteCard, useLongPress } from "@/components/NoteCard";
-import { FeedNoteCard } from "@/components/FeedNoteCard";
+import { useLongPress } from "@/lib/use-long-press";
+
 import { WatchHistorySection } from "@/components/WatchHistorySection";
 import {
   AlertDialog,
