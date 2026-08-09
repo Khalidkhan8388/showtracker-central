@@ -236,3 +236,117 @@ export function WatchHistoryStrip({ entries }: { entries: WatchLogEntry[] }) {
     </>
   );
 }
+
+/**
+ * Stacked deck of stubs: only the newest ticket is visible, with the rest
+ * peeking behind it. Tap to expand into a vertically scrolling sheet.
+ */
+export function WatchHistoryDeck({ entries }: { entries: WatchLogEntry[] }) {
+  const [open, setOpen] = useState(false);
+  const [selected, setSelected] = useState<WatchLogEntry | null>(null);
+  if (!entries.length) return null;
+  const top = entries[0]!;
+  const behind = Math.min(entries.length - 1, 2);
+
+  return (
+    <>
+      <div className="relative pb-3">
+        {Array.from({ length: behind }).map((_, i) => {
+          const depth = behind - i;
+          return (
+            <div
+              key={i}
+              aria-hidden
+              className="absolute inset-x-0 top-0 rounded-2xl bg-card ring-1 ring-border/60"
+              style={{
+                height: 108,
+                transform: `translateY(${depth * 7}px) scale(${1 - depth * 0.04})`,
+                opacity: 1 - depth * 0.25,
+              }}
+            />
+          );
+        })}
+        <TicketStub
+          entry={top}
+          className="relative h-[108px] w-full"
+          onClick={() => setOpen(true)}
+        />
+        {entries.length > 1 && (
+          <p className="mt-3 text-center text-[11px] text-muted-foreground">
+            {entries.length} stubs · tap to view all
+          </p>
+        )}
+      </div>
+
+      {open && (
+        <TicketDeckSheet
+          entries={entries}
+          onClose={() => setOpen(false)}
+          onSelect={(e) => setSelected(e)}
+        />
+      )}
+      {selected && <TicketStubModal entry={selected} onClose={() => setSelected(null)} />}
+    </>
+  );
+}
+
+/** Full-screen vertically scrolling list of every stub in the deck. */
+function TicketDeckSheet({
+  entries,
+  onClose,
+  onSelect,
+}: {
+  entries: WatchLogEntry[];
+  onClose: () => void;
+  onSelect: (e: WatchLogEntry) => void;
+}) {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setVisible(true));
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      cancelAnimationFrame(id);
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="Watch history"
+      className="fixed inset-0 z-[190] flex flex-col"
+      style={{
+        background: "color-mix(in oklab, var(--color-background) 60%, transparent)",
+        backdropFilter: "blur(16px) saturate(150%)",
+        opacity: visible ? 1 : 0,
+        transition: "opacity 180ms ease-out",
+      }}
+    >
+      <div className="flex items-center justify-between px-5 pb-3 pt-6">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+          Watch history · {entries.length}
+        </p>
+        <button
+          type="button"
+          onClick={() => {
+            void haptic.tap();
+            onClose();
+          }}
+          aria-label="Close watch history"
+          className="flex h-9 w-9 items-center justify-center rounded-full bg-card ring-1 ring-border/60 press-bounce"
+        >
+          <X className="h-4 w-4" />
+        </button>
+      </div>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-5 pb-16">
+        {entries.map((e) => (
+          <TicketStub key={e.id} entry={e} className="h-[100px] w-full" onClick={() => onSelect(e)} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
