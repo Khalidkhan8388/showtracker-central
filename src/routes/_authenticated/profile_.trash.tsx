@@ -125,31 +125,37 @@ function TrashPage() {
             <div className="mt-1 text-[13px] text-muted-foreground">Deleted notes will appear here for 30 days.</div>
           </div>
         ) : (
-          <div className="columns-2 gap-3 [column-fill:_balance]">
+          <div className="grid grid-cols-3 gap-3">
             {items.map((n) => {
               const remaining = daysLeft(n.deleted_at ?? null);
+              const isSel = selected.has(n.id);
               return (
-                <div key={n.id} className="mb-3 break-inside-avoid">
-                  <div className="relative">
-                    <NoteCard
-                      note={n}
-                      variant="masonry"
-                      thumbUrl={thumbs[n.id]}
-                      selected={selected.has(n.id)}
-                      selectMode={selectMode}
-                      onOpen={() => toggle(n.id)}
-                      onLongPress={() => toggle(n.id)}
-                      onToggleSel={() => toggle(n.id)}
-                    />
-                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                      {remaining}d left
-                    </div>
+                <button
+                  key={n.id}
+                  onClick={() => toggle(n.id)}
+                  className={`relative text-left transition-transform active:scale-[0.97] ${isSel ? "opacity-100" : "opacity-90"}`}
+                >
+                  <div className="aspect-[2/3] w-full">
+                    {n.media ? (
+                      <MediaCard media={n.media as LocalMedia} variant="grid" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center rounded-[15px] bg-card p-2 text-center text-[11px] font-medium text-muted-foreground ring-1 ring-border/60">
+                        {n.heading || "Untitled"}
+                      </div>
+                    )}
                   </div>
-                </div>
+                  <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                    {remaining}d left
+                  </div>
+                  {isSel && (
+                    <span className="pointer-events-none absolute inset-0 rounded-[15px] ring-2 ring-primary" />
+                  )}
+                </button>
               );
             })}
           </div>
         )}
+
       </section>
 
       {/* Bottom pill — always visible with counts + actions */}
