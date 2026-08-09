@@ -1,14 +1,15 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocalDeletedNotes } from "@/hooks/use-local-notes";
 import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
 import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functions";
-import { NoteCard, type Note } from "@/components/NoteCard";
-import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { MediaCard } from "@/components/MediaCard";
+import type { LocalMedia, LocalNote } from "@/lib/local-db";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
+
 
 export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
@@ -35,51 +36,15 @@ function TrashPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void purgeExpiredNotes().catch(() => {});
   }, []);
 
-  const items = useMemo(() => (deleted ?? []) as Note[], [deleted]);
+  const items = useMemo(() => (deleted ?? []) as LocalNote[], [deleted]);
   const selectMode = selected.size > 0;
 
-  const signInFlightRef = useRef<Set<string>>(new Set());
-  const signThumbsFor = useCallback((rows: Note[]) => {
-    const paths: string[] = [];
-    const toFetch: Array<{ id: string; path: string }> = [];
-    for (const n of rows) {
-      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
-      if (!p) continue;
-      paths.push(p);
-      const cached = getCachedPhotoUrl(p);
-      if (cached) {
-        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
-        continue;
-      }
-      if (signInFlightRef.current.has(p)) continue;
-      signInFlightRef.current.add(p);
-      toFetch.push({ id: n.id, path: p });
-    }
-    if (paths.length) void warmPhotoCache(paths);
-    if (toFetch.length === 0) return;
-    Promise.all(
-      toFetch.map(async ({ id, path }) => ({ id, path, url: await getPhotoUrl(path) })),
-    ).then((pairs) => {
-      setThumbs((cur) => {
-        const next = { ...cur };
-        for (const { id, path, url } of pairs) {
-          signInFlightRef.current.delete(path);
-          if (url) next[id] = url;
-        }
-        return next;
-      });
-    });
-  }, []);
 
-  useEffect(() => {
-    if (items.length) signThumbsFor(items);
-  }, [items, signThumbsFor]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -160,31 +125,37 @@ function TrashPage() {
             <div className="mt-1 text-[13px] text-muted-foreground">Deleted notes will appear here for 30 days.</div>
           </div>
         ) : (
-          <div className="columns-2 gap-3 [column-fill:_balance]">
+          <div className="grid grid-cols-3 gap-3">
             {items.map((n) => {
               const remaining = daysLeft(n.deleted_at ?? null);
+              const isSel = selected.has(n.id);
               return (
-                <div key={n.id} className="mb-3 break-inside-avoid">
-                  <div className="relative">
-                    <NoteCard
-                      note={n}
-                      variant="masonry"
-                      thumbUrl={thumbs[n.id]}
-                      selected={selected.has(n.id)}
-                      selectMode={selectMode}
-                      onOpen={() => toggle(n.id)}
-                      onLongPress={() => toggle(n.id)}
-                      onToggleSel={() => toggle(n.id)}
-                    />
-                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                      {remaining}d left
-                    </div>
+                <button
+                  key={n.id}
+                  onClick={() => toggle(n.id)}
+                  className={`relative text-left transition-transform active:scale-[0.97] ${isSel ? "opacity-100" : "opacity-90"}`}
+                >
+                  <div className="aspect-[2/3] w-full">
+                    {n.media ? (
+                      <MediaCard media={n.media as LocalMedia} variant="grid" />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center rounded-[15px] bg-card p-2 text-center text-[11px] font-medium text-muted-foreground ring-1 ring-border/60">
+                        {n.heading || "Untitled"}
+                      </div>
+                    )}
                   </div>
-                </div>
+                  <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                    {remaining}d left
+                  </div>
+                  {isSel && (
+                    <span className="pointer-events-none absolute inset-0 rounded-[15px] ring-2 ring-primary" />
+                  )}
+                </button>
               );
             })}
           </div>
         )}
+
       </section>
 
       {/* Bottom pill — always visible with counts + actions */}

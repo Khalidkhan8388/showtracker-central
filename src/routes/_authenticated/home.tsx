@@ -1,260 +1,62 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-// Local-only app — no auth/user identity.
-import { Recorder } from "@/components/Recorder";
-import { CheckCircle2, Loader2, AlertCircle, Mic, Trash2, X, ChevronRight, Pin, FolderPlus } from "lucide-react";
-import { formatDistanceToNow } from "date-fns";
-import { deleteNotes, pinNote } from "@/lib/notes.functions";
-import { Markdown } from "@/components/Markdown";
-import { useTheme } from "@/lib/theme";
-import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Film, ChevronRight, Search as SearchIcon } from "lucide-react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { patchLocalNote, deleteLocalNotes, resync, clearPendingDelete } from "@/lib/sync-engine";
-import { useCollections, addNotesToCollection, createCollection, backfillMediaCollections } from "@/lib/collections";
+import { useCollections, backfillMediaCollections } from "@/lib/collections";
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
-import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { MemoriesSection } from "@/components/MemoriesSection";
 import { WatchHistorySection } from "@/components/WatchHistorySection";
+import { SectionHeader as UISectionHeader } from "@/components/SectionLabel";
 import { haptic } from "@/lib/haptics";
-import { SectionLabel, SectionHeader as UISectionHeader } from "@/components/SectionLabel";
-
-import { AddToCollectionSheet } from "@/components/AddToCollectionSheet";
-
-import { toast } from "sonner";
-
-
-
-
+import type { LocalNote, LocalMedia } from "@/lib/local-db";
 
 export const Route = createFileRoute("/_authenticated/home")({
   head: () => ({
     meta: [
-      { title: "Home — Braintape" },
-      { name: "description", content: "Your voice-first second brain." },
+      { title: "Braintape — Movie & TV Tracker" },
+      { name: "description", content: "Track the movies and shows you watch, episode by episode." },
+      { property: "og:title", content: "Braintape — Movie & TV Tracker" },
+      { property: "og:description", content: "Track the movies and shows you watch, episode by episode." },
+      { property: "og:type", content: "website" },
+      { name: "twitter:card", content: "summary" },
     ],
   }),
   component: Home,
 });
 
-type Note = {
-  id: string;
-  status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
-  heading: string | null;
-  summary: string | null;
-  duration_seconds: number | null;
-  created_at: string;
-  pinned: boolean;
-  image_paths: string[] | null;
-  source_url: string | null;
-  transcript: string | null;
-};
-
 function Home() {
   const localNotes = useLocalNotes();
-  const notes = (localNotes ?? null) as Note[] | null;
-  const [hideMedia, setHideMedia] = useState(false);
-  useEffect(() => {
-    const read = () => {
-      setHideMedia(localStorage.getItem("hide-media-on-home") === "1");
-    };
-    read();
-    const onStorage = (e: StorageEvent) => {
-      if (e.key === "hide-media-on-home") read();
-    };
-    const onCustom = () => read();
-    window.addEventListener("storage", onStorage);
-    window.addEventListener("braintape:pref-changed", onCustom);
-    return () => {
-      window.removeEventListener("storage", onStorage);
-      window.removeEventListener("braintape:pref-changed", onCustom);
-    };
-  }, []);
-
-  const [thumbs, setThumbs] = useState<Record<string, string>>({});
-  const [selectedNotes, setSelectedNotes] = useState<Set<string>>(new Set());
-  const delNotesFn = deleteNotes;
-  const pinNoteFn = pinNote;
   const navigate = useNavigate();
-  const [showAddToCollection, setShowAddToCollection] = useState(false);
-  const [memoriesExpanded, setMemoriesExpanded] = useState(false);
   const allCollections = useCollections();
 
-
-  // Auto-file existing movie/TV notes into their collections (one-time per mount).
   useEffect(() => {
     void backfillMediaCollections();
   }, []);
-
-
-
-  const noteSelectMode = selectedNotes.size > 0;
 
   const [collapsed, setCollapsed] = useState(false);
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
-    // IntersectionObserver fires reliably during iOS momentum scrolling,
-    // unlike `scroll` events which pause until the fling settles.
-    const io = new IntersectionObserver(
-      ([entry]) => setCollapsed(!entry.isIntersecting),
-      { threshold: 0 },
-    );
+    const io = new IntersectionObserver(([entry]) => setCollapsed(!entry.isIntersecting), {
+      threshold: 0,
+    });
     io.observe(el);
     return () => io.disconnect();
   }, []);
 
+  const mediaNotes = useMemo(
+    () => ((localNotes ?? []) as LocalNote[]).filter((n) => !!n.media),
+    [localNotes],
+  );
 
-
-
-  // Sign only images we haven't signed yet — cache is keyed by storage path so
-  // Signed URL cache is module-level so it survives route unmounts/remounts;
-  // this stops thumbnails from re-signing every time we transition back.
-  const signInFlightRef = useRef<Set<string>>(new Set());
-  const signThumbsFor = useCallback((rows: Note[]) => {
-    const paths: string[] = [];
-    const toFetch: Array<{ id: string; path: string }> = [];
-    for (const n of rows) {
-      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
-      if (!p) continue;
-      paths.push(p);
-      const cached = getCachedPhotoUrl(p);
-      if (cached) {
-        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
-        continue;
-      }
-      if (signInFlightRef.current.has(p)) continue;
-      signInFlightRef.current.add(p);
-      toFetch.push({ id: n.id, path: p });
-    }
-    // Warm the in-memory cache from IndexedDB so instant paints kick in.
-    if (paths.length) {
-      void warmPhotoCache(paths).then(() => {
-        setThumbs((cur) => {
-          let next = cur;
-          for (const n of rows) {
-            const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
-            if (!p) continue;
-            const u = getCachedPhotoUrl(p);
-            if (u && next[n.id] !== u) {
-              if (next === cur) next = { ...cur };
-              next[n.id] = u;
-            }
-          }
-          return next;
-        });
-      });
-    }
-    if (toFetch.length === 0) return;
-    Promise.all(
-      toFetch.map(async ({ id, path }) => ({ id, path, url: await getPhotoUrl(path) })),
-    ).then((pairs) => {
-      setThumbs((cur) => {
-        const next = { ...cur };
-        for (const { id, path, url } of pairs) {
-          signInFlightRef.current.delete(path);
-          if (url) next[id] = url;
-        }
-        return next;
-      });
-    });
-  }, []);
-
-  // Whenever the local note set changes, re-check thumbnails for new rows.
-  useEffect(() => {
-    if (notes) signThumbsFor(notes);
-  }, [notes, signThumbsFor]);
-
-
-  function ProfileInitial() {
-    return <span>B</span>;
-  }
-
-
-  function toggleNoteSel(id: string) {
-    void haptic.select();
-    setSelectedNotes((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
-
-  async function confirmDeleteNotes() {
-    const ids = Array.from(selectedNotes);
-    if (ids.length === 0) return;
-    void haptic.heavy();
-    await deleteLocalNotes(ids);
-    setSelectedNotes(new Set());
-    try {
-      await delNotesFn({ data: { noteIds: ids } });
-      await clearPendingDelete(ids);
-    } catch {
-      void resync();
-    }
-  }
-
-
-  async function togglePinSelected() {
-    const ids = Array.from(selectedNotes);
-    if (ids.length === 0 || !notes) return;
-    void haptic.impact();
-    // If any selected is unpinned, pin all; otherwise unpin all.
-    const anyUnpinned = notes.some((n) => selectedNotes.has(n.id) && !n.pinned);
-    const nextPinned = anyUnpinned;
-    await Promise.all(ids.map((id) => patchLocalNote(id, { pinned: nextPinned })));
-    setSelectedNotes(new Set());
-    try {
-      await Promise.all(ids.map((noteId) => pinNoteFn({ data: { noteId, pinned: nextPinned } })));
-    } catch {
-      void resync();
-    }
-  }
-
-
-
-  const selectMode = noteSelectMode;
-
-  // Memoized derivations — only recompute when notes actually change.
-  const derived = useMemo(() => {
-    if (!notes) return null;
-    const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
-    const pinnedNotes = displayNotes.filter((n) => n.pinned);
-    const hasPinned = pinnedNotes.length > 0;
-    const latest = displayNotes[0];
-    // No hero card: pinned entries render as a feed block, and every
-    // unpinned note flows into the normal memories feed.
-    const stripSource = displayNotes.filter((n) => !n.pinned);
-    const stripIds = new Set<string>();
-    const strip: Note[] = [];
-    for (const n of stripSource.slice(0, 5)) {
-      if (!stripIds.has(n.id)) {
-        stripIds.add(n.id);
-        strip.push(n);
-      }
-    }
-    const grid = stripSource.slice(5);
-
-
-
-    return {
-      displayNotes,
-      latest,
-      pinnedNotes,
-      hasPinned,
-      strip,
-      grid,
-      hasAnyContent: displayNotes.length > 0,
-    };
-  }, [notes, hideMedia]);
-
-
+  const watching = useMemo(
+    () => mediaNotes.filter((n) => n.media?.watch_status === "watching"),
+    [mediaNotes],
+  );
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      {/* iOS large-title header */}
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-28">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
           <div className="min-w-0">
@@ -268,17 +70,16 @@ function Home() {
             >
               Braintape
             </h1>
-            {notes && notes.length > 0 && (
+            {mediaNotes.length > 0 && (
               <p
                 style={{
                   opacity: collapsed ? 0 : 1,
                   height: collapsed ? 0 : "1.25rem",
                   marginTop: collapsed ? 0 : "0.25rem",
-                  willChange: "opacity",
                 }}
                 className="overflow-hidden text-[13px] text-muted-foreground transition-opacity duration-150 ease-out motion-reduce:transition-none"
               >
-                {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
+                {mediaNotes.length} {mediaNotes.length === 1 ? "title" : "titles"} tracked
               </p>
             )}
           </div>
@@ -287,234 +88,118 @@ function Home() {
             className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold press-bounce active:opacity-70"
             aria-label="Profile"
           >
-            <ProfileInitial />
+            B
           </Link>
-
         </div>
-
-
       </header>
 
-      <section className="flex-1 px-4 pb-32 pt-2">
-        <div ref={sentinelRef} aria-hidden="true" className="h-6 -mt-2" />
+      <section className="px-4 pt-3">
+        <div ref={sentinelRef} className="h-px w-full" />
 
-        {notes === null ? (
+        {localNotes === null || localNotes === undefined ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : notes.length === 0 ? (
+        ) : mediaNotes.length === 0 ? (
           <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
             <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
+              <Film className="h-5 w-5 text-muted-foreground" />
             </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-          </div>
-        ) : !derived || !derived.hasAnyContent ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
+            <p className="text-[17px] font-semibold text-foreground">Nothing tracked yet</p>
+            <p className="mt-1 text-[13px] text-muted-foreground">
+              Search for a movie or show to start your library.
+            </p>
+            <Link
+              to="/search"
+              className="mt-4 inline-flex items-center gap-1.5 rounded-full bg-primary px-4 py-2 text-[13px] font-semibold text-primary-foreground press-bounce active:opacity-70"
+            >
+              <SearchIcon className="h-3.5 w-3.5" /> Find something
+            </Link>
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="space-y-5">
             <WatchHistorySection limit={7} />
 
-            <CollectionsRow notes={localNotes ?? []} />
-
-
-            <MemoriesSection
-              notes={derived.displayNotes as any}
-              thumbs={thumbs}
-              selected={selectedNotes}
-              selectMode={noteSelectMode}
-              onToggleSel={toggleNoteSel}
-              limit={6}
-              onSeeAll={() => {
-                void haptic.tap();
-                setMemoriesExpanded(true);
-              }}
-            />
-
-            {memoriesExpanded && (
-              <MemoriesOverlay
-                notes={derived.displayNotes as any}
-                thumbs={thumbs}
-                selected={selectedNotes}
-                selectMode={noteSelectMode}
-                onToggleSel={toggleNoteSel}
-                onClose={() => {
-                  void haptic.tap();
-                  setMemoriesExpanded(false);
-                }}
-              />
+            {watching.length > 0 && (
+              <div className="-mx-4">
+                <div className="px-5 pb-2">
+                  <UISectionHeader label="Continue watching" />
+                </div>
+                <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
+                  {watching.map((n) => (
+                    <button
+                      key={n.id}
+                      onClick={() => {
+                        void haptic.tap();
+                        void navigate({ to: "/notes/$id", params: { id: n.id } });
+                      }}
+                      className="w-28 shrink-0 snap-start text-left active:opacity-80"
+                    >
+                      <div className="aspect-[2/3] w-full">
+                        <MediaCard media={n.media as LocalMedia} variant="grid" pinned={n.pinned} />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
             )}
+
+            <CollectionsRow notes={mediaNotes} collections={allCollections ?? []} />
+
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <UISectionHeader label="Library" />
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {mediaNotes.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-3 gap-3">
+                {mediaNotes.map((n) => (
+                  <button
+                    key={n.id}
+                    onClick={() => {
+                      void haptic.tap();
+                      void navigate({ to: "/notes/$id", params: { id: n.id } });
+                    }}
+                    className="text-left active:opacity-80"
+                  >
+                    <div className="aspect-[2/3] w-full">
+                      <MediaCard media={n.media as LocalMedia} variant="grid" pinned={n.pinned} />
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
         )}
       </section>
 
-
-
-
-      {selectMode ? (
-        <div className="pointer-events-none fixed inset-x-0 bottom-10 z-40 flex justify-center px-5">
-          <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
-            <button
-              onClick={() => {
-                void haptic.tap();
-                setSelectedNotes(new Set());
-              }}
-              aria-label="Cancel selection"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-full text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
-            >
-              <X aria-hidden="true" className="h-4 w-4" />
-            </button>
-            {noteSelectMode && (
-              <button
-                onClick={() => {
-                  void haptic.impact();
-                  void togglePinSelected();
-                }}
-                aria-label="Pin selected"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
-              >
-                <Pin aria-hidden="true" className="h-3.5 w-3.5" />
-                Pin
-              </button>
-            )}
-            {noteSelectMode && (
-              <button
-                onClick={() => {
-                  void haptic.tap();
-                  setShowAddToCollection(true);
-                }}
-                aria-label="Add to collection"
-                className="inline-flex items-center gap-1.5 rounded-full px-3 py-2 text-xs font-semibold text-neutral-900 hover:bg-black/5 active:scale-90 press-bounce active:opacity-70 dark:text-white dark:hover:bg-white/10"
-              >
-                <FolderPlus aria-hidden="true" className="h-3.5 w-3.5" />
-                Collect
-              </button>
-            )}
-            <div className="mx-1 h-4 w-px bg-black/10 dark:bg-white/10" />
-            <button
-              onClick={() => {
-                void haptic.heavy();
-                void confirmDeleteNotes();
-              }}
-              className="inline-flex items-center gap-1.5 rounded-full bg-destructive/90 px-3 py-2 text-xs font-semibold text-destructive-foreground shadow-sm active:scale-90 active:opacity-90"
-            >
-              <Trash2 className="h-3.5 w-3.5" />
-              Delete
-            </button>
-          </div>
-        </div>
-      ) : !memoriesExpanded ? (
-        <Recorder onNoteReady={() => { void haptic.success(); void resync(); }} />
-      ) : null}
-
-      {showAddToCollection && (
-        <AddToCollectionSheet
-          collections={allCollections ?? []}
-          onClose={() => setShowAddToCollection(false)}
-          onPick={async (collectionId) => {
-            const ids = Array.from(selectedNotes);
-            if (ids.length > 0) await addNotesToCollection(collectionId, ids);
-            setSelectedNotes(new Set());
-            setShowAddToCollection(false);
-          }}
-          onCreate={async (title) => {
-            const c = await createCollection(title);
-            const ids = Array.from(selectedNotes);
-            if (ids.length > 0) await addNotesToCollection(c.id, ids);
-            setSelectedNotes(new Set());
-            setShowAddToCollection(false);
-          }}
-        />
-      )}
+      <Link
+        to="/search"
+        aria-label="Search movies and TV"
+        className="fixed bottom-8 left-1/2 z-40 -translate-x-1/2 inline-flex items-center gap-2 rounded-full glass-pill px-5 py-3 text-[14px] font-semibold text-neutral-900 press-bounce active:opacity-80 dark:text-white"
+      >
+        <SearchIcon className="h-4 w-4" />
+        Add title
+      </Link>
     </div>
   );
 }
 
-function MemoriesOverlay({
+function CollectionsRow({
   notes,
-  thumbs,
-  selected,
-  selectMode,
-  onToggleSel,
-  onClose,
+  collections,
 }: {
-  notes: import("@/lib/local-db").LocalNote[];
-  thumbs: Record<string, string>;
-  selected: Set<string>;
-  selectMode: boolean;
-  onToggleSel: (id: string) => void;
-  onClose: () => void;
+  notes: LocalNote[];
+  collections: import("@/lib/local-db").LocalCollection[];
 }) {
-  return (
-    <div className="fixed inset-0 z-30 flex flex-col bg-background animate-bounce-in">
-      <header className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
-        <div className="flex items-center justify-between">
-          <div className="flex flex-col">
-            <SectionLabel>All memories</SectionLabel>
-            <span className="text-[13px] text-muted-foreground">
-              {notes.length} {notes.length === 1 ? "entry" : "entries"}
-            </span>
-          </div>
-          <button
-            type="button"
-            onClick={() => {
-              void haptic.tap();
-              onClose();
-            }}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground press-bounce"
-            aria-label="Close"
-          >
-            <X className="h-4 w-4" />
-          </button>
-        </div>
-      </header>
-      <div className="flex-1 overflow-y-auto px-4 pb-32 pt-4">
-        <MemoriesSection
-          notes={notes}
-          thumbs={thumbs}
-          selected={selected}
-          selectMode={selectMode}
-          onToggleSel={onToggleSel}
-          expanded
-        />
-      </div>
-    </div>
-  );
-}
-
-function AnalyzingBadge({ label = "Analyzing", className = "" }: { label?: string; className?: string }) {
-  return (
-    <span className={`inline-flex items-center gap-1.5 ${className}`}>
-      <span>{label}</span>
-      <span className="inline-flex gap-0.5">
-        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
-        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
-        <span className="analyzing-dot inline-block h-1 w-1 rounded-full bg-current" />
-      </span>
-    </span>
-  );
-}
-
-
-
-
-function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[] }) {
-  const collections = useCollections();
-  const list = collections ?? [];
-
-  // Build a quick lookup: noteId -> note
   const noteById = useMemo(() => {
-    const m = new Map<string, import("@/lib/local-db").LocalNote>();
+    const m = new Map<string, LocalNote>();
     for (const n of notes) m.set(n.id, n);
     return m;
   }, [notes]);
+
+  if (collections.length === 0) return null;
 
   return (
     <div className="-mx-4">
@@ -529,14 +214,10 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
         </Link>
       </div>
       <div className="no-scrollbar flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1">
-
-        {list.map((c) => {
-          const ids = c.note_ids ?? [];
-          // Prefer a media poster from any member note
+        {collections.map((c) => {
           let posterUrl: string | null = null;
-          for (const nid of ids) {
-            const n = noteById.get(nid);
-            const media = (n as any)?.media as import("@/lib/local-db").LocalMedia | undefined;
+          for (const nid of c.note_ids ?? []) {
+            const media = noteById.get(nid)?.media;
             if (media?.poster_path) {
               posterUrl = tmdbPoster(media.poster_path, "w342");
               break;
@@ -560,33 +241,18 @@ function CollectionsRow({ notes }: { notes: import("@/lib/local-db").LocalNote[]
               ) : (
                 <div className="absolute inset-0 bg-gradient-to-br from-primary/25 via-primary/10 to-transparent" />
               )}
-              <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-6">
-                <span className="mb-0.5 inline-block rounded-full bg-black/50 px-1.5 py-0.5 text-[9px] font-semibold text-white/90">
-                  {ids.length}
-                </span>
+              <div className="absolute inset-x-0 bottom-0 scrim-t p-2 pt-8">
                 <p className="line-clamp-2 text-[12px] font-semibold leading-tight scrim-fg">
                   {c.title}
                 </p>
+                <p className="text-[10px] scrim-fg-70">
+                  {(c.note_ids ?? []).length} {(c.note_ids ?? []).length === 1 ? "title" : "titles"}
+                </p>
               </div>
-
             </Link>
           );
         })}
       </div>
     </div>
   );
-}
-
-
-
-function StatusIcon({ status }: { status: Note["status"] }) {
-  if (status === "ready") return <CheckCircle2 className="h-3.5 w-3.5 text-foreground" />;
-  if (status === "failed") return <AlertCircle className="h-3.5 w-3.5 text-destructive" />;
-  return <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />;
-}
-
-function formatDur(s: number) {
-  const m = Math.floor(s / 60);
-  const r = s % 60;
-  return `${m}:${String(r).padStart(2, "0")}`;
 }
