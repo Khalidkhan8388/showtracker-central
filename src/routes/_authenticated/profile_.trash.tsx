@@ -1,14 +1,15 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import { RotateCcw, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocalDeletedNotes } from "@/hooks/use-local-notes";
 import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
 import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functions";
-import { NoteCard, type Note } from "@/components/NoteCard";
-import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
+import { MediaCard } from "@/components/MediaCard";
+import type { LocalMedia, LocalNote } from "@/lib/local-db";
 import { confirmDialog } from "@/components/ConfirmDialog";
 import { PageHeader } from "@/components/PageHeader";
+
 
 export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
