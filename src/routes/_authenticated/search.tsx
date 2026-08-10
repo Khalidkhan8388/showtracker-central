@@ -8,6 +8,7 @@ import { MediaCard } from "@/components/MediaCard";
 import { PageHeader } from "@/components/PageHeader";
 import { haptic } from "@/lib/haptics";
 import type { LocalMedia, LocalNote } from "@/lib/local-db";
+import { TabBar } from "@/components/TabBar";
 import { Search, Loader2, X, Clock, Plus, Check, Film, Tv, Star } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
@@ -304,7 +305,7 @@ function SearchPage() {
 
       {/* Floating search field */}
       <div
-        className="fixed inset-x-0 bottom-0 z-40 px-4 pb-6"
+        className="fixed inset-x-0 bottom-[96px] z-40 px-4"
         style={{ transform: `translateY(-${kbOffset}px)` }}
       >
         <div className="mx-auto flex max-w-md items-center gap-2 rounded-full glass-pill px-4 py-3">
@@ -327,6 +328,7 @@ function SearchPage() {
           )}
         </div>
       </div>
+      <TabBar />
     </div>
   );
 }
