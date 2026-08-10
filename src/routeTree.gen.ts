@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedLibraryRouteImport } from './routes/_authenticated/library'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedDiscoverRouteImport } from './routes/_authenticated/discover'
 import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
@@ -44,6 +45,11 @@ const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedLibraryRoute = AuthenticatedLibraryRouteImport.update({
+  id: '/library',
+  path: '/library',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
@@ -91,6 +97,7 @@ export interface FileRoutesByFullPath {
   '/onboarding': typeof OnboardingRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
@@ -104,6 +111,7 @@ export interface FileRoutesByTo {
   '/onboarding': typeof OnboardingRoute
   '/discover': typeof AuthenticatedDiscoverRoute
   '/home': typeof AuthenticatedHomeRoute
+  '/library': typeof AuthenticatedLibraryRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
@@ -119,6 +127,7 @@ export interface FileRoutesById {
   '/onboarding': typeof OnboardingRoute
   '/_authenticated/discover': typeof AuthenticatedDiscoverRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
+  '/_authenticated/library': typeof AuthenticatedLibraryRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
@@ -134,6 +143,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/discover'
     | '/home'
+    | '/library'
     | '/profile'
     | '/search'
     | '/cast/$personId'
@@ -147,6 +157,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/discover'
     | '/home'
+    | '/library'
     | '/profile'
     | '/search'
     | '/cast/$personId'
@@ -161,6 +172,7 @@ export interface FileRouteTypes {
     | '/onboarding'
     | '/_authenticated/discover'
     | '/_authenticated/home'
+    | '/_authenticated/library'
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/cast/$personId'
@@ -211,6 +223,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/library': {
+      id: '/_authenticated/library'
+      path: '/library'
+      fullPath: '/library'
+      preLoaderRoute: typeof AuthenticatedLibraryRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/home': {
@@ -268,6 +287,7 @@ declare module '@tanstack/react-router' {
 interface AuthenticatedRouteChildren {
   AuthenticatedDiscoverRoute: typeof AuthenticatedDiscoverRoute
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
+  AuthenticatedLibraryRoute: typeof AuthenticatedLibraryRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedCastPersonIdRoute: typeof AuthenticatedCastPersonIdRoute
@@ -280,6 +300,7 @@ interface AuthenticatedRouteChildren {
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedDiscoverRoute: AuthenticatedDiscoverRoute,
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
+  AuthenticatedLibraryRoute: AuthenticatedLibraryRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedCastPersonIdRoute: AuthenticatedCastPersonIdRoute,
