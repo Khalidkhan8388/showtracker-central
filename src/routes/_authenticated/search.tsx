@@ -5,7 +5,6 @@ import { addTmdbMedia } from "@/lib/notes.functions";
 import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
 import { poster as posterUrl } from "@/lib/media";
 import { MediaCard } from "@/components/MediaCard";
-import { PageHeader } from "@/components/PageHeader";
 import { haptic } from "@/lib/haptics";
 import type { LocalMedia, LocalNote } from "@/lib/local-db";
 import { TabBar } from "@/components/TabBar";
@@ -135,9 +134,11 @@ function SearchPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <PageHeader title="Search" backTo="/home" />
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-3 pt-3">
+        <h1 className="text-[26px] font-bold leading-none tracking-tight">Search</h1>
+      </header>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: 160 + kbOffset }}>
+      <div className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: 220 + kbOffset }}>
         {/* Your library */}
         {library.length > 0 && (
           <section className="mb-6">
