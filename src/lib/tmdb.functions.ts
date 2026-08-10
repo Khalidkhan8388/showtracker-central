@@ -466,3 +466,47 @@ export const fetchTmdbPersonFn = createServerFn({ method: "POST" })
     }
   });
 
+
+// -- Discover / trending -----------------------------------------------------
+
+const TrendingInput = z.object({
+  type: z.enum(["movie", "tv"]),
+  mode: z.enum(["trending", "popular", "top_rated", "upcoming"]).default("trending"),
+});
+
+export const tmdbTrendingFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => TrendingInput.parse(d))
+  .handler(async ({ data }): Promise<TmdbSearchHit[]> => {
+    const key = process.env.TMDB_API_KEY;
+    if (!key) throw new Error("TMDB_API_KEY is not configured");
+    const path =
+      data.mode === "trending"
+        ? `/trending/${data.type}/week`
+        : data.mode === "upcoming"
+          ? data.type === "movie"
+            ? "/movie/upcoming"
+            : "/tv/on_the_air"
+          : `/${data.type}/${data.mode}`;
+    try {
+      const r = await tmdbGet(path, key, { page: "1" });
+      const results: any[] = Array.isArray(r.results) ? r.results : [];
+      return results.slice(0, 20).map((x): TmdbSearchHit => {
+        const date = (data.type === "movie" ? x.release_date : x.first_air_date) || null;
+        return {
+          type: data.type,
+          tmdb_id: Number(x.id),
+          title:
+            data.type === "movie"
+              ? (x.title ?? x.original_title ?? "Untitled")
+              : (x.name ?? x.original_name ?? "Untitled"),
+          overview: x.overview ?? "",
+          poster_path: x.poster_path ?? null,
+          backdrop_path: x.backdrop_path ?? null,
+          year: date ? String(date).slice(0, 4) : null,
+          vote_average: typeof x.vote_average === "number" ? x.vote_average : null,
+        };
+      });
+    } catch {
+      return [];
+    }
+  });
