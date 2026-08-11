@@ -8,9 +8,7 @@ import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { SectionLabel } from "@/components/SectionLabel";
 import { TabBar } from "@/components/TabBar";
-import { TitlePill } from "@/components/TitlePill";
-import { FilterDock } from "@/components/FilterDock";
-import { type MediaKind } from "@/components/MediaTypePill";
+import { MediaTypePill, type MediaKind } from "@/components/MediaTypePill";
 import { EpisodeTracker } from "@/components/MediaStatsPanel";
 import { haptic } from "@/lib/haptics";
 import type { LocalNote, LocalMedia } from "@/lib/local-db";
@@ -29,21 +27,10 @@ export const Route = createFileRoute("/_authenticated/library")({
   component: LibraryPage,
 });
 
-const FILTERS = [
-  { key: "all", label: "All" },
-  { key: "watchlist", label: "Watchlist" },
-  { key: "watching", label: "Watching" },
-  { key: "watched", label: "Watched" },
-  { key: "upcoming", label: "Upcoming" },
-] as const;
-
-type FilterKey = (typeof FILTERS)[number]["key"];
-
 function LibraryPage() {
   const navigate = useNavigate();
   const localNotes = useLocalNotes();
   const [kind, setKind] = useState<MediaKind>("movie");
-  const [filter, setFilter] = useState<FilterKey>("all");
 
   useEffect(() => {
     void backfillMediaCollections();
@@ -56,26 +43,7 @@ function LibraryPage() {
 
   const movies = useMemo(() => mediaNotes.filter((n) => n.media?.type === "movie"), [mediaNotes]);
   const shows = useMemo(() => mediaNotes.filter((n) => n.media?.type === "tv"), [mediaNotes]);
-  const all = kind === "movie" ? movies : shows;
-
-  const items = useMemo(() => {
-    const now = Date.now();
-    switch (filter) {
-      case "watchlist":
-        return all.filter((n) => !n.media?.watch_status || n.media.watch_status === "watchlist");
-      case "watching":
-        return all.filter((n) => n.media?.watch_status === "watching");
-      case "watched":
-        return all.filter((n) => n.media?.watch_status === "watched");
-      case "upcoming":
-        return all.filter((n) => {
-          const d = n.media?.release_date ? new Date(n.media.release_date).getTime() : NaN;
-          return Number.isFinite(d) && d > now;
-        });
-      default:
-        return all;
-    }
-  }, [all, filter]);
+  const items = kind === "movie" ? movies : shows;
 
   const upcomingMovies = useMemo(() => {
     const now = Date.now();
@@ -95,14 +63,19 @@ function LibraryPage() {
     [movies],
   );
 
-  const showSections = filter === "all";
-
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-52">
-      <TitlePill>
-        Library
-        <span className="ml-2 text-[11px] tabular-nums text-muted-foreground">{mediaNotes.length} tracked</span>
-      </TitlePill>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-3 pt-3">
+        <div className="flex items-baseline justify-between">
+          <h1 className="text-[26px] font-bold leading-none tracking-tight">Library</h1>
+          <span className="text-[11px] tabular-nums text-muted-foreground">
+            {mediaNotes.length} tracked
+          </span>
+        </div>
+        <div className="mt-3">
+          <MediaTypePill value={kind} onChange={setKind} movieCount={movies.length} tvCount={shows.length} />
+        </div>
+      </header>
 
       <section className="space-y-6 px-4 pt-4">
         {localNotes === null || localNotes === undefined ? (
@@ -115,7 +88,7 @@ function LibraryPage() {
               <Film className="h-5 w-5 text-muted-foreground" />
             </div>
             <p className="text-[17px] font-semibold">
-              No {kind === "movie" ? "movies" : "shows"} here
+              No {kind === "movie" ? "movies" : "shows"} yet
             </p>
             <Link
               to="/search"
@@ -126,9 +99,9 @@ function LibraryPage() {
           </div>
         ) : (
           <>
-            {showSections && kind === "tv" ? (
+            {kind === "tv" ? (
               <EpisodeTracker members={shows.map((n) => ({ id: n.id, heading: n.heading, media: n.media }))} />
-            ) : showSections ? (
+            ) : (
               <>
                 {upcomingMovies.length > 0 && (
                   <div>
@@ -196,15 +169,11 @@ function LibraryPage() {
                   </div>
                 )}
               </>
-            ) : null}
+            )}
 
             <div>
               <div className="mb-2 flex items-center justify-between">
-                <SectionLabel>
-                  {filter === "all"
-                    ? `All ${kind === "movie" ? "movies" : "shows"}`
-                    : FILTERS.find((f) => f.key === filter)?.label}
-                </SectionLabel>
+                <SectionLabel>All {kind === "movie" ? "movies" : "shows"}</SectionLabel>
                 <span className="text-[11px] tabular-nums text-muted-foreground">{items.length}</span>
               </div>
               <div className="grid grid-cols-3 gap-3">
@@ -228,15 +197,6 @@ function LibraryPage() {
         )}
       </section>
 
-      <FilterDock
-        kind={kind}
-        onKindChange={setKind}
-        movieCount={movies.length}
-        tvCount={shows.length}
-        filters={FILTERS as unknown as { key: string; label: string }[]}
-        activeFilter={filter}
-        onFilterChange={(k) => setFilter(k as FilterKey)}
-      />
       <TabBar />
     </div>
   );

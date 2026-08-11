@@ -1,17 +1,13 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { addTmdbMedia } from "@/lib/notes.functions";
-import { searchTmdbFn } from "@/lib/tmdb.functions";
-import type { TmdbSearchHit } from "@/lib/tmdb.functions";
+import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
 import { poster as posterUrl } from "@/lib/media";
 import { MediaCard } from "@/components/MediaCard";
 import { haptic } from "@/lib/haptics";
 import type { LocalMedia, LocalNote } from "@/lib/local-db";
 import { TabBar } from "@/components/TabBar";
-import { TitlePill } from "@/components/TitlePill";
 import { Search, Loader2, X, Clock, Plus, Check, Film, Tv, Star } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
@@ -49,8 +45,9 @@ function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const localNotes = useLocalNotes();
   const [query, setQuery] = useState("");
-  const [debounced, setDebounced] = useState("");
   const [recents, setRecents] = useState<string[]>([]);
+  const [hits, setHits] = useState<TmdbSearchHit[]>([]);
+  const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<Set<string>>(new Set());
   const [kbOffset, setKbOffset] = useState(0);
 
@@ -72,41 +69,40 @@ function SearchPage() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    let raf = 0;
-    const update = () => {
-      if (raf) return;
-      raf = requestAnimationFrame(() => {
-        raf = 0;
-        setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
-      });
-    };
+    const update = () => setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
-      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 
-  // Debounce keystrokes, then let React Query cache/dedupe the request.
   useEffect(() => {
-    const t = setTimeout(() => setDebounced(query.trim()), 220);
-    return () => clearTimeout(t);
+    const q = query.trim();
+    if (q.length < 2) {
+      setHits([]);
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    let cancelled = false;
+    const t = setTimeout(async () => {
+      try {
+        const res = await searchTmdbFn({ data: { query: q } });
+        if (!cancelled) setHits(res);
+      } catch {
+        if (!cancelled) setHits([]);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }, 350);
+    return () => {
+      cancelled = true;
+      clearTimeout(t);
+    };
   }, [query]);
-
-  const enabled = debounced.length >= 2;
-  const { data, isFetching } = useQuery({
-    queryKey: ["tmdb-search", debounced],
-    queryFn: () => searchTmdbFn({ data: { query: debounced } }),
-    enabled,
-    staleTime: 1000 * 60 * 10,
-    placeholderData: keepPreviousData,
-  });
-
-  const hits = useMemo<TmdbSearchHit[]>(() => (enabled ? (data ?? []) : []), [enabled, data]);
-  const loading = enabled && isFetching;
 
   async function addMedia(hit: TmdbSearchHit) {
     const key = `${hit.type}:${hit.tmdb_id}`;
@@ -117,9 +113,8 @@ function SearchPage() {
       await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
       pushRecent(query);
       setRecents(loadRecents());
-      toast.success(`Added ${hit.title} to your library`);
     } catch {
-      toast.error(`Couldn't add ${hit.title}`);
+      // user can retry
     } finally {
       setAdding((s) => {
         const n = new Set(s);
@@ -130,19 +125,20 @@ function SearchPage() {
   }
 
   const library = useMemo(() => {
-    const q = debounced.toLowerCase();
+    const q = query.trim().toLowerCase();
     if (!q) return mediaNotes.slice(0, 12);
     return mediaNotes.filter((n) => (n.media?.title ?? "").toLowerCase().includes(q));
-  }, [mediaNotes, debounced]);
+  }, [mediaNotes, query]);
 
-  const idle = !enabled;
+  const idle = query.trim().length < 2;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <TitlePill>Search</TitlePill>
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-3 pt-3">
+        <h1 className="text-[26px] font-bold leading-none tracking-tight">Search</h1>
+      </header>
 
-      <div className="px-4 pt-4" style={{ paddingBottom: 220 + kbOffset, contentVisibility: "auto" }}>
-
+      <div className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: 220 + kbOffset }}>
         {/* Your library */}
         {library.length > 0 && (
           <section className="mb-6">

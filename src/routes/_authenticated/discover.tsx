@@ -1,7 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
 import { Loader2, Plus, Check, Star } from "lucide-react";
 import { tmdbTrendingFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
 import { addTmdbMedia } from "@/lib/notes.functions";
@@ -9,9 +8,7 @@ import { useLocalNotes } from "@/hooks/use-local-notes";
 import { poster as posterUrl } from "@/lib/media";
 import { SectionLabel } from "@/components/SectionLabel";
 import { TabBar } from "@/components/TabBar";
-import { TitlePill } from "@/components/TitlePill";
-import { FilterDock } from "@/components/FilterDock";
-import { type MediaKind } from "@/components/MediaTypePill";
+import { MediaTypePill, type MediaKind } from "@/components/MediaTypePill";
 import { haptic } from "@/lib/haptics";
 import type { LocalNote } from "@/lib/local-db";
 
@@ -39,6 +36,7 @@ const MODES = [
 type Mode = (typeof MODES)[number]["key"];
 
 function DiscoverPage() {
+  const navigate = useNavigate();
   const [kind, setKind] = useState<MediaKind>("movie");
   const [mode, setMode] = useState<Mode>("trending");
   const [adding, setAdding] = useState<Set<string>>(new Set());
@@ -64,10 +62,8 @@ function DiscoverPage() {
     void haptic.tap();
     setAdding((p) => new Set(p).add(key));
     try {
-      await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
-      toast.success(`Added ${hit.title} to your library`);
-    } catch {
-      toast.error(`Couldn't add ${hit.title}`);
+      const r = await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
+      if (r?.noteId) void navigate({ to: "/notes/$id", params: { id: r.noteId } });
     } finally {
       setAdding((p) => {
         const n = new Set(p);
@@ -78,8 +74,31 @@ function DiscoverPage() {
   }
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-52">
-      <TitlePill>Discover</TitlePill>
+    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-2 pt-3">
+        <h1 className="text-[26px] font-bold leading-none tracking-tight">Discover</h1>
+        <div className="mt-3">
+          <MediaTypePill value={kind} onChange={setKind} />
+        </div>
+        <div className="no-scrollbar -mx-1 mt-2 flex gap-1.5 overflow-x-auto px-1 pb-1">
+          {MODES.map((m) => (
+            <button
+              key={m.key}
+              onClick={() => {
+                void haptic.tap();
+                setMode(m.key);
+              }}
+              className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold press-bounce ${
+                mode === m.key
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              {m.label}
+            </button>
+          ))}
+        </div>
+      </header>
 
       <section className="px-4 pt-3">
         <SectionLabel>{kind === "movie" ? "Movies" : "TV shows"}</SectionLabel>
@@ -135,13 +154,6 @@ function DiscoverPage() {
         )}
       </section>
 
-      <FilterDock
-        kind={kind}
-        onKindChange={setKind}
-        filters={MODES as unknown as { key: string; label: string }[]}
-        activeFilter={mode}
-        onFilterChange={(k) => setMode(k as Mode)}
-      />
       <TabBar />
     </div>
   );
