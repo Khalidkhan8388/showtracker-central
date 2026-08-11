@@ -39,7 +39,7 @@ export function FilterDock({
         }`}
         style={{ transformOrigin: "bottom center" }}
       >
-        <MediaTypePill value={kind} onChange={onKindChange} movieCount={movieCount} tvCount={tvCount} />
+        <MediaTypePill bare value={kind} onChange={onKindChange} movieCount={movieCount} tvCount={tvCount} />
         {filters && filters.length > 0 && !shrink && (
           <div className="no-scrollbar mt-1 flex gap-1.5 overflow-x-auto px-1 pb-1 pt-0.5">
             {filters.map((f) => (
