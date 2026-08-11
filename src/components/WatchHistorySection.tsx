@@ -5,7 +5,7 @@ import { useWatchHistory, useWatchHistoryFor } from "@/lib/watch-history";
 /** Recently watched stubs. Pass `tmdbIds` to scope it to one collection. */
 export function WatchHistorySection({
   tmdbIds,
-  limit = 12,
+  limit,
   label = "Recently watched",
   variant = "strip",
 }: {
