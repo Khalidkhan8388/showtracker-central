@@ -24,7 +24,9 @@ export function MediaTypePill({
   ];
 
   return (
-    <div className="inline-flex w-full items-center gap-1 rounded-full bg-muted p-1">
+    <div
+      className={`inline-flex w-full items-center gap-1 rounded-full p-1 ${bare ? "" : "bg-muted"}`}
+    >
       {items.map(({ key, label, icon: Icon, count }) => {
         const active = value === key;
         return (
