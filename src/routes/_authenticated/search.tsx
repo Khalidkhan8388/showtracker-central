@@ -49,9 +49,8 @@ function SearchPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const localNotes = useLocalNotes();
   const [query, setQuery] = useState("");
+  const [debounced, setDebounced] = useState("");
   const [recents, setRecents] = useState<string[]>([]);
-  const [hits, setHits] = useState<TmdbSearchHit[]>([]);
-  const [loading, setLoading] = useState(false);
   const [adding, setAdding] = useState<Set<string>>(new Set());
   const [kbOffset, setKbOffset] = useState(0);
 
@@ -73,40 +72,41 @@ function SearchPage() {
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return;
-    const update = () => setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+    let raf = 0;
+    const update = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        setKbOffset(Math.max(0, window.innerHeight - vv.height - vv.offsetTop));
+      });
+    };
     update();
     vv.addEventListener("resize", update);
     vv.addEventListener("scroll", update);
     return () => {
       vv.removeEventListener("resize", update);
       vv.removeEventListener("scroll", update);
+      if (raf) cancelAnimationFrame(raf);
     };
   }, []);
 
+  // Debounce keystrokes, then let React Query cache/dedupe the request.
   useEffect(() => {
-    const q = query.trim();
-    if (q.length < 2) {
-      setHits([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    let cancelled = false;
-    const t = setTimeout(async () => {
-      try {
-        const res = await searchTmdbFn({ data: { query: q } });
-        if (!cancelled) setHits(res);
-      } catch {
-        if (!cancelled) setHits([]);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }, 350);
-    return () => {
-      cancelled = true;
-      clearTimeout(t);
-    };
+    const t = setTimeout(() => setDebounced(query.trim()), 220);
+    return () => clearTimeout(t);
   }, [query]);
+
+  const enabled = debounced.length >= 2;
+  const { data, isFetching } = useQuery({
+    queryKey: ["tmdb-search", debounced],
+    queryFn: () => searchTmdbFn({ data: { query: debounced } }),
+    enabled,
+    staleTime: 1000 * 60 * 10,
+    placeholderData: keepPreviousData,
+  });
+
+  const hits = useMemo<TmdbSearchHit[]>(() => (enabled ? (data ?? []) : []), [enabled, data]);
+  const loading = enabled && isFetching;
 
   async function addMedia(hit: TmdbSearchHit) {
     const key = `${hit.type}:${hit.tmdb_id}`;
@@ -117,8 +117,9 @@ function SearchPage() {
       await addTmdbMedia({ data: { type: hit.type, tmdb_id: hit.tmdb_id } });
       pushRecent(query);
       setRecents(loadRecents());
+      toast.success(`Added ${hit.title} to your library`);
     } catch {
-      // user can retry
+      toast.error(`Couldn't add ${hit.title}`);
     } finally {
       setAdding((s) => {
         const n = new Set(s);
@@ -129,20 +130,19 @@ function SearchPage() {
   }
 
   const library = useMemo(() => {
-    const q = query.trim().toLowerCase();
+    const q = debounced.toLowerCase();
     if (!q) return mediaNotes.slice(0, 12);
     return mediaNotes.filter((n) => (n.media?.title ?? "").toLowerCase().includes(q));
-  }, [mediaNotes, query]);
+  }, [mediaNotes, debounced]);
 
-  const idle = query.trim().length < 2;
+  const idle = !enabled;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-3 pt-3">
-        <h1 className="text-[26px] font-bold leading-none tracking-tight">Search</h1>
-      </header>
+      <TitlePill>Search</TitlePill>
 
-      <div className="flex-1 overflow-y-auto px-4 pt-4" style={{ paddingBottom: 220 + kbOffset }}>
+      <div className="px-4 pt-4" style={{ paddingBottom: 220 + kbOffset, contentVisibility: "auto" }}>
+
         {/* Your library */}
         {library.length > 0 && (
           <section className="mb-6">
