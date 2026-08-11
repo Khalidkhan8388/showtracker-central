@@ -33,12 +33,11 @@ function StubsPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background px-4 pb-3 pt-3">
-        <h1 className="text-[26px] font-bold leading-none tracking-tight">Stubs</h1>
-        <p className="mt-1 text-[12px] text-muted-foreground">
-          Shelf, ticket stubs and combined stats for movies and TV.
-        </p>
-      </header>
+      <TitlePill>
+        Stubs
+        <span className="ml-2 text-[11px] text-muted-foreground">shelf &amp; stats</span>
+      </TitlePill>
+
 
       <section className="px-4 pt-4">
         {localNotes === null || localNotes === undefined ? (
