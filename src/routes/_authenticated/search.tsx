@@ -1,13 +1,17 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
+import { toast } from "sonner";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { addTmdbMedia } from "@/lib/notes.functions";
-import { searchTmdbFn, type TmdbSearchHit } from "@/lib/tmdb.functions";
+import { searchTmdbFn } from "@/lib/tmdb.functions";
+import type { TmdbSearchHit } from "@/lib/tmdb.functions";
 import { poster as posterUrl } from "@/lib/media";
 import { MediaCard } from "@/components/MediaCard";
 import { haptic } from "@/lib/haptics";
 import type { LocalMedia, LocalNote } from "@/lib/local-db";
 import { TabBar } from "@/components/TabBar";
+import { TitlePill } from "@/components/TitlePill";
 import { Search, Loader2, X, Clock, Plus, Check, Film, Tv, Star } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/search")({
