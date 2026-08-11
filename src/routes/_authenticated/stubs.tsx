@@ -4,6 +4,7 @@ import { Loader2, Ticket } from "lucide-react";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { MediaStats } from "@/components/MediaStatsPanel";
 import { TabBar } from "@/components/TabBar";
+import { TitlePill } from "@/components/TitlePill";
 import type { LocalNote } from "@/lib/local-db";
 
 export const Route = createFileRoute("/_authenticated/stubs")({
