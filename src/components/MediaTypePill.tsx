@@ -9,11 +9,14 @@ export function MediaTypePill({
   onChange,
   movieCount,
   tvCount,
+  bare = false,
 }: {
   value: MediaKind;
   onChange: (v: MediaKind) => void;
   movieCount?: number;
   tvCount?: number;
+  /** Drop the grey track (used inside the floating glass dock). */
+  bare?: boolean;
 }) {
   const items: Array<{ key: MediaKind; label: string; icon: typeof Film; count?: number }> = [
     { key: "movie", label: "Movies", icon: Film, count: movieCount },
