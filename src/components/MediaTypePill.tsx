@@ -9,11 +9,14 @@ export function MediaTypePill({
   onChange,
   movieCount,
   tvCount,
+  bare = false,
 }: {
   value: MediaKind;
   onChange: (v: MediaKind) => void;
   movieCount?: number;
   tvCount?: number;
+  /** Drop the grey track (used inside the floating glass dock). */
+  bare?: boolean;
 }) {
   const items: Array<{ key: MediaKind; label: string; icon: typeof Film; count?: number }> = [
     { key: "movie", label: "Movies", icon: Film, count: movieCount },
@@ -21,7 +24,9 @@ export function MediaTypePill({
   ];
 
   return (
-    <div className="inline-flex w-full items-center gap-1 rounded-full bg-muted p-1">
+    <div
+      className={`inline-flex w-full items-center gap-1 rounded-full p-1 ${bare ? "" : "bg-muted"}`}
+    >
       {items.map(({ key, label, icon: Icon, count }) => {
         const active = value === key;
         return (
