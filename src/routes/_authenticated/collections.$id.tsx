@@ -1216,17 +1216,38 @@ function WatchedShelf({ members }: { members: Array<ShelfMember> }) {
         <span className="text-[11px] text-muted-foreground tabular-nums">{watched.length}</span>
       </div>
 
-      {/* Shelf row */}
+      {/* 3D shelf row */}
       <div className="relative">
-        <div className="scrollbar-none flex items-end gap-[10px] overflow-x-auto px-2 pb-2 pt-1">
+        <div
+          className="scrollbar-none flex items-end gap-[14px] overflow-x-auto px-4 pb-1 pt-6"
+          style={{ perspective: "900px", perspectiveOrigin: "50% 60%" }}
+        >
           {watched.map((m) => (
             <SpineTile key={m.id} member={m} onOpen={() => setOpen(m)} />
           ))}
         </div>
-        {/* subtle shelf line */}
-        <div className="mx-1 h-px bg-border/70" />
-        <div className="mx-1 mt-[2px] h-[3px] rounded-b-md bg-gradient-to-b from-border/40 to-transparent" />
+        {/* shelf plank — a lit front edge with a receding top surface */}
+        <div className="relative mx-1">
+          <div
+            className="h-[10px] rounded-b-[6px]"
+            style={{
+              background:
+                "linear-gradient(180deg, color-mix(in oklab, var(--color-foreground) 22%, transparent) 0%, color-mix(in oklab, var(--color-foreground) 8%, transparent) 60%, transparent 100%)",
+              boxShadow: "0 -1px 0 color-mix(in oklab, var(--color-foreground) 28%, transparent) inset",
+            }}
+          />
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-x-0 top-[10px] h-6 opacity-40"
+            style={{
+              background:
+                "linear-gradient(180deg, color-mix(in oklab, var(--color-foreground) 12%, transparent), transparent)",
+              filter: "blur(3px)",
+            }}
+          />
+        </div>
       </div>
+
 
       <MediaCaseDialog member={open} onClose={() => setOpen(null)} />
     </div>
