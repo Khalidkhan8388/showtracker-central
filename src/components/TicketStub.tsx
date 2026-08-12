@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { format, isToday, isYesterday } from "date-fns";
-import { Clapperboard, Tv, X, ArrowUpRight, ChevronLeft, ChevronRight } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Clapperboard, Tv, X, ArrowUpRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import { poster as tmdbPoster } from "@/lib/media";
 import type { WatchLogEntry } from "@/lib/local-db";
 import { formatRuntime, ticketNumber } from "@/lib/watch-history";
@@ -17,25 +17,6 @@ function stamp(at: string) {
 function fullStamp(at: string) {
   const d = new Date(at);
   return format(d, "EEEE, d MMMM yyyy 'at' h:mm a");
-}
-
-/** Deterministic barcode bars derived from the ticket id. */
-function Barcode({ seed, className = "" }: { seed: string; className?: string }) {
-  const bars = useMemo(() => {
-    let h = 0;
-    for (const ch of seed) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
-    return Array.from({ length: 16 }, (_, i) => {
-      h = (h * 1103515245 + 12345 + i) >>> 0;
-      return (h % 3) + 1;
-    });
-  }, [seed]);
-  return (
-    <div className={`flex items-stretch gap-[2px] ${className}`} aria-hidden>
-      {bars.map((w, i) => (
-        <span key={i} style={{ width: w }} className="block rounded-[1px] bg-foreground/25" />
-      ))}
-    </div>
-  );
 }
 
 /**
@@ -65,7 +46,7 @@ export function TicketStub({
         onClick?.();
       }}
       aria-label={`Open watch ticket for ${entry.title}`}
-      className={`group relative flex overflow-hidden rounded-2xl bg-card ring-1 ring-border/60 shadow-[0_1px_2px_rgba(0,0,0,0.06),0_8px_20px_-14px_rgba(0,0,0,0.45)] press-bounce active:opacity-90 text-left ${className}`}
+      className={`group relative flex overflow-hidden rounded-2xl bg-card ring-1 ring-border/60 press-bounce active:opacity-80 text-left ${className}`}
     >
       {/* Poster panel */}
       <div className="relative w-[76px] shrink-0 overflow-hidden bg-muted">
@@ -74,14 +55,13 @@ export function TicketStub({
             src={art}
             alt={`${entry.title} poster`}
             loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-500 group-active:scale-[1.06]"
+            className="h-full w-full object-cover"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center text-muted-foreground">
             {entry.type === "tv" ? <Tv className="h-4 w-4" /> : <Clapperboard className="h-4 w-4" />}
           </div>
         )}
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-transparent to-black/25" />
       </div>
 
       {/* Perforation */}
@@ -94,21 +74,16 @@ export function TicketStub({
       {/* Detail panel */}
       <div className="flex min-w-0 flex-1 flex-col justify-between gap-1 px-3 py-2.5">
         <div className="min-w-0">
-          <div className="flex items-center gap-1.5 text-[9px] font-semibold uppercase tracking-[0.16em] text-muted-foreground">
-            {entry.type === "tv" ? <Tv className="h-3 w-3" /> : <Clapperboard className="h-3 w-3" />}
-            <span>{entry.type === "tv" ? "Episode" : "Feature"}</span>
-          </div>
-          <p className="mt-1 truncate text-[14px] font-semibold leading-tight text-foreground">{entry.title}</p>
+          <p className="truncate text-[14px] font-semibold leading-tight text-foreground">{entry.title}</p>
           {sub && <p className="mt-0.5 truncate text-[11px] text-muted-foreground">{sub}</p>}
         </div>
-        <div className="flex items-end justify-between gap-2">
+        <div className="flex items-center justify-between gap-2">
           <span className="truncate text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
             {stamp(entry.at)}
           </span>
-          <div className="flex shrink-0 flex-col items-end gap-1">
-            <Barcode seed={entry.id} className="h-3 opacity-80" />
-            <span className="font-mono text-[9px] text-muted-foreground/70">№{ticketNumber(entry)}</span>
-          </div>
+          <span className="shrink-0 font-mono text-[10px] text-muted-foreground/70">
+            №{ticketNumber(entry)}
+          </span>
         </div>
       </div>
     </button>
@@ -116,17 +91,7 @@ export function TicketStub({
 }
 
 /** Full-size ticket modal with full date, title/episode, and ticket number. */
-function TicketStubModal({
-  entry,
-  onClose,
-  onPrev,
-  onNext,
-}: {
-  entry: WatchLogEntry;
-  onClose: () => void;
-  onPrev?: () => void;
-  onNext?: () => void;
-}) {
+function TicketStubModal({ entry, onClose }: { entry: WatchLogEntry; onClose: () => void }) {
   const art = tmdbPoster(entry.poster_path, "w500");
   const isEp = entry.type === "tv" && entry.season != null;
   const sub = isEp
@@ -158,13 +123,11 @@ function TicketStubModal({
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") close();
-      if (e.key === "ArrowLeft") onPrev?.();
-      if (e.key === "ArrowRight") onNext?.();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [onPrev, onNext]);
+  }, []);
 
   return (
     <div
@@ -208,32 +171,6 @@ function TicketStubModal({
           >
             <X className="h-4 w-4" />
           </button>
-          {onPrev && (
-            <button
-              type="button"
-              onClick={() => {
-                void haptic.tap();
-                onPrev();
-              }}
-              className="absolute left-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/40 text-background backdrop-blur-md press-bounce"
-              aria-label="Previous ticket"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          )}
-          {onNext && (
-            <button
-              type="button"
-              onClick={() => {
-                void haptic.tap();
-                onNext();
-              }}
-              className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full bg-foreground/40 text-background backdrop-blur-md press-bounce"
-              aria-label="Next ticket"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          )}
         </div>
 
         {/* Perforation */}
@@ -267,11 +204,6 @@ function TicketStubModal({
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-3 rounded-[18px] bg-background px-3 py-2.5 ring-1 ring-border/60">
-            <Barcode seed={entry.id} className="h-6 flex-1" />
-            <span className="font-mono text-[10px] uppercase tracking-[0.2em] text-muted-foreground">Admit one</span>
-          </div>
-
           <Link
             to="/notes/$id"
             params={{ id: entry.note_id }}
@@ -287,36 +219,20 @@ function TicketStubModal({
   );
 }
 
-/** Shared modal controller that supports stepping through a list of stubs. */
-function useStubBrowser(entries: WatchLogEntry[]) {
-  const [index, setIndex] = useState<number | null>(null);
-  const open = (e: WatchLogEntry) => setIndex(entries.findIndex((x) => x.id === e.id));
-  const node =
-    index != null && index >= 0 && entries[index] ? (
-      <TicketStubModal
-        entry={entries[index]!}
-        onClose={() => setIndex(null)}
-        onPrev={index > 0 ? () => setIndex(index - 1) : undefined}
-        onNext={index < entries.length - 1 ? () => setIndex(index + 1) : undefined}
-      />
-    ) : null;
-  return { open, node };
-}
-
 /** Horizontal strip of the most recent stubs. Tapping a stub opens its full ticket. */
 export function WatchHistoryStrip({ entries }: { entries: WatchLogEntry[] }) {
-  const browser = useStubBrowser(entries);
+  const [selected, setSelected] = useState<WatchLogEntry | null>(null);
   if (!entries.length) return null;
   return (
     <>
       <div className="-mx-4 overflow-x-auto px-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         <div className="flex gap-2.5 pb-1">
           {entries.map((e) => (
-            <TicketStub key={e.id} entry={e} className="h-[86px] w-[248px] shrink-0" onClick={() => browser.open(e)} />
+            <TicketStub key={e.id} entry={e} className="h-[86px] w-[248px] shrink-0" onClick={() => setSelected(e)} />
           ))}
         </div>
       </div>
-      {browser.node}
+      {selected && <TicketStubModal entry={selected} onClose={() => setSelected(null)} />}
     </>
   );
 }
@@ -327,7 +243,7 @@ export function WatchHistoryStrip({ entries }: { entries: WatchLogEntry[] }) {
  */
 export function WatchHistoryDeck({ entries }: { entries: WatchLogEntry[] }) {
   const [open, setOpen] = useState(false);
-  const browser = useStubBrowser(entries);
+  const [selected, setSelected] = useState<WatchLogEntry | null>(null);
   if (!entries.length) return null;
   const top = entries[0]!;
   const behind = Math.min(entries.length - 1, 2);
@@ -366,15 +282,13 @@ export function WatchHistoryDeck({ entries }: { entries: WatchLogEntry[] }) {
         <TicketDeckSheet
           entries={entries}
           onClose={() => setOpen(false)}
-          onSelect={(e) => browser.open(e)}
+          onSelect={(e) => setSelected(e)}
         />
       )}
-      {browser.node}
+      {selected && <TicketStubModal entry={selected} onClose={() => setSelected(null)} />}
     </>
   );
 }
-
-type StubFilter = "all" | "movie" | "tv";
 
 /** Full-screen vertically scrolling list of every stub in the deck. */
 function TicketDeckSheet({
@@ -387,7 +301,6 @@ function TicketDeckSheet({
   onSelect: (e: WatchLogEntry) => void;
 }) {
   const [visible, setVisible] = useState(false);
-  const [filter, setFilter] = useState<StubFilter>("all");
 
   useEffect(() => {
     const id = requestAnimationFrame(() => setVisible(true));
@@ -398,31 +311,6 @@ function TicketDeckSheet({
       document.body.style.overflow = prev;
     };
   }, []);
-
-  const shown = useMemo(
-    () => (filter === "all" ? entries : entries.filter((e) => e.type === filter)),
-    [entries, filter],
-  );
-
-  const groups = useMemo(() => {
-    const map = new Map<string, WatchLogEntry[]>();
-    for (const e of shown) {
-      const key = format(new Date(e.at), "MMMM yyyy");
-      const list = map.get(key);
-      if (list) list.push(e);
-      else map.set(key, [e]);
-    }
-    return Array.from(map.entries());
-  }, [shown]);
-
-  const counts = useMemo(
-    () => ({
-      all: entries.length,
-      movie: entries.filter((e) => e.type === "movie").length,
-      tv: entries.filter((e) => e.type === "tv").length,
-    }),
-    [entries],
-  );
 
   return (
     <div
@@ -439,7 +327,7 @@ function TicketDeckSheet({
     >
       <div className="flex items-center justify-between px-5 pb-3 pt-6">
         <p className="text-[11px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-          Watch history · {shown.length}
+          Watch history · {entries.length}
         </p>
         <button
           type="button"
@@ -453,44 +341,12 @@ function TicketDeckSheet({
           <X className="h-4 w-4" />
         </button>
       </div>
-
-      <div className="flex gap-2 px-5 pb-3">
-        {(["all", "movie", "tv"] as StubFilter[]).map((f) => (
-          <button
-            key={f}
-            type="button"
-            onClick={() => {
-              void haptic.tap();
-              setFilter(f);
-            }}
-            className={`rounded-full px-3.5 py-1.5 text-[12px] font-medium press-bounce ring-1 ${
-              filter === f
-                ? "bg-foreground text-background ring-transparent"
-                : "bg-card text-muted-foreground ring-border/60"
-            }`}
-          >
-            {f === "all" ? "All" : f === "movie" ? "Movies" : "Episodes"} · {counts[f]}
-          </button>
+      <div className="flex-1 space-y-2.5 overflow-y-auto px-5 pb-16">
+        {entries.map((e) => (
+          <TicketStub key={e.id} entry={e} className="h-[100px] w-full" onClick={() => onSelect(e)} />
         ))}
-      </div>
-
-      <div className="flex-1 overflow-y-auto px-5 pb-16">
-        {groups.map(([label, list]) => (
-          <div key={label} className="mb-5">
-            <p className="sticky top-0 z-10 -mx-1 mb-2 px-1 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-muted-foreground backdrop-blur-sm">
-              {label} · {list.length}
-            </p>
-            <div className="space-y-2.5">
-              {list.map((e) => (
-                <TicketStub key={e.id} entry={e} className="h-[100px] w-full" onClick={() => onSelect(e)} />
-              ))}
-            </div>
-          </div>
-        ))}
-        {shown.length === 0 && (
-          <p className="mt-10 text-center text-[13px] text-muted-foreground">No stubs here yet.</p>
-        )}
       </div>
     </div>
   );
 }
+
