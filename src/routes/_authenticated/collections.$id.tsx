@@ -1276,61 +1276,87 @@ function SpineTile({ member, onOpen }: { member: ShelfMember; onOpen: () => void
     <button
       type="button"
       onClick={onOpen}
-      className="group relative h-[172px] w-[38px] flex-shrink-0 overflow-hidden rounded-[3px] shadow-[0_2px_6px_rgba(0,0,0,0.35)] transition-transform active:scale-[0.97]"
+      className="group relative h-[172px] w-[40px] flex-shrink-0"
+      style={{ transformStyle: "preserve-3d" }}
       aria-label={`Open ${title}`}
     >
-      {posterUrl ? (
-        // Rotate the full poster 90° so its own title artwork reads vertically
-        // like a real DVD spine — the poster is the text.
-        <img
-          src={posterUrl}
-          alt=""
-          className="absolute left-1/2 top-1/2 h-[38px] w-[172px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover"
-          loading="lazy"
-        />
-      ) : (
-        <div className="absolute inset-0 bg-neutral-800" />
-      )}
-      {/* left crease highlight */}
-      <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/25 to-transparent" />
-      {/* right shadow */}
-      <div className="pointer-events-none absolute inset-y-0 right-0 w-[3px] bg-gradient-to-l from-black/50 to-transparent" />
-      {/* soft vertical scrim so wordmark reads on any poster */}
-      <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/60 via-black/25 to-black/60" />
+      <div
+        className="relative h-full w-full transition-transform duration-300 ease-out group-active:[transform:rotateY(-42deg)_translateZ(10px)]"
+        style={{ transformStyle: "preserve-3d", transform: "rotateY(-26deg)" }}
+      >
+        {/* Front cover receding into depth */}
+        <div
+          aria-hidden
+          className="absolute top-0 left-full h-full w-[112px] overflow-hidden rounded-r-[3px]"
+          style={{ transformOrigin: "left center", transform: "rotateY(90deg)" }}
+        >
+          {posterUrl ? (
+            <img src={posterUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <div className="h-full w-full bg-neutral-800" />
+          )}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/55 via-black/15 to-black/45" />
+        </div>
 
-      {/* Title wordmark — the movie/show's own poster logo, rotated to spine
-          orientation. Falls back to a display-serif italic title while the
-          logo loads or when TMDB has no logo asset. */}
-      <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-        {logoUrl ? (
-          <div className="flex h-[38px] w-[168px] -rotate-90 items-center justify-center">
+        {/* Spine face */}
+        <div className="absolute inset-0 overflow-hidden rounded-[3px] shadow-[0_10px_18px_-8px_rgba(0,0,0,0.6)]">
+          {posterUrl ? (
             <img
-              src={logoUrl}
-              alt={title}
-              className="max-h-[26px] max-w-[132px] object-contain"
-              style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.85)) brightness(1.1) contrast(1.05)" }}
+              src={posterUrl}
+              alt=""
+              className="absolute left-1/2 top-1/2 h-[40px] w-[172px] max-w-none -translate-x-1/2 -translate-y-1/2 rotate-90 object-cover blur-[1px]"
               loading="lazy"
             />
+          ) : (
+            <div className="absolute inset-0 bg-neutral-800" />
+          )}
+          {/* left crease highlight */}
+          <div className="pointer-events-none absolute inset-y-0 left-0 w-[2px] bg-gradient-to-r from-white/30 to-transparent" />
+          {/* right shadow where the cover folds away */}
+          <div className="pointer-events-none absolute inset-y-0 right-0 w-[5px] bg-gradient-to-l from-black/60 to-transparent" />
+          {/* soft vertical scrim so wordmark reads on any poster */}
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-b from-black/65 via-black/30 to-black/65" />
+          {/* gloss sweep */}
+          <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(115deg,transparent_35%,rgba(255,255,255,0.22)_48%,transparent_60%)]" />
 
+          {/* Title wordmark — the title's own logo, rotated to spine orientation */}
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            {logoUrl ? (
+              <div className="flex h-[40px] w-[168px] -rotate-90 items-center justify-center">
+                <img
+                  src={logoUrl}
+                  alt={title}
+                  className="max-h-[26px] max-w-[132px] object-contain"
+                  style={{ filter: "drop-shadow(0 1px 2px rgba(0,0,0,0.85)) brightness(1.1) contrast(1.05)" }}
+                  loading="lazy"
+                />
+              </div>
+            ) : (
+              <span
+                className="max-h-[160px] whitespace-nowrap font-serif text-[12px] font-semibold italic leading-none tracking-[0.02em] text-white"
+                style={{
+                  writingMode: "vertical-rl",
+                  transform: "rotate(180deg)",
+                  textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)",
+                }}
+              >
+                {title}
+              </span>
+            )}
           </div>
-        ) : (
-          <span
-            className="max-h-[160px] whitespace-nowrap font-serif text-[12px] font-semibold italic leading-none tracking-[0.02em] text-white"
-            style={{
-              writingMode: "vertical-rl",
-              transform: "rotate(180deg)",
-              textShadow: "0 1px 3px rgba(0,0,0,0.85), 0 0 8px rgba(0,0,0,0.5)",
-            }}
-          >
-            {title}
-          </span>
-        )}
+        </div>
       </div>
 
+      {/* contact shadow on the plank */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-[3px] left-[-4px] h-[6px] w-[58px] rounded-full opacity-60"
+        style={{ background: "radial-gradient(ellipse at center, rgba(0,0,0,0.55), transparent 70%)" }}
+      />
     </button>
   );
-
 }
+
 
 function MediaCaseDialog({ member, onClose }: { member: ShelfMember | null; onClose: () => void }) {
   const navigate = useNavigate();
