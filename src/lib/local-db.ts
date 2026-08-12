@@ -43,6 +43,8 @@ export type LocalMedia = {
   seasons?: LocalMediaSeason[];
   watch_status: WatchStatus | null;
   watched_at: string | null;
+  /** Personal rating, 1–5 stars. */
+  user_rating?: number | null;
   // Set of "S{season}E{ep}" identifiers watched (tv only)
   watched_episodes: string[];
 };
@@ -151,6 +153,8 @@ export type WatchLogEntry = {
   runtime: number | null;   // minutes
   year: string | null;
   vote_average: number | null;
+  /** Personal rating, 1–5 stars, copied from the title. */
+  user_rating?: number | null;
 };
 
 class BraintapeDB extends Dexie {
@@ -252,6 +256,15 @@ class BraintapeDB extends Dexie {
     });
     // v13: watch history ("ticket stubs") for movies + episodes.
     this.version(13).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+      watchlog: "id, at, tmdb_id, type, note_id",
+    });
+    // v14: personal star rating on media + watch log stubs. No new index.
+    this.version(14).stores({
       notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
       meta: "key",
       photos: "path, cachedAt, size",

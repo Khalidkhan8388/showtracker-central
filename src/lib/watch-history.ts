@@ -14,6 +14,7 @@ function baseFields(note: LocalNote, m: LocalMedia) {
     backdrop_path: m.backdrop_path,
     year: m.release_date ? String(m.release_date).slice(0, 4) : null,
     vote_average: m.vote_average,
+    user_rating: m.user_rating ?? null,
   };
 }
 
@@ -58,6 +59,12 @@ export async function logEpisodeWatched(
     runtime: ep?.runtime ?? m.runtime,
   };
   await db.watchlog.put(entry);
+}
+
+/** Mirror a personal rating onto every stub of the same title. */
+export async function setStubRating(tmdbId: number, rating: number | null) {
+  const rows = await db.watchlog.where("tmdb_id").equals(tmdbId).toArray();
+  for (const r of rows) await db.watchlog.put({ ...r, user_rating: rating });
 }
 
 export async function unlogMovie(tmdbId: number) {

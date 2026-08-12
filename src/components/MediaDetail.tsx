@@ -4,6 +4,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2, User } from "lucide-react";
 import type { LocalMedia, WatchStatus } from "@/lib/local-db";
 import { fetchTmdbCreditsFn } from "@/lib/tmdb.functions";
+import { haptic } from "@/lib/haptics";
 import {
   backdrop,
   epKey,
@@ -13,6 +14,7 @@ import {
   still,
   toggleEpisodeWatched,
   toggleSeasonWatched,
+  setUserRating,
   totalEpisodes,
   WATCH_COLORS,
   WATCH_LABEL,
@@ -153,6 +155,46 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
               </button>
             );
           })}
+        </div>
+      </section>
+
+      {/* Your rating */}
+      <section className="mt-6">
+        <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your rating</h2>
+        <div className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-sm">
+          <div className="flex items-center gap-1.5">
+            {[1, 2, 3, 4, 5].map((n) => {
+              const filled = (media.user_rating ?? 0) >= n;
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
+                  onClick={() => {
+                    void haptic.tap();
+                    void setUserRating(noteId, media.user_rating === n ? null : n);
+                  }}
+                  className="press-bounce p-0.5 active:opacity-70"
+                >
+                  <Star
+                    className={`h-7 w-7 ${filled ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`}
+                    strokeWidth={1.75}
+                  />
+                </button>
+              );
+            })}
+          </div>
+          {media.user_rating ? (
+            <button
+              type="button"
+              onClick={() => void setUserRating(noteId, null)}
+              className="rounded-full bg-muted px-3 py-1.5 text-[12px] font-medium text-muted-foreground press-bounce active:opacity-60"
+            >
+              Clear
+            </button>
+          ) : (
+            <span className="text-[12px] text-muted-foreground">Not rated</span>
+          )}
         </div>
       </section>
 

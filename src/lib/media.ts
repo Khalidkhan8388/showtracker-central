@@ -1,5 +1,5 @@
 import { db, type LocalMedia, type LocalNote, type WatchStatus } from "./local-db";
-import { logEpisodeWatched, logMovieWatched, unlogEpisode, unlogMovie } from "./watch-history";
+import { logEpisodeWatched, logMovieWatched, setStubRating, unlogEpisode, unlogMovie } from "./watch-history";
 
 
 export const TMDB_IMG = "https://image.tmdb.org/t/p";
@@ -88,6 +88,14 @@ export async function setWatchStatus(noteId: string, status: WatchStatus | null)
 }
 
 
+
+/** Set a personal 1–5 star rating (null clears it) across all notes + stubs for this title. */
+export async function setUserRating(noteId: string, rating: number | null) {
+  const n = await db.notes.get(noteId);
+  if (!n?.media) return;
+  await patchMedia(noteId, { user_rating: rating });
+  await setStubRating(n.media.tmdb_id, rating);
+}
 
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
   const n = await db.notes.get(noteId);
