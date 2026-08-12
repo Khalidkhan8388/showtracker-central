@@ -1078,7 +1078,6 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
       <div className="mb-4">
         <WatchHistorySection
           tmdbIds={members.map((m) => m.media?.tmdb_id).filter((x): x is number => typeof x === "number")}
-          limit={50}
           variant="deck"
         />
       </div>
