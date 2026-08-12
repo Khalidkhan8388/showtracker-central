@@ -1,11 +1,27 @@
 import { Link } from "@tanstack/react-router";
 import { format, isToday, isYesterday } from "date-fns";
-import { Clapperboard, Tv, X, ArrowUpRight } from "lucide-react";
+import { Clapperboard, Tv, X, ArrowUpRight, Star } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { poster as tmdbPoster } from "@/lib/media";
 import type { WatchLogEntry } from "@/lib/local-db";
 import { formatRuntime, ticketNumber } from "@/lib/watch-history";
 import { haptic } from "@/lib/haptics";
+
+/** Small star sticker showing the personal rating. */
+function RatingSticker({ rating, size = "sm" }: { rating: number; size?: "sm" | "lg" }) {
+  const lg = size === "lg";
+  return (
+    <span
+      className={`inline-flex items-center gap-0.5 rounded-full bg-amber-400 font-semibold text-black shadow-sm ring-1 ring-black/10 ${
+        lg ? "px-2.5 py-1 text-[12px]" : "px-1.5 py-0.5 text-[10px]"
+      }`}
+      aria-label={`Rated ${rating} out of 5`}
+    >
+      <Star className={lg ? "h-3.5 w-3.5 fill-current" : "h-2.5 w-2.5 fill-current"} />
+      {rating}
+    </span>
+  );
+}
 
 function stamp(at: string) {
   const d = new Date(at);
@@ -62,6 +78,11 @@ export function TicketStub({
             {entry.type === "tv" ? <Tv className="h-4 w-4" /> : <Clapperboard className="h-4 w-4" />}
           </div>
         )}
+        {entry.user_rating ? (
+          <div className="absolute left-1 top-1">
+            <RatingSticker rating={entry.user_rating} />
+          </div>
+        ) : null}
       </div>
 
       {/* Perforation */}
@@ -171,6 +192,11 @@ function TicketStubModal({ entry, onClose }: { entry: WatchLogEntry; onClose: ()
           >
             <X className="h-4 w-4" />
           </button>
+          {entry.user_rating ? (
+            <div className="absolute left-3 top-3">
+              <RatingSticker rating={entry.user_rating} size="lg" />
+            </div>
+          ) : null}
         </div>
 
         {/* Perforation */}
