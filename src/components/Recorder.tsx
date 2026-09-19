@@ -665,6 +665,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         />
         <Link
           to="/search"
+          search={{ tab: "memories" as const }}
           aria-label="Search"
           className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
