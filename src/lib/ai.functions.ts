@@ -72,14 +72,25 @@ function parseTags(input: unknown): string[] {
   return out;
 }
 
+function tasksFromRaw(input: unknown): string[] {
+  const arr = Array.isArray(input) ? input : [];
+  return arr
+    .map((t: unknown) =>
+      typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : "",
+    )
+    .filter((t: string) => t.trim().length > 0)
+    .slice(0, 20);
+}
+
 // ---------- media analysis -------------------------------------------------
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 sentences. If images are attached, describe what's visible and weave that into the summary.
 - key_points: array of 3-6 short bullets (max ~12 words each) capturing the most important ideas, decisions, or facts. Return [] only if there's truly nothing to bullet.
+- tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -90,9 +101,11 @@ const AnalyzeInput = z.object({
     .object({
       heading: z.string().nullable().optional(),
       summary: z.string().nullable().optional(),
+      tasks: z.array(z.string()).optional(),
     })
     .nullable()
     .optional(),
+  skipTasks: z.boolean().optional().default(false),
   extraTranscripts: z.array(z.string()).optional().default([]),
 });
 
@@ -108,7 +121,8 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
     const priorHasContent =
       !!prior &&
       (((prior.heading ?? "").trim().length > 0) ||
-        ((prior.summary ?? "").trim().length > 0));
+        ((prior.summary ?? "").trim().length > 0) ||
+        ((prior.tasks?.length ?? 0) > 0));
 
     // Kick off transcription in PARALLEL with structuring (both hit the AI
     // gateway independently). Structuring uses the transcript once ready.
@@ -130,7 +144,8 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
           `EXISTING NOTE (merge with new content into ONE cohesive note):\n` +
           `- Heading: ${prior?.heading || "(none)"}\n` +
           `- Summary: ${prior?.summary || "(none)"}\n` +
-          `Produce ONE unified heading and ONE cohesive summary weaving old + new.`,
+          `- Tasks:\n${(prior?.tasks ?? []).map((t) => `  • ${t}`).join("\n") || "  (none)"}\n\n` +
+          `Produce ONE unified heading, ONE cohesive summary weaving old + new, and a merged, de-duplicated task list.`,
       });
     }
     const intro = transcript
@@ -173,6 +188,7 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
             .filter((k: string) => k.length > 0)
             .slice(0, 6)
         : [],
+      tasks: data.skipTasks ? [] : tasksFromRaw(parsed.tasks),
       tags: [] as string[],
     };
   });
@@ -234,10 +250,11 @@ export const ocrImagesFn = createServerFn({ method: "POST" })
 // ---------- web link ------------------------------------------------------
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return ONE JSON object with keys: heading, summary. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
 - summary: 2-5 sentences capturing the key takeaways.
+- tasks: concrete, actionable to-dos plausibly triggered by saving this page. Skip "Read this later". Cap at 8. Return [] if nothing is actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -321,6 +338,7 @@ export const analyzeWebLinkFn = createServerFn({ method: "POST" })
     return {
       heading: String(parsed.heading ?? title ?? "Saved link").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
+      tasks: tasksFromRaw(parsed.tasks),
       tags: [] as string[],
       imageUrl: imageUrl ?? null,
     };
@@ -356,10 +374,11 @@ export const fetchLinkImageFn = createServerFn({ method: "POST" })
 // ---------- text note enrichment ------------------------------------------
 
 const TEXT_SYSTEM_PROMPT = `You analyze a user's written note.
-Return ONE JSON object with keys: heading, summary. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
 
 - heading: short (max ~8 words), title case. If a heading is provided, refine it rather than replacing.
 - summary: 1-3 sentence recap. Leave "" if too short.
+- tasks: clear actionable to-dos. Cap at 8. Return [] if nothing actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -371,7 +390,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => TextInput.parse(d))
   .handler(async ({ data }) => {
     if (!data.body || data.body.trim().length < 20) {
-      return { heading: data.heading, summary: "", tags: [] as string[] };
+      return { heading: data.heading, summary: "", tasks: [] as string[], tags: [] as string[] };
     }
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
@@ -390,7 +409,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
         response_format: { type: "json_object" },
       }),
     }, 120_000);
-    if (!res.ok) return { heading: data.heading, summary: "", tags: [] };
+    if (!res.ok) return { heading: data.heading, summary: "", tasks: [], tags: [] };
     const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
     const raw = j.choices?.[0]?.message?.content ?? "{}";
     let parsed: any;
@@ -398,6 +417,7 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
     return {
       heading: String(parsed.heading ?? data.heading ?? "").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
+      tasks: tasksFromRaw(parsed.tasks),
       tags: [] as string[],
     };
   });
@@ -405,11 +425,12 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
 // ---------- youtube -------------------------------------------------------
 
 const YT_SYSTEM_PROMPT = `You turn YouTube video metadata into a structured saved note.
-Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
 
 - heading: short (max ~10 words), title case. Prefer the actual video title lightly refined; NEVER include the channel name or timestamps.
 - summary: 3-6 sentences distilling what the video is actually about — the argument, story, or steps — using the captions as the primary source of truth. Do NOT restate the title. Do NOT say "in this video".
 - key_points: 3-7 concrete takeaways as short bullet strings. Each ≤ 120 chars. Return [] if the source is too thin.
+- tasks: concrete, actionable to-dos plausibly triggered by watching this. Skip "Watch this later". Cap at 6. Return [] if nothing is actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -459,84 +480,9 @@ export const analyzeYouTubeFn = createServerFn({ method: "POST" })
       heading: String(parsed.heading ?? data.title ?? "YouTube video").slice(0, 140),
       summary: String(parsed.summary ?? "").slice(0, 2400),
       key_points: keyPoints,
+      tasks: tasksFromRaw(parsed.tasks),
     };
   });
-
-// ---------- instagram -----------------------------------------------------
-
-const IG_SYSTEM_PROMPT = `You turn an Instagram post (caption + optional image) into a structured saved note.
-Return ONE JSON object with keys: heading, summary, key_points, places, tags. No prose, no code fences.
-
-- heading: short (max ~9 words), title case, describing what the post is actually about. Never "Instagram post".
-- summary: 2-4 sentences. Combine what the caption says with what is visible in the image. Do not mention "this post".
-- key_points: 0-6 short bullets (≤ 110 chars) with the concrete facts, tips, steps, prices or recommendations.
-- places: real-world places named or clearly identifiable — restaurants, cafés, hotels, cities, landmarks, shops, trails. Each item: { "name": string, "detail": string } where detail is a short locality/description ("Bandra, Mumbai" or "rooftop bar"). Return [] if none.
-- tags: 3-6 lowercase topic tags, no '#'.
-
-Respond with ONLY the JSON object.`;
-
-const InstagramAnalyzeInput = z.object({
-  caption: z.string().trim().max(8000).nullable().optional(),
-  username: z.string().trim().max(120).nullable().optional(),
-  kind: z.string().trim().max(20).nullable().optional(),
-  url: z.string().trim().max(2000),
-  image: ImageSchema.nullable().optional(),
-});
-
-export const analyzeInstagramFn = createServerFn({ method: "POST" })
-  .inputValidator((d: unknown) => InstagramAnalyzeInput.parse(d))
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-
-    const parts: string[] = [`URL: ${data.url}`];
-    if (data.username) parts.push(`Author: @${data.username}`);
-    if (data.kind) parts.push(`Type: ${data.kind}`);
-    parts.push(data.caption ? `Caption:\n${data.caption.slice(0, 6000)}` : "(No caption available — rely on the image.)");
-
-    const content: any[] = [{ type: "text", text: parts.join("\n\n") }];
-    if (data.image) {
-      content.push({ type: "image_url", image_url: { url: `data:${data.image.mime};base64,${data.image.base64}` } });
-    }
-
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: IG_SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) throw new Error(`AI failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
-
-    const keyPoints: string[] = Array.isArray(parsed.key_points)
-      ? parsed.key_points.map((s: unknown) => String(s ?? "").trim()).filter(Boolean).slice(0, 6)
-      : [];
-    const places = (Array.isArray(parsed.places) ? parsed.places : [])
-      .map((p: any) => {
-        if (typeof p === "string") return { name: p.trim(), detail: null as string | null };
-        return { name: String(p?.name ?? "").trim(), detail: String(p?.detail ?? "").trim() || null };
-      })
-      .filter((p: { name: string }) => p.name.length > 0)
-      .slice(0, 8);
-
-    return {
-      heading: String(parsed.heading ?? "").slice(0, 140),
-      summary: String(parsed.summary ?? "").slice(0, 1600),
-      key_points: keyPoints,
-      places,
-      tags: parseTags(parsed.tags),
-    };
-  });
-
 
 
 // ---------- link label ----------------------------------------------------
@@ -660,3 +606,202 @@ export const fetchReaderViewFn = createServerFn({ method: "POST" })
       throw new Error(e?.message ?? "Reader view failed");
     }
   });
+
+// ---------- reminder verification ----------------------------------------
+
+const VerifyRemindersInput = z.object({
+  text: z.string().max(20000),
+  nowIso: z.string(),
+  candidates: z
+    .array(z.object({ iso: z.string(), title: z.string().optional() }))
+    .max(20),
+  existing: z.array(z.string()).max(50).optional().default([]),
+});
+
+export const verifyRemindersFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => VerifyRemindersInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    if (data.candidates.length === 0) return { reminders: [] as Array<{ iso: string; title: string }> };
+
+    const sys = `You verify reminder suggestions parsed from a user's note.
+
+For each candidate, decide if the date/time is a genuine future reminder the user would want, then return a clean, complete task title.
+
+Rules:
+- Drop candidates that are not real reminders (metadata, quoted dates, past events, ambiguous references, or duplicates of another candidate that refer to the same event).
+- Drop candidates whose date is essentially the same as an item in "existing" (same event, same time).
+- Titles MUST be full, human-readable task phrases (e.g. "Call Sarah about the brief", "Submit tax return"). Never use ellipses (no "…"), never truncate mid-word, never leave dangling prepositions. If you can't derive a clear title from the note, use a short natural phrase describing the event (e.g. "Meeting", "Deadline", "Reminder").
+- Preserve the exact ISO date from the candidate — do NOT change the time.
+- Return items in chronological order. Max 6 items.
+
+Return ONE JSON object: { "reminders": [ { "iso": string, "title": string } ] }. No prose, no code fences.`;
+
+    const user = `Now: ${data.nowIso}
+
+Existing reminders on this note (skip anything that duplicates these):
+${data.existing.length ? data.existing.join("\n") : "(none)"}
+
+Note text:
+"""
+${data.text}
+"""
+
+Candidates parsed locally:
+${JSON.stringify(data.candidates)}`;
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 30_000);
+    if (!res.ok) throw new Error(`Verify failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const allowedIsos = new Set(data.candidates.map((c) => c.iso));
+    const existingKeys = new Set(
+      data.existing
+        .map((iso) => new Date(iso).getTime())
+        .filter((t) => !isNaN(t))
+        .map((t) => Math.floor(t / 60000) * 60000),
+    );
+    const seen = new Set<number>();
+    const out: Array<{ iso: string; title: string }> = [];
+    const items: any[] = Array.isArray(parsed.reminders) ? parsed.reminders : [];
+    for (const r of items) {
+      const iso = String(r?.iso ?? "");
+      if (!allowedIsos.has(iso)) continue;
+      const t = new Date(iso).getTime();
+      if (isNaN(t)) continue;
+      const key = Math.floor(t / 60000) * 60000;
+      if (existingKeys.has(key) || seen.has(key)) continue;
+      let title = String(r?.title ?? "").replace(/[…]+/g, "").replace(/\s+/g, " ").trim();
+      if (!title) title = "Reminder";
+      if (title.length > 80) title = title.slice(0, 80).trim();
+      seen.add(key);
+      out.push({ iso, title });
+      if (out.length >= 6) break;
+    }
+    out.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
+    return { reminders: out };
+  });
+
+// ---------- smart reminder time suggestions -------------------------------
+
+const SmartTimesInput = z.object({
+  text: z.string().max(6000),
+  nowIso: z.string(),
+  timeZone: z.string().max(80).optional().default("UTC"),
+  profileSummary: z.string().max(600),
+  avoidWeekends: z.boolean().optional().default(true),
+  existing: z.array(z.string()).max(30).optional().default([]),
+});
+
+export const suggestSmartTimesFn = createServerFn({ method: "POST" })
+  .inputValidator((d: unknown) => SmartTimesInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+
+    const sys = `You suggest smart reminder times based on the user's note and their behavioral profile.
+
+Return 3 candidate reminder times that respect the user's typical active hours and avoid quiet windows (late night, and weekends unless the profile says otherwise).
+
+Rules:
+- Times must be in the FUTURE relative to "now".
+- Prefer times within the user's active window; never propose times outside their wake window.
+- Vary the horizons: one soon (later today or tomorrow), one in a few days, one longer-term — but every one must fit the note's apparent urgency.
+- Skip times that duplicate an existing reminder (same day + hour).
+- Each suggestion has:
+  - iso: full ISO 8601 timestamp WITH timezone offset matching the user's timezone
+  - label: short friendly label ("Tomorrow morning", "Sunday evening", "Next Tuesday")
+  - reason: one short sentence explaining WHY this time fits (e.g. "You're usually free around 9am on weekdays")
+- Also return ONE optional contextual suggestion with iso set to null and id set to "next-open" meaning "the next time you open the app during your active hours". Include it only if the note isn't strongly tied to a specific date.
+
+Return ONE JSON object: { "suggestions": [ { "iso": string|null, "id": string|null, "label": string, "reason": string } ] }.
+Max 4 items. No prose, no code fences.`;
+
+    const user = `Now: ${data.nowIso}
+User timezone: ${data.timeZone}
+Behavioral profile: ${data.profileSummary}
+Avoid weekends by default: ${data.avoidWeekends}
+
+Existing reminders on this note (skip duplicates):
+${data.existing.length ? data.existing.join("\n") : "(none)"}
+
+Note content:
+"""
+${data.text}
+"""`;
+
+    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
+      body: JSON.stringify({
+        model: MODEL,
+        messages: [
+          { role: "system", content: sys },
+          { role: "user", content: user },
+        ],
+        response_format: { type: "json_object" },
+      }),
+    }, 30_000);
+    if (!res.ok) throw new Error(`Smart times failed (${res.status})`);
+    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
+    const raw = j.choices?.[0]?.message?.content ?? "{}";
+    let parsed: any;
+    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+
+    const nowMs = new Date(data.nowIso).getTime();
+    const existingKeys = new Set(
+      data.existing
+        .map((iso) => new Date(iso).getTime())
+        .filter((t) => !isNaN(t))
+        .map((t) => Math.floor(t / (30 * 60 * 1000))),
+    );
+
+    const out: Array<{ iso: string | null; id: string | null; label: string; reason: string }> = [];
+    const items: any[] = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
+    const seenKeys = new Set<number>();
+    let seenNextOpen = false;
+
+    for (const it of items) {
+      const label = String(it?.label ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
+      const reason = String(it?.reason ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
+      if (!label) continue;
+
+      const rawId = typeof it?.id === "string" ? it.id.trim() : "";
+      const isoRaw = it?.iso;
+
+      if (rawId === "next-open" || (isoRaw == null && !seenNextOpen)) {
+        if (seenNextOpen) continue;
+        seenNextOpen = true;
+        out.push({ iso: null, id: "next-open", label: label || "Next time you open the app", reason });
+        continue;
+      }
+
+      if (typeof isoRaw !== "string") continue;
+      const t = new Date(isoRaw).getTime();
+      if (isNaN(t) || t <= nowMs + 60 * 1000) continue;
+      if (t > nowMs + 365 * 24 * 3600 * 1000) continue;
+      const key = Math.floor(t / (30 * 60 * 1000));
+      if (existingKeys.has(key) || seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      out.push({ iso: new Date(t).toISOString(), id: null, label, reason });
+      if (out.length >= 4) break;
+    }
+
+    return { suggestions: out };
+  });
+
+

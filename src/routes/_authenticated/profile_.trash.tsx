@@ -1,15 +1,12 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { RotateCcw, Trash2, Loader2, X } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { ChevronLeft, RotateCcw, Trash2, Loader2, X } from "lucide-react";
 import { toast } from "sonner";
 import { useLocalDeletedNotes } from "@/hooks/use-local-notes";
 import { hardDeleteLocalNotes, restoreLocalNotes } from "@/lib/sync-engine";
 import { purgeExpiredNotes, purgeNotes, restoreNotes } from "@/lib/notes.functions";
-import { MediaCard } from "@/components/MediaCard";
-import type { LocalMedia, LocalNote } from "@/lib/local-db";
-import { confirmDialog } from "@/components/ConfirmDialog";
-import { PageHeader } from "@/components/PageHeader";
-
+import { NoteCard, type Note } from "@/components/NoteCard";
+import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
 
 export const Route = createFileRoute("/_authenticated/profile_/trash")({
   head: () => ({
@@ -36,15 +33,51 @@ function TrashPage() {
   const navigate = useNavigate();
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [busy, setBusy] = useState(false);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
 
   useEffect(() => {
     void purgeExpiredNotes().catch(() => {});
   }, []);
 
-  const items = useMemo(() => (deleted ?? []) as LocalNote[], [deleted]);
+  const items = useMemo(() => (deleted ?? []) as Note[], [deleted]);
   const selectMode = selected.size > 0;
 
+  const signInFlightRef = useRef<Set<string>>(new Set());
+  const signThumbsFor = useCallback((rows: Note[]) => {
+    const paths: string[] = [];
+    const toFetch: Array<{ id: string; path: string }> = [];
+    for (const n of rows) {
+      const p = Array.isArray(n.image_paths) ? n.image_paths[0] : null;
+      if (!p) continue;
+      paths.push(p);
+      const cached = getCachedPhotoUrl(p);
+      if (cached) {
+        setThumbs((cur) => (cur[n.id] === cached ? cur : { ...cur, [n.id]: cached }));
+        continue;
+      }
+      if (signInFlightRef.current.has(p)) continue;
+      signInFlightRef.current.add(p);
+      toFetch.push({ id: n.id, path: p });
+    }
+    if (paths.length) void warmPhotoCache(paths);
+    if (toFetch.length === 0) return;
+    Promise.all(
+      toFetch.map(async ({ id, path }) => ({ id, path, url: await getPhotoUrl(path) })),
+    ).then((pairs) => {
+      setThumbs((cur) => {
+        const next = { ...cur };
+        for (const { id, path, url } of pairs) {
+          signInFlightRef.current.delete(path);
+          if (url) next[id] = url;
+        }
+        return next;
+      });
+    });
+  }, []);
 
+  useEffect(() => {
+    if (items.length) signThumbsFor(items);
+  }, [items, signThumbsFor]);
 
   function toggle(id: string) {
     setSelected((prev) => {
@@ -74,7 +107,7 @@ function TrashPage() {
   async function purgeSelected() {
     const ids = Array.from(selected);
     if (ids.length === 0) return;
-    if (!(await confirmDialog({ title: "Delete forever", message: `Permanently delete ${ids.length} note${ids.length > 1 ? "s" : ""}? This cannot be undone.`, destructive: true }))) return;
+    if (!confirm(`Permanently delete ${ids.length} note${ids.length > 1 ? "s" : ""}? This cannot be undone.`)) return;
     setBusy(true);
     try {
       await hardDeleteLocalNotes(ids);
@@ -90,7 +123,7 @@ function TrashPage() {
 
   async function purgeAll() {
     if (items.length === 0) return;
-    if (!(await confirmDialog({ title: "Empty trash", message: `Permanently delete all ${items.length} notes? This cannot be undone.`, confirmLabel: "Delete all", destructive: true }))) return;
+    if (!confirm(`Permanently delete all ${items.length} notes? This cannot be undone.`)) return;
     const ids = items.map((n) => n.id);
     setBusy(true);
     try {
@@ -107,7 +140,16 @@ function TrashPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background pb-32">
-      <PageHeader title="Recently deleted" backTo="/profile" />
+      <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
+        <Link
+          to="/profile"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-60"
+          aria-label="Back"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </Link>
+        <h1 className="text-[17px] font-semibold">Recently Deleted</h1>
+      </header>
 
       <div className="px-4 pt-3 text-[13px] text-muted-foreground">
         Notes here are permanently removed after 30 days. Long-press to select.
@@ -125,37 +167,31 @@ function TrashPage() {
             <div className="mt-1 text-[13px] text-muted-foreground">Deleted notes will appear here for 30 days.</div>
           </div>
         ) : (
-          <div className="grid grid-cols-3 gap-3">
+          <div className="columns-2 gap-3 [column-fill:_balance]">
             {items.map((n) => {
               const remaining = daysLeft(n.deleted_at ?? null);
-              const isSel = selected.has(n.id);
               return (
-                <button
-                  key={n.id}
-                  onClick={() => toggle(n.id)}
-                  className={`relative text-left transition-transform active:scale-[0.97] ${isSel ? "opacity-100" : "opacity-90"}`}
-                >
-                  <div className="aspect-[2/3] w-full">
-                    {n.media ? (
-                      <MediaCard media={n.media as LocalMedia} variant="grid" />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center rounded-[15px] bg-card p-2 text-center text-[11px] font-medium text-muted-foreground ring-1 ring-border/60">
-                        {n.heading || "Untitled"}
-                      </div>
-                    )}
+                <div key={n.id} className="mb-3 break-inside-avoid">
+                  <div className="relative">
+                    <NoteCard
+                      note={n}
+                      variant="masonry"
+                      thumbUrl={thumbs[n.id]}
+                      selected={selected.has(n.id)}
+                      selectMode={selectMode}
+                      onOpen={() => toggle(n.id)}
+                      onLongPress={() => toggle(n.id)}
+                      onToggleSel={() => toggle(n.id)}
+                    />
+                    <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
+                      {remaining}d left
+                    </div>
                   </div>
-                  <div className="pointer-events-none absolute bottom-2 left-2 z-10 rounded-full bg-black/55 px-2 py-0.5 text-[10px] font-medium text-white backdrop-blur-sm">
-                    {remaining}d left
-                  </div>
-                  {isSel && (
-                    <span className="pointer-events-none absolute inset-0 rounded-[15px] ring-2 ring-primary" />
-                  )}
-                </button>
+                </div>
               );
             })}
           </div>
         )}
-
       </section>
 
       {/* Bottom pill — always visible with counts + actions */}
@@ -173,7 +209,7 @@ function TrashPage() {
             <button
               disabled={busy}
               onClick={restoreSelected}
-              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold press-bounce active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70 disabled:opacity-50"
             >
               <RotateCcw className="h-3.5 w-3.5" />
               Restore
@@ -181,7 +217,7 @@ function TrashPage() {
             <button
               disabled={busy}
               onClick={purgeSelected}
-              className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground press-bounce active:opacity-70 disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" />
               Delete
@@ -192,7 +228,7 @@ function TrashPage() {
             <div className="pointer-events-auto flex items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-neutral-900 shadow-2xl ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:text-white dark:ring-white/10">
               <button
                 onClick={() => setSelected(new Set(items.map((n) => n.id)))}
-                className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold press-bounce active:opacity-70"
+                className="inline-flex items-center gap-1.5 rounded-full bg-foreground/10 px-3 py-1.5 text-[13px] font-semibold active:opacity-70"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
                 Restore all
@@ -200,7 +236,7 @@ function TrashPage() {
               <button
                 disabled={busy}
                 onClick={purgeAll}
-                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground press-bounce active:opacity-70 disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-full bg-destructive px-3 py-1.5 text-[13px] font-semibold text-destructive-foreground active:opacity-70 disabled:opacity-50"
               >
                 <Trash2 className="h-3.5 w-3.5" />
                 Delete all

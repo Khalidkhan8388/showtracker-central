@@ -19,11 +19,11 @@
  */
 
 @theme inline {
-  --font-sans: "Geist", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui,
-    "Segoe UI", Roboto, Arial, sans-serif;
-  --font-display: "Geist", -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, sans-serif;
-  --font-serif: "Geist", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display",
+    "Helvetica Neue", "Inter", ui-sans-serif, system-ui, "Segoe UI", Roboto, Arial, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Helvetica Neue", "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: "Instrument Serif", ui-serif, Georgia, "Times New Roman", serif;
   --radius-sm: calc(var(--radius) - 6px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
@@ -116,18 +116,10 @@
   --scrim-mid: rgba(0, 0, 0, 0.4);
   --scrim-fg: #ffffff;
 
-  /* Liquid glass pills */
-  --glass-bg: rgba(255, 255, 255, 0.55);
-  --glass-highlight: rgba(255, 255, 255, 0.75);
-  --glass-ring: rgba(0, 0, 0, 0.06);
-  --glass-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.35), 0 2px 8px -2px rgba(0, 0, 0, 0.12);
-  --glass-item-bg: rgba(255, 255, 255, 0.85);
-
-  /* Reminder accent — faded orange */
-  --reminder: #fbd0ae;          /* soft faded orange */
-  --reminder-strong: #f4a870;   /* deeper faded orange */
-  --reminder-foreground: #55290b;
-
+  /* Reminder accent — soft faded yellow */
+  --reminder: #fde68a;          /* amber-200, soft */
+  --reminder-strong: #fcd34d;   /* amber-300 */
+  --reminder-foreground: #4a3a00;
 
 
 }
@@ -171,13 +163,6 @@
   --sidebar-accent-foreground: #ffffff;
   --sidebar-border: rgba(84, 84, 88, 0.65);
   --sidebar-ring: #ffffff;
-
-  /* Liquid glass pills */
-  --glass-bg: rgba(40, 40, 44, 0.5);
-  --glass-highlight: rgba(255, 255, 255, 0.18);
-  --glass-ring: rgba(255, 255, 255, 0.12);
-  --glass-shadow: 0 18px 40px -14px rgba(0, 0, 0, 0.7), 0 2px 8px -2px rgba(0, 0, 0, 0.4);
-  --glass-item-bg: rgba(255, 255, 255, 0.16);
 
   /* Scrim tokens — dark mode fades to black */
   --scrim-strong: rgba(0, 0, 0, 0.85);
@@ -433,69 +418,3 @@ input[type="search"]::-webkit-search-decoration {
   background: var(--scrim-fg);
 }
 
-
-/* ---------- Liquid glass action pills ---------- */
-@utility glass-pill {
-  background: var(--glass-bg);
-  backdrop-filter: blur(32px) saturate(180%);
-  box-shadow:
-    inset 0 1px 0 0 var(--glass-highlight),
-    inset 0 0 0 1px var(--glass-ring),
-    var(--glass-shadow);
-}
-
-/* Selected / active item inside a glass pill */
-@utility glass-item {
-  background: var(--glass-item-bg);
-  box-shadow: inset 0 1px 0 0 var(--glass-highlight), 0 4px 12px -6px rgba(0, 0, 0, 0.4);
-}
-
-/* ---------- Bouncy motion system ---------- */
-@keyframes bounce-in {
-  0%   { opacity: 0; transform: scale(0.9) translateY(8px); }
-  60%  { opacity: 1; transform: scale(1.02) translateY(-2px); }
-  100% { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes bounce-up {
-  0%   { opacity: 0; transform: translateY(24px) scale(0.96); }
-  70%  { opacity: 1; transform: translateY(-4px) scale(1.01); }
-  100% { opacity: 1; transform: translateY(0) scale(1); }
-}
-@keyframes pop {
-  0%   { transform: scale(1); }
-  40%  { transform: scale(1.12); }
-  100% { transform: scale(1); }
-}
-
-@utility animate-bounce-in {
-  animation: bounce-in 380ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-@utility animate-bounce-up {
-  animation: bounce-up 420ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
-}
-@utility animate-pop {
-  animation: pop 300ms cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-/* Springy press feedback for any tappable control. */
-@utility press-bounce {
-  transition:
-    transform 260ms cubic-bezier(0.34, 1.56, 0.64, 1),
-    opacity 160ms ease-out,
-    background-color 160ms ease-out;
-  &:active { transform: scale(0.93); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .animate-bounce-in,
-  .animate-bounce-up,
-  .animate-pop { animation: none !important; }
-  .press-bounce { transition: none !important; }
-  .press-bounce:active { transform: none !important; }
-}
-
-/* Sticky top/bottom bars — same live-blur language as the action pills. */
-@utility glass-bar {
-  background: color-mix(in oklab, var(--color-background) 72%, transparent);
-  backdrop-filter: blur(28px) saturate(180%);
-}

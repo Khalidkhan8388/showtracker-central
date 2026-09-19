@@ -1,10 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
+import { ChevronLeft, FolderPlus, Plus, X, Trash2, ChevronRight, Folder } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useCollections, createCollection, deleteCollection, backfillMediaCollections, pruneEmptyCollections } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
-import { confirmDialog } from "@/components/ConfirmDialog";
-import { PageHeader } from "@/components/PageHeader";
 
 export const Route = createFileRoute("/_authenticated/collections/")({
   head: () => ({
@@ -59,16 +57,28 @@ function CollectionsPage() {
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <PageHeader title="Collections" backTo="/home">
-        <button
-          type="button"
-          onClick={() => setCreating(true)}
-          aria-label="New collection"
-          className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
-        >
-          <Plus className="h-5 w-5" />
-        </button>
-      </PageHeader>
+      <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
+        <div className="flex items-center justify-between gap-2 px-4 py-3">
+          <div className="flex min-w-0 items-center gap-2">
+            <Link
+              to="/home"
+              aria-label="Back"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+            <h1 className="text-[22px] font-bold tracking-tight">Collections</h1>
+          </div>
+          <button
+            type="button"
+            onClick={() => setCreating(true)}
+            aria-label="New collection"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
+          >
+            <Plus className="h-5 w-5" />
+          </button>
+        </div>
+      </header>
 
       <section className="flex-1 px-4 pb-24 pt-4">
         {creating && (
@@ -98,7 +108,7 @@ function CollectionsPage() {
                 setCreating(false);
               }}
               aria-label="Cancel"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
             >
               <X className="h-4 w-4" />
             </button>
@@ -112,7 +122,7 @@ function CollectionsPage() {
             </div>
             <p className="text-[17px] font-semibold text-foreground">No collections yet</p>
             <p className="mt-1 text-[13px] text-muted-foreground">
-              Group notes, media, and links into collections.
+              Group notes, tasks, and links into collections.
             </p>
             <button
               type="button"
@@ -143,18 +153,15 @@ function CollectionsPage() {
                   </div>
                   <button
                     type="button"
-                    onClick={async (e) => {
+                    onClick={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      const ok = await confirmDialog({
-                        title: "Delete collection",
-                        message: `Delete "${c.title}"? Memories inside won't be deleted.`,
-                        destructive: true,
-                      });
-                      if (ok) void deleteCollection(c.id);
+                      if (confirm(`Delete "${c.title}"? Memories inside won't be deleted.`)) {
+                        void deleteCollection(c.id);
+                      }
                     }}
                     aria-label="Delete collection"
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
                   >
                     <Trash2 className="h-4 w-4" />
                   </button>

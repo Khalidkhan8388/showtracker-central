@@ -3,7 +3,7 @@
 // but persist to Dexie instead of a cloud DB. AI-only work is delegated
 // to the server functions in `./ai.functions`.
 
-import { db, newNote, type LocalNote } from "./local-db";
+import { db, newNote, type LocalNote, type LocalTask } from "./local-db";
 import {
   analyzeMediaFn,
   analyzeTextFn,
@@ -136,15 +136,26 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
     const prior = {
       heading: note.heading ?? "",
       summary: note.summary ?? "",
+      tasks: (note.tasks ?? []).map((t) => t.text),
     };
-    const priorHasContent = prior.heading.trim() || prior.summary.trim();
+    const priorHasContent = prior.heading.trim() || prior.summary.trim() || prior.tasks.length > 0;
     const result = await analyzeMediaFn({
       data: {
         audio: firstAudio,
         images,
         prior: priorHasContent ? prior : null,
+        skipTasks: false, // extract tasks from voice and image notes alike
         extraTranscripts,
       },
+    });
+    // Preserve done/pending state where task text matches.
+    const priorMap = new Map<string, { done: boolean; pending: boolean }>();
+    for (const t of note.tasks ?? []) {
+      priorMap.set(t.text.trim().toLowerCase(), { done: !!t.done, pending: t.pending ?? false });
+    }
+    const tasksPayload: LocalTask[] = result.tasks.map((text, i) => {
+      const m = priorMap.get(text.trim().toLowerCase());
+      return { id: `t${i}`, text, done: m?.done ?? false, pending: m?.pending ?? true };
     });
     await updateNote(noteId, {
       status: "ready",
@@ -152,6 +163,7 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       heading: result.heading,
       summary: result.summary,
       key_points: result.key_points ?? [],
+      tasks: tasksPayload,
       error: null,
     });
     // Auto-OCR any images on media notes (voice+image or image-only).
@@ -204,7 +216,102 @@ async function autoExtractOcr(
 
 // -- CRUD ----
 
+export async function toggleTask({ data }: { data: { noteId: string; taskId: string; done?: boolean } }) {
+  const note = await getNote(data.noteId);
+  if (!note) return { ok: true as const };
+  const next = (note.tasks ?? []).map((t) =>
+    t.id === data.taskId ? { ...t, done: typeof data.done === "boolean" ? data.done : !t.done } : t,
+  );
+  await updateNote(data.noteId, { tasks: next });
+  return { ok: true as const };
+}
+
+export async function pinTask({ data }: { data: { noteId: string; taskId: string; pinned?: boolean } }) {
+  const note = await getNote(data.noteId);
+  if (!note) return { ok: true as const };
+  const next = (note.tasks ?? []).map((t) =>
+    t.id === data.taskId ? { ...t, pinned: typeof data.pinned === "boolean" ? data.pinned : !t.pinned } : t,
+  );
+  await updateNote(data.noteId, { tasks: next });
+  return { ok: true as const };
+}
+
+
+export async function editTaskText({
+  data,
+}: {
+  data: { noteId: string; taskId: string; text: string };
+}) {
+  const note = await getNote(data.noteId);
+  if (!note) return { ok: true as const };
+  const next = (note.tasks ?? []).map((t) => (t.id === data.taskId ? { ...t, text: data.text } : t));
+  await updateNote(data.noteId, { tasks: next });
+  return { ok: true as const };
+}
+
 const CUSTOM_HEADING = "__custom__";
+
+export async function addCustomTask({ data }: { data: { text: string } }) {
+  const existing = await db.notes.filter((n) => n.heading === CUSTOM_HEADING && !n.deleted_at).first();
+  const newTask: LocalTask = {
+    id: `c${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`,
+    text: data.text,
+    done: false,
+  };
+  if (existing) {
+    await updateNote(existing.id, { tasks: [...(existing.tasks ?? []), newTask] });
+    return { ok: true as const, noteId: existing.id, taskId: newTask.id };
+  }
+  const note = newNote({ heading: CUSTOM_HEADING, status: "ready", tasks: [newTask] });
+  await db.notes.put(note);
+  return { ok: true as const, noteId: note.id, taskId: newTask.id };
+}
+
+export async function deleteTasks({
+  data,
+}: {
+  data: { tasks: Array<{ noteId: string; taskId: string }> };
+}) {
+  const byNote = new Map<string, Set<string>>();
+  for (const t of data.tasks) {
+    if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+    byNote.get(t.noteId)!.add(t.taskId);
+  }
+  for (const [noteId, taskIds] of byNote) {
+    const note = await getNote(noteId);
+    if (!note) continue;
+    const next = (note.tasks ?? []).filter((t) => !taskIds.has(t.id));
+    await updateNote(noteId, { tasks: next });
+  }
+  return { ok: true as const };
+}
+
+export async function approveTasks({
+  data,
+}: {
+  data: { tasks: Array<{ noteId: string; taskId: string }> };
+}) {
+  const byNote = new Map<string, Set<string>>();
+  for (const t of data.tasks) {
+    if (!byNote.has(t.noteId)) byNote.set(t.noteId, new Set());
+    byNote.get(t.noteId)!.add(t.taskId);
+  }
+  for (const [noteId, taskIds] of byNote) {
+    const note = await getNote(noteId);
+    if (!note) continue;
+    const next = (note.tasks ?? []).map((t) => (taskIds.has(t.id) ? { ...t, pending: false } : t));
+    await updateNote(noteId, { tasks: next });
+  }
+  return { ok: true as const };
+}
+
+export async function dismissTasks({
+  data,
+}: {
+  data: { tasks: Array<{ noteId: string; taskId: string }> };
+}) {
+  return deleteTasks({ data });
+}
 
 export async function pinNote({ data }: { data: { noteId: string; pinned: boolean } }) {
   await updateNote(data.noteId, { pinned: data.pinned });
@@ -314,12 +421,76 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
   } catch {
     // Fall through to normal AI link processing.
   }
-
-
+  // 1b) YouTube — dedicated fetcher + AI analysis using title + description + captions.
+  try {
+    const { parseYouTubeId } = await import("./youtube");
+    if (parseYouTubeId(url)) {
+      const { fetchYouTubeFn } = await import("./youtube.functions");
+      const yt = await fetchYouTubeFn({ data: { url } });
+      let heading = yt.title ?? "YouTube video";
+      let summary = yt.description?.slice(0, 400) ?? null;
+      let keyPoints: string[] = [];
+      let tasksPayload: LocalTask[] = [];
+      try {
+        const { analyzeYouTubeFn } = await import("./ai.functions");
+        const ai = await analyzeYouTubeFn({
+          data: {
+            title: yt.title,
+            channelName: yt.channelName,
+            description: yt.description,
+            captions: yt.captions,
+            url: yt.canonicalUrl,
+          },
+        });
+        heading = ai.heading || heading;
+        summary = ai.summary || summary;
+        keyPoints = ai.key_points ?? [];
+        tasksPayload = ai.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
+      } catch (aiErr) {
+        console.error("[youtube] AI analysis failed, keeping metadata-only card", aiErr);
+      }
+      const tags = (yt.keywords ?? [])
+        .slice(0, 6)
+        .map((k) => k.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, ""))
+        .filter(Boolean);
+      await updateNote(note.id, {
+        status: "ready",
+        heading: heading.slice(0, 140),
+        summary,
+        tasks: tasksPayload,
+        key_points: keyPoints,
+        tags,
+        source_url: normalizeUrl(yt.canonicalUrl),
+        youtube: {
+          video_id: yt.videoId,
+          canonical_url: yt.canonicalUrl,
+          title: yt.title,
+          channel_name: yt.channelName,
+          channel_url: yt.channelUrl,
+          channel_id: yt.channelId,
+          thumbnail_url: yt.thumbnailUrl,
+          description: yt.description,
+          published_at: yt.publishedAt,
+          duration_seconds: yt.durationSeconds,
+          view_count: yt.viewCount,
+          keywords: yt.keywords ?? [],
+          captions_available: (yt.captions?.length ?? 0) > 40,
+        },
+      });
+      return { ok: true as const, noteId: note.id, youtube: true as const };
+    }
+  } catch (ytErr) {
+    console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
+  }
   // 2) Fall back to standard AI enrichment
-
   try {
     const result = await analyzeWebLinkFn({ data: { url } });
+    const tasksPayload: LocalTask[] = result.tasks.map((t, i) => ({
+      id: `t${i}`,
+      text: t,
+      done: false,
+      pending: true,
+    }));
     // Try to grab an og:image and persist it as the note's cover.
     let imagePaths: string[] = [];
     if (result.imageUrl) {
@@ -339,6 +510,7 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       status: "ready",
       heading: result.heading,
       summary: result.summary,
+      tasks: tasksPayload,
       image_paths: imagePaths,
     });
     if (imagePaths.length > 0) {
@@ -386,6 +558,8 @@ export async function saveTextNote({
     void (async () => {
       try {
         const enriched = await analyzeTextFn({ data: { heading, body } });
+        // Text notes never get AI-extracted tasks — tasks come only from
+        // voice, image, or URL notes.
         await updateNote(note.id, {
           heading: enriched.heading || heading,
           summary: enriched.summary,
@@ -535,7 +709,28 @@ export async function searchEverything({
         .toLowerCase();
       return hay.includes(needle);
     });
-    return { noteIds: noteMatches.map((n) => n.id), reasoning: null };
+    const tasks: Array<{
+      noteId: string;
+      taskId: string;
+      text: string;
+      done: boolean;
+      noteHeading: string | null;
+    }> = [];
+    for (const n of all) {
+      if (n.deleted_at) continue;
+      for (const t of n.tasks ?? []) {
+        if (t.text.toLowerCase().includes(needle)) {
+          tasks.push({
+            noteId: n.id,
+            taskId: t.id,
+            text: t.text,
+            done: !!t.done,
+            noteHeading: n.heading === "__custom__" ? null : n.heading,
+          });
+        }
+      }
+    }
+    return { noteIds: noteMatches.map((n) => n.id), tasks, reasoning: null };
   }
 
   const catalog = notes.slice(0, 200).map((n) => ({
@@ -545,5 +740,5 @@ export async function searchEverything({
     tags: n.tags ?? [],
   }));
   const { ids, reasoning } = await semanticRankFn({ data: { query: q, catalog } });
-  return { noteIds: ids, reasoning };
+  return { noteIds: ids, tasks: [] as any[], reasoning };
 }

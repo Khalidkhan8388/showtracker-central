@@ -2,13 +2,12 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { User, Calendar, MapPin, Film, Tv, Star, Plus, Check, Loader2 } from "lucide-react";
+import { ChevronLeft, User, Calendar, MapPin, Film, Tv, Star, Plus, Check, Loader2 } from "lucide-react";
 import { fetchTmdbPersonFn } from "@/lib/tmdb.functions";
 import { profile, poster } from "@/lib/media";
 import { addTmdbMedia } from "@/lib/notes.functions";
 import { db } from "@/lib/local-db";
 import { toast } from "sonner";
-import { BackButton } from "@/components/BackButton";
 
 export const Route = createFileRoute("/_authenticated/cast/$personId")({
   head: () => ({ meta: [{ title: "Cast — Braintape" }] }),
@@ -96,13 +95,14 @@ function CastDetail() {
   return (
     <div className="min-h-screen pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 border-b border-border/60 bg-background px-4 py-3">
-        <BackButton
-          onClick={() => {
-            if (typeof window !== "undefined" && window.history.length > 1) window.history.back();
-            else void navigate({ to: "/home" });
-          }}
-        />
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border/50 bg-background/90 px-4 py-3 backdrop-blur-xl">
+        <button
+          type="button"
+          onClick={() => window.history.back()}
+          className="inline-flex items-center gap-1 rounded-full bg-muted px-3 py-1.5 text-sm font-medium text-foreground active:opacity-60"
+        >
+          <ChevronLeft className="h-4 w-4" /> Back
+        </button>
       </div>
 
       {isLoading ? (

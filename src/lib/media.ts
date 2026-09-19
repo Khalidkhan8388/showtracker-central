@@ -1,6 +1,4 @@
 import { db, type LocalMedia, type LocalNote, type WatchStatus } from "./local-db";
-import { logEpisodeWatched, logMovieWatched, setStubRating, unlogEpisode, unlogMovie } from "./watch-history";
-
 
 export const TMDB_IMG = "https://image.tmdb.org/t/p";
 export const poster = (path: string | null, size: "w185" | "w342" | "w500" | "original" = "w342") =>
@@ -40,61 +38,17 @@ export const WATCH_COLORS: Record<WatchStatus, string> = {
 async function patchMedia(noteId: string, patch: Partial<LocalMedia>) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
-  const all = await db.notes.toArray();
-  const targets = all.filter(
-    (x) =>
-      !x.deleted_at &&
-      !!x.media &&
-      x.media.type === n.media!.type &&
-      x.media.tmdb_id === n.media!.tmdb_id,
-  );
-  const now = new Date().toISOString();
-  for (const t of (targets.length ? targets : [n])) {
-    if (!t.media) continue;
-    const media: LocalMedia = { ...t.media, ...patch };
-    await db.notes.update(t.id, { media, updated_at: now } as Partial<LocalNote>);
-  }
+  const media: LocalMedia = { ...n.media, ...patch };
+  await db.notes.update(noteId, { media, updated_at: new Date().toISOString() } as Partial<LocalNote>);
 }
-
 
 export async function setWatchStatus(noteId: string, status: WatchStatus | null) {
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
-  const watchedAt = status === "watched" ? new Date().toISOString() : n.media.watched_at;
-
-  // Ticket-stub history for movies (TV history is tracked per episode).
-  if (n.media.type === "movie") {
-    if (status === "watched") await logMovieWatched(n, n.media, watchedAt ?? new Date().toISOString());
-    else await unlogMovie(n.media.tmdb_id);
-  }
-
-  // Apply to every note that points at the same title so the status is
-  // identical no matter which collection/filter you're looking at.
-  const all = await db.notes.toArray();
-  const siblings = all.filter(
-    (x) =>
-      !x.deleted_at &&
-      !!x.media &&
-      x.media.type === n.media!.type &&
-      x.media.tmdb_id === n.media!.tmdb_id,
-  );
-  const targets = siblings.length ? siblings : [n];
-  const now = new Date().toISOString();
-  for (const t of targets) {
-    if (!t.media) continue;
-    const media: LocalMedia = { ...t.media, watch_status: status, watched_at: watchedAt };
-    await db.notes.update(t.id, { media, updated_at: now } as Partial<LocalNote>);
-  }
-}
-
-
-
-/** Set a personal 1–5 star rating (null clears it) across all notes + stubs for this title. */
-export async function setUserRating(noteId: string, rating: number | null) {
-  const n = await db.notes.get(noteId);
-  if (!n?.media) return;
-  await patchMedia(noteId, { user_rating: rating });
-  await setStubRating(n.media.tmdb_id, rating);
+  await patchMedia(noteId, {
+    watch_status: status,
+    watched_at: status === "watched" ? new Date().toISOString() : n.media.watched_at,
+  });
 }
 
 export async function toggleEpisodeWatched(noteId: string, season: number, episode: number, watched?: boolean) {
@@ -105,10 +59,7 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
   const shouldBe = watched ?? !set.has(key);
   if (shouldBe) set.add(key);
   else set.delete(key);
-  if (shouldBe) await logEpisodeWatched(n, n.media, season, episode);
-  else await unlogEpisode(n.media.tmdb_id, season, episode);
   const arr = Array.from(set);
-
   // Auto-promote status
   let status: WatchStatus | null = n.media.watch_status;
   const total = totalEpisodes(n.media);
@@ -130,15 +81,9 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
   const set = new Set(n.media.watched_episodes);
   for (const ep of s.episodes) {
     const k = epKey(season, ep.episode_number);
-    if (watched) {
-      set.add(k);
-      await logEpisodeWatched(n, n.media, season, ep.episode_number);
-    } else {
-      set.delete(k);
-      await unlogEpisode(n.media.tmdb_id, season, ep.episode_number);
-    }
+    if (watched) set.add(k);
+    else set.delete(k);
   }
-
   const arr = Array.from(set);
   const total = totalEpisodes(n.media);
   let status: WatchStatus | null = n.media.watch_status;

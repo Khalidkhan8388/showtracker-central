@@ -2,6 +2,15 @@ import Dexie, { type Table } from "dexie";
 
 export const LOCAL_UID = "local";
 
+export type LocalTask = {
+  id: string;
+  text: string;
+  done: boolean;
+  pinned?: boolean;
+  pending?: boolean;
+  reminder_at?: string | null;
+};
+
 export type WatchStatus = "watchlist" | "watching" | "watched" | "dropped";
 
 export type LocalMediaEpisode = {
@@ -43,8 +52,6 @@ export type LocalMedia = {
   seasons?: LocalMediaSeason[];
   watch_status: WatchStatus | null;
   watched_at: string | null;
-  /** Personal rating, 1–5 stars. */
-  user_rating?: number | null;
   // Set of "S{season}E{ep}" identifiers watched (tv only)
   watched_episodes: string[];
 };
@@ -65,24 +72,6 @@ export type LocalYouTube = {
   captions_available: boolean;
 };
 
-export type LocalInstagram = {
-  shortcode: string;
-  kind: "post" | "reel" | "tv";
-  canonical_url: string;
-  username: string | null;
-  display_name: string | null;
-  caption: string | null;
-  like_count: number | null;
-  comment_count: number | null;
-  posted_at: string | null;
-  is_video: boolean;
-  /** Remote CDN image, used when the local cached copy is unavailable. */
-  thumbnail_url?: string | null;
-  /** Real-world places mentioned in / visible in the post (AI extracted). */
-  places?: { name: string; detail: string | null }[] | null;
-};
-
-
 export type LocalNote = {
   id: string;
   user_id: string;
@@ -90,6 +79,7 @@ export type LocalNote = {
   heading: string | null;
   summary: string | null;
   transcript: string | null;
+  tasks: LocalTask[];
   duration_seconds: number | null;
   created_at: string;
   updated_at: string;
@@ -104,13 +94,19 @@ export type LocalNote = {
   deleted_at: string | null;
   media?: LocalMedia | null;
   youtube?: LocalYouTube | null;
-  instagram?: LocalInstagram | null;
-  /** Real-world places extracted from a link's content (AI extracted). */
-  places?: { name: string; detail: string | null }[] | null;
-
+  reminder_at?: string | null;
+  reminders?: string[];
+  hidden_episode_reminders?: string[];
   ocr_text?: string | null;
   ocr_hidden?: boolean;
+  reminder_suggestion_dismissed?: boolean;
   action_suggestion_dismissed?: boolean;
+  reminder_titles?: Record<string, string>;
+  /** Contextual reminders — fire based on behavior rather than a fixed time.
+   *  Supported ids: "next-open" (fires on next app open during active hours). */
+  contextual_reminders?: string[];
+  /** Metadata for contextual reminders (title + creation time), keyed by id above. */
+  contextual_meta?: Record<string, { title: string; created_at: string }>;
 
 
 
@@ -136,35 +132,12 @@ export type LocalCollection = {
   updated_at: string;
 };
 
-/** One "ticket stub" — a movie or an episode you finished watching. */
-export type WatchLogEntry = {
-  id: string;
-  at: string;               // ISO timestamp of when it was marked watched
-  note_id: string;
-  type: "movie" | "tv";
-  tmdb_id: number;
-  title: string;
-  poster_path: string | null;
-  backdrop_path: string | null;
-  /** tv only */
-  season: number | null;
-  episode: number | null;
-  episode_title: string | null;
-  runtime: number | null;   // minutes
-  year: string | null;
-  vote_average: number | null;
-  /** Personal rating, 1–5 stars, copied from the title. */
-  user_rating?: number | null;
-};
-
 class BraintapeDB extends Dexie {
   notes!: Table<LocalNote, string>;
   meta!: Table<MetaRow, string>;
   photos!: Table<LocalBlob, string>;
   audios!: Table<LocalBlob, string>;
   collections!: Table<LocalCollection, string>;
-  watchlog!: Table<WatchLogEntry, string>;
-
 
   constructor() {
     super("braintape");
@@ -237,6 +210,12 @@ class BraintapeDB extends Dexie {
       photos: "path, cachedAt, size",
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
+    }).upgrade(async (tx) => {
+      await tx.table("notes").toCollection().modify((n: any) => {
+        if (!Array.isArray(n.reminders)) {
+          n.reminders = n.reminder_at ? [n.reminder_at] : [];
+        }
+      });
     });
     // v11: optional YouTube payload on link notes. No new index.
     this.version(11).stores({
@@ -246,36 +225,8 @@ class BraintapeDB extends Dexie {
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
     });
-    // v12: optional Instagram payload on link notes. No new index.
-    this.version(12).stores({
-      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
-      meta: "key",
-      photos: "path, cachedAt, size",
-      audios: "path, cachedAt, size",
-      collections: "id, title, created_at, updated_at",
-    });
-    // v13: watch history ("ticket stubs") for movies + episodes.
-    this.version(13).stores({
-      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
-      meta: "key",
-      photos: "path, cachedAt, size",
-      audios: "path, cachedAt, size",
-      collections: "id, title, created_at, updated_at",
-      watchlog: "id, at, tmdb_id, type, note_id",
-    });
-    // v14: personal star rating on media + watch log stubs. No new index.
-    this.version(14).stores({
-      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
-      meta: "key",
-      photos: "path, cachedAt, size",
-      audios: "path, cachedAt, size",
-      collections: "id, title, created_at, updated_at",
-      watchlog: "id, at, tmdb_id, type, note_id",
-    });
-
   }
 }
-
 
 
 
@@ -290,6 +241,7 @@ export function newNote(patch: Partial<LocalNote> = {}): LocalNote {
     heading: null,
     summary: null,
     transcript: null,
+    tasks: [],
     duration_seconds: null,
     created_at: now,
     updated_at: now,

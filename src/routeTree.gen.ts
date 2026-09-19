@@ -9,23 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as OnboardingRouteImport } from './routes/onboarding'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
+import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
+import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
 import { Route as AuthenticatedCastPersonIdRouteImport } from './routes/_authenticated/cast.$personId'
 
-const OnboardingRoute = OnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
@@ -34,6 +31,11 @@ const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
+  id: '/share',
+  path: '/share',
+  getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
   id: '/search',
@@ -50,10 +52,21 @@ const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
   path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
+const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedCollectionsIndexRoute =
   AuthenticatedCollectionsIndexRouteImport.update({
     id: '/collections/',
     path: '/collections/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTasksReviewRoute =
+  AuthenticatedTasksReviewRouteImport.update({
+    id: '/tasks/review',
+    path: '/tasks/review',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedProfileTrashRoute =
@@ -82,97 +95,101 @@ const AuthenticatedCastPersonIdRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
-  '/onboarding': typeof OnboardingRoute
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/share': typeof AuthenticatedShareRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
+  '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/collections/': typeof AuthenticatedCollectionsIndexRoute
+  '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/onboarding': typeof OnboardingRoute
   '/home': typeof AuthenticatedHomeRoute
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
+  '/share': typeof AuthenticatedShareRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
+  '/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/collections': typeof AuthenticatedCollectionsIndexRoute
+  '/tasks': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteWithChildren
-  '/onboarding': typeof OnboardingRoute
   '/_authenticated/home': typeof AuthenticatedHomeRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
+  '/_authenticated/share': typeof AuthenticatedShareRoute
   '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
+  '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
   '/_authenticated/collections/': typeof AuthenticatedCollectionsIndexRoute
+  '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
-    | '/onboarding'
     | '/home'
     | '/profile'
     | '/search'
+    | '/share'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
+    | '/tasks/review'
     | '/collections/'
+    | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
-    | '/onboarding'
     | '/home'
     | '/profile'
     | '/search'
+    | '/share'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
+    | '/tasks/review'
     | '/collections'
+    | '/tasks'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
-    | '/onboarding'
     | '/_authenticated/home'
     | '/_authenticated/profile'
     | '/_authenticated/search'
+    | '/_authenticated/share'
     | '/_authenticated/cast/$personId'
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
     | '/_authenticated/profile_/trash'
+    | '/_authenticated/tasks/review'
     | '/_authenticated/collections/'
+    | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
-  OnboardingRoute: typeof OnboardingRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/onboarding': {
-      id: '/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof OnboardingRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/_authenticated': {
       id: '/_authenticated'
       path: ''
@@ -186,6 +203,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_authenticated/share': {
+      id: '/_authenticated/share'
+      path: '/share'
+      fullPath: '/share'
+      preLoaderRoute: typeof AuthenticatedShareRouteImport
+      parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/search': {
       id: '/_authenticated/search'
@@ -208,11 +232,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/tasks/': {
+      id: '/_authenticated/tasks/'
+      path: '/tasks'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/collections/': {
       id: '/_authenticated/collections/'
       path: '/collections'
       fullPath: '/collections/'
       preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/tasks/review': {
+      id: '/_authenticated/tasks/review'
+      path: '/tasks/review'
+      fullPath: '/tasks/review'
+      preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile_/trash': {
@@ -250,22 +288,28 @@ interface AuthenticatedRouteChildren {
   AuthenticatedHomeRoute: typeof AuthenticatedHomeRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
+  AuthenticatedShareRoute: typeof AuthenticatedShareRoute
   AuthenticatedCastPersonIdRoute: typeof AuthenticatedCastPersonIdRoute
   AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
   AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
+  AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
   AuthenticatedCollectionsIndexRoute: typeof AuthenticatedCollectionsIndexRoute
+  AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
 }
 
 const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedHomeRoute: AuthenticatedHomeRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
+  AuthenticatedShareRoute: AuthenticatedShareRoute,
   AuthenticatedCastPersonIdRoute: AuthenticatedCastPersonIdRoute,
   AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
   AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
+  AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
   AuthenticatedCollectionsIndexRoute: AuthenticatedCollectionsIndexRoute,
+  AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
 }
 
 const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
@@ -275,7 +319,6 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
-  OnboardingRoute: OnboardingRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

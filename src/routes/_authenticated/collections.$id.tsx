@@ -1,18 +1,15 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin, ArrowUpDown } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronLeft, Trash2, Plus, X, Check, LayoutGrid, List as ListIcon, CalendarClock, BarChart3, Clock, Film, Tv, Eye, PlayCircle, XCircle, Pin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useCollection, removeNotesFromCollection, addNotesToCollection, renameCollection, deleteCollection } from "@/lib/collections";
 import { useLocalNotes } from "@/hooks/use-local-notes";
 import { formatDistanceToNow, format } from "date-fns";
 import { getCachedPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
-import { BackButton } from "@/components/BackButton";
 import { poster as tmdbPoster, still as tmdbStill, WATCH_LABEL, WATCH_COLORS, totalEpisodes as mediaTotal, watchedCount as mediaDone, epKey, toggleEpisodeWatched, setWatchStatus } from "@/lib/media";
 import { deleteNotes, pinNote } from "@/lib/notes.functions";
 import type { WatchStatus, LocalMedia, LocalMediaEpisode } from "@/lib/local-db";
-import { useLongPress } from "@/lib/use-long-press";
-
-import { WatchHistorySection } from "@/components/WatchHistorySection";
+import { NoteCard, useLongPress } from "@/components/NoteCard";
+import { FeedNoteCard } from "@/components/FeedNoteCard";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -30,27 +27,6 @@ import { fetchTmdbLogoFn } from "@/lib/tmdb.functions";
 
 
 
-
-type SortKey =
-  | "added-desc"
-  | "added-asc"
-  | "release-desc"
-  | "release-asc"
-  | "title"
-  | "rating"
-  | "status"
-  | "progress";
-
-const SORT_LABEL: Record<SortKey, string> = {
-  "added-desc": "Recently added",
-  "added-asc": "Oldest added",
-  "release-desc": "Release date — newest",
-  "release-asc": "Release date — oldest",
-  title: "Title A–Z",
-  rating: "Rating",
-  status: "Watch status",
-  progress: "Progress",
-};
 
 export const Route = createFileRoute("/_authenticated/collections/$id")({
   head: () => ({
@@ -90,16 +66,7 @@ function CollectionDetail() {
     [notes, memberIds],
   );
   const [statusFilter, setStatusFilter] = useState<WatchStatus | "all">("all");
-  const [sort, setSort] = useState<SortKey>(() => {
-    if (typeof window === "undefined") return "added-desc";
-    return ((localStorage.getItem("collection-sort") as SortKey) ?? "added-desc");
-  });
-  function setSortMode(s: SortKey) {
-    setSort(s);
-    if (typeof window !== "undefined") localStorage.setItem("collection-sort", s);
-  }
   const [tvView, setTvView] = useState<"posters" | "episodes" | "stats">("posters");
-
   const mediaMembers = useMemo(
     () => allMembers.filter((n) => !!(n as any).media),
     [allMembers],
@@ -128,59 +95,9 @@ function CollectionDetail() {
           const m = (n as any).media;
           return m && m.watch_status === statusFilter;
         });
-
-    const md = (n: any): LocalMedia | null => (n?.media ?? null) as LocalMedia | null;
-    const releaseMs = (n: any) => {
-      const m = md(n);
-      const d = m?.release_date || (m as any)?.last_air_date || null;
-      const t = d ? Date.parse(d) : NaN;
-      return Number.isNaN(t) ? null : t;
-    };
-    const titleOf = (n: any) => (md(n)?.title || n.heading || "").toLowerCase();
-    const progressOf = (n: any) => {
-      const m = md(n);
-      if (!m || m.type !== "tv") return -1;
-      const total = mediaTotal(m);
-      return total ? mediaDone(m) / total : 0;
-    };
-    const STATUS_ORDER: Record<string, number> = { watching: 0, watchlist: 1, watched: 2, dropped: 3 };
-
-    const cmp = (a: any, b: any) => {
-      switch (sort) {
-        case "release-desc": {
-          const x = releaseMs(a), y = releaseMs(b);
-          if (x === null && y === null) return 0;
-          if (x === null) return 1;
-          if (y === null) return -1;
-          return y - x;
-        }
-        case "release-asc": {
-          const x = releaseMs(a), y = releaseMs(b);
-          if (x === null && y === null) return 0;
-          if (x === null) return 1;
-          if (y === null) return -1;
-          return x - y;
-        }
-        case "title":
-          return titleOf(a).localeCompare(titleOf(b));
-        case "rating":
-          return (md(b)?.vote_average ?? -1) - (md(a)?.vote_average ?? -1);
-        case "status":
-          return (STATUS_ORDER[md(a)?.watch_status ?? ""] ?? 9) - (STATUS_ORDER[md(b)?.watch_status ?? ""] ?? 9);
-        case "progress":
-          return progressOf(b) - progressOf(a);
-        case "added-asc":
-          return (a.created_at ?? "").localeCompare(b.created_at ?? "");
-        case "added-desc":
-        default:
-          return (b.created_at ?? "").localeCompare(a.created_at ?? "");
-      }
-    };
-
-    // pinned first, then chosen sort
-    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)) || cmp(a, b));
-  }, [allMembers, hasMedia, statusFilter, sort]);
-
+    // pinned first, stable
+    return [...base].sort((a, b) => (Number(!!b.pinned) - Number(!!a.pinned)));
+  }, [allMembers, hasMedia, statusFilter]);
   const allSelectedPinned = useMemo(() => {
     if (removeSel.size === 0) return false;
     for (const id of removeSel) {
@@ -268,15 +185,20 @@ function CollectionDetail() {
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
       <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
         <div className="flex items-center gap-2 px-4 py-3">
-          <BackButton
+          <button
+            type="button"
             onClick={() => {
               if (typeof window !== "undefined" && window.history.length > 1) {
                 window.history.back();
               } else {
-                void navigate({ to: "/collections" });
+                navigate({ to: "/collections" });
               }
             }}
-          />
+            aria-label="Back"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-foreground active:opacity-70"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
           {editingTitle ? (
             <form
               className="flex flex-1 items-center gap-2"
@@ -294,7 +216,7 @@ function CollectionDetail() {
                   if (title.trim()) await renameCollection(id, title);
                   setEditingTitle(false);
                 }}
-                className="flex-1 bg-transparent text-[17px] font-semibold outline-none"
+                className="flex-1 bg-transparent text-[22px] font-bold tracking-tight outline-none"
                 maxLength={80}
               />
             </form>
@@ -305,7 +227,7 @@ function CollectionDetail() {
                 setTitle(collection.title);
                 setEditingTitle(true);
               }}
-              className="flex-1 truncate text-left text-[17px] font-semibold"
+              className="flex-1 truncate text-left text-[22px] font-bold tracking-tight"
             >
               {collection.title}
             </button>
@@ -314,7 +236,7 @@ function CollectionDetail() {
             type="button"
             onClick={() => setConfirmDelete(true)}
             aria-label="Delete collection"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground press-bounce active:opacity-70"
+            className="inline-flex h-9 w-9 items-center justify-center rounded-full text-muted-foreground active:opacity-70"
           >
             <Trash2 className="h-4 w-4" />
           </button>
@@ -334,7 +256,7 @@ function CollectionDetail() {
                     setPicked(new Set());
                     setPicking(false);
                   }}
-                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground press-bounce active:opacity-70"
+                  className="rounded-full px-3 py-1.5 text-[13px] font-medium text-muted-foreground active:opacity-70"
                 >
                   Cancel
                 </button>
@@ -364,7 +286,7 @@ function CollectionDetail() {
                         }`}
                       >
                         <div
-                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-[7px] border ${
+                          className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border ${
                             sel ? "border-primary bg-primary text-primary-foreground" : "border-muted-foreground/40"
                           }`}
                         >
@@ -397,7 +319,7 @@ function CollectionDetail() {
                     setPicking(true);
                   }
                 }}
-                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground press-bounce active:opacity-70"
+                className="flex flex-1 items-center justify-center gap-2 rounded-2xl border border-dashed border-border bg-card/60 px-4 py-3 text-[14px] font-semibold text-muted-foreground active:opacity-70"
               >
                 <Plus className="h-4 w-4" />
                 Add memories
@@ -405,7 +327,7 @@ function CollectionDetail() {
             </div>
             {hasMedia && (
             <div className="pointer-events-none fixed inset-x-0 bottom-4 z-30 flex justify-center px-4">
-              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full glass-pill animate-bounce-up p-1">
+              <div className="pointer-events-auto inline-flex items-center gap-0 rounded-full bg-white/90 p-1 shadow-lg ring-1 ring-black/10 backdrop-blur-xl backdrop-saturate-150 dark:bg-neutral-900/90 dark:ring-white/10">
                 <button
                   type="button"
                   onClick={() => setTvView("posters")}
@@ -479,18 +401,58 @@ function CollectionDetail() {
 
 
             {!hasMedia ? (
-              <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
-                This collection is empty.
-              </p>
+              members.length === 0 ? (
+                <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
+                  This collection is empty.
+                </p>
+              ) : (
+                <div className="columns-2 gap-3 [column-fill:_balance]">
+                  {members.map((n) => {
+                    const sel = removeSel.has(n.id);
+                    return (
+                      <div key={n.id} className="mb-3 break-inside-avoid">
+                        <FeedNoteCard
+                          note={n as any}
+                          variant="masonry"
+                          fullWidth
+                          thumbUrl={thumbs[n.id]}
+                          selected={sel}
+                          selectMode={removing}
+                          onOpen={() => {
+                            if (removing) {
+                              setRemoveSel((prev) => {
+                                const next = new Set(prev);
+                                next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                                return next;
+                              });
+                            } else {
+                              navigate({ to: "/notes/$id", params: { id: n.id } });
+                            }
+                          }}
+                          onLongPress={() => {
+                            setRemoving(true);
+                            setRemoveSel(new Set([n.id]));
+                          }}
+                          onToggleSel={() => {
+                            setRemoveSel((prev) => {
+                              const next = new Set(prev);
+                              next.has(n.id) ? next.delete(n.id) : next.add(n.id);
+                              return next;
+                            });
+                          }}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )
             ) : hasMedia && tvView === "stats" ? (
               <MediaStats members={mediaMembers} />
             ) : hasTv && tvView === "episodes" ? (
               <EpisodeTracker members={mediaMembers} />
             ) : (
             <>
-
             {hasMedia && (
-
               <div className="-mx-4 mb-3 overflow-x-auto px-4">
                 <div className="inline-flex min-w-full gap-1.5">
                   {((hasTv
@@ -508,7 +470,7 @@ function CollectionDetail() {
                         className={`shrink-0 rounded-full px-3 py-1.5 text-[12px] font-semibold transition-colors ${
                           active
                             ? "bg-primary text-primary-foreground"
-                            : "bg-card text-muted-foreground ring-1 ring-border/60 press-bounce active:opacity-70"
+                            : "bg-card text-muted-foreground ring-1 ring-border/60 active:opacity-70"
                         }`}
                       >
                         {label}
@@ -520,39 +482,6 @@ function CollectionDetail() {
                   })}
                 </div>
               </div>
-            )}
-            {hasMedia && (
-              <div className="mb-3 flex items-center justify-between">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
-                  {members.length} {members.length === 1 ? "title" : "titles"}
-                </span>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button
-                      type="button"
-                      className="press-bounce inline-flex items-center gap-1.5 rounded-full bg-card px-3 py-1.5 text-[12px] font-semibold text-muted-foreground ring-1 ring-border/60 active:opacity-70"
-                    >
-                      <ArrowUpDown className="h-3.5 w-3.5" />
-                      {SORT_LABEL[sort]}
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-52 rounded-2xl">
-                    {(Object.keys(SORT_LABEL) as SortKey[])
-                      .filter((k) => (k === "progress" ? hasTv : true))
-                      .map((k) => (
-                        <DropdownMenuItem
-                          key={k}
-                          onSelect={() => setSortMode(k)}
-                          className="flex items-center justify-between gap-3 rounded-xl text-[13px]"
-                        >
-                          {SORT_LABEL[k]}
-                          {sort === k && <Check className="h-4 w-4" />}
-                        </DropdownMenuItem>
-                      ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
             )}
             {members.length === 0 ? (
               <p className="rounded-2xl bg-card px-4 py-8 text-center text-[13px] text-muted-foreground ring-1 ring-border/60">
@@ -622,7 +551,7 @@ function CollectionDetail() {
 
       {removing && (
         <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
-          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full glass-pill animate-bounce-up px-2 py-1.5 text-foreground">
+          <div className="pointer-events-auto flex max-w-[calc(100vw-2rem)] flex-wrap items-center justify-center gap-1 rounded-full border border-border/60 bg-background/90 px-2 py-1.5 text-foreground shadow-xl backdrop-blur-xl">
             <button
               type="button"
               onClick={() => { setRemoving(false); setRemoveSel(new Set()); }}
@@ -1074,37 +1003,24 @@ function MediaStats({ members }: { members: Array<{ id: string; heading: string 
 
   return (
     <div className="pb-24">
-      {/* Ticket stubs deck */}
-      <div className="mb-4">
-        <WatchHistorySection
-          tmdbIds={members.map((m) => m.media?.tmdb_id).filter((x): x is number => typeof x === "number")}
-          limit={50}
-          variant="deck"
-        />
+      {/* Overall hero */}
+      <div className="rounded-3xl bg-primary p-5 text-primary-foreground shadow-sm">
+        <p className="text-[11px] font-semibold uppercase tracking-wider opacity-80">Time watched</p>
+        <p className="mt-1 text-[34px] font-bold leading-none tracking-tight tabular-nums">
+          {fmtMinutes(stats.totals.mins)}
+        </p>
+        <p className="mt-2 text-[12px] opacity-80">
+          {(() => {
+            const parts: string[] = [];
+            if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
+            if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
+            return parts.length ? `Across ${parts.join(" · ")}` : "Nothing watched yet";
+          })()}
+        </p>
       </div>
 
       {/* Watched shelf */}
       <WatchedShelf members={members} />
-
-      {/* Time watched — compact */}
-      <div className="mt-4 flex items-center justify-between gap-3 rounded-2xl bg-card px-4 py-3 ring-1 ring-border/60">
-        <div className="min-w-0">
-          <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">Time watched</p>
-          <p className="mt-0.5 truncate text-[12px] text-muted-foreground">
-            {(() => {
-              const parts: string[] = [];
-              if (stats.hasMovies) parts.push(`${stats.movies.watched} movie${stats.movies.watched === 1 ? "" : "s"}`);
-              if (stats.hasShows) parts.push(`${stats.shows.epsWatched} episode${stats.shows.epsWatched === 1 ? "" : "s"}`);
-              return parts.length ? parts.join(" · ") : "Nothing watched yet";
-            })()}
-          </p>
-        </div>
-        <p className="shrink-0 text-[18px] font-bold leading-none tracking-tight tabular-nums text-foreground">
-          {fmtMinutes(stats.totals.mins)}
-        </p>
-      </div>
-
-
 
 
       {stats.hasMovies && (
@@ -1532,7 +1448,7 @@ function MediaListRow({
           </div>
         )}
         {selectMode && (
-          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-[8px] bg-background/90 shadow ring-1 ring-border">
+          <div className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow ring-1 ring-border">
             {selected ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
           </div>
         )}
@@ -1641,7 +1557,7 @@ function MediaGridTile({
           </div>
         )}
         {selectMode && (
-          <div className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-[8px] bg-background/90 shadow ring-1 ring-border">
+          <div className="absolute left-1.5 top-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-background/90 shadow ring-1 ring-border">
             {selected ? <Check className="h-3.5 w-3.5" strokeWidth={3} /> : null}
           </div>
         )}

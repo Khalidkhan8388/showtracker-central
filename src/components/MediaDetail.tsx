@@ -4,7 +4,6 @@ import { useQuery } from "@tanstack/react-query";
 import { Film, Tv, Star, Clock, Calendar, Globe, ChevronDown, Check, Circle, Trash2, User } from "lucide-react";
 import type { LocalMedia, WatchStatus } from "@/lib/local-db";
 import { fetchTmdbCreditsFn } from "@/lib/tmdb.functions";
-import { haptic } from "@/lib/haptics";
 import {
   backdrop,
   epKey,
@@ -14,7 +13,6 @@ import {
   still,
   toggleEpisodeWatched,
   toggleSeasonWatched,
-  setUserRating,
   totalEpisodes,
   WATCH_COLORS,
   WATCH_LABEL,
@@ -148,53 +146,13 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                 type="button"
                 onClick={() => void setWatchStatus(noteId, active ? null : s)}
                 className={`rounded-2xl px-2 py-2.5 text-[12px] font-semibold transition-colors ${
-                  active ? WATCH_COLORS[s] : "bg-muted text-muted-foreground press-bounce active:opacity-70"
+                  active ? WATCH_COLORS[s] : "bg-muted text-muted-foreground active:opacity-70"
                 }`}
               >
                 {WATCH_LABEL[s]}
               </button>
             );
           })}
-        </div>
-      </section>
-
-      {/* Your rating */}
-      <section className="mt-6">
-        <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">Your rating</h2>
-        <div className="flex items-center justify-between rounded-2xl bg-card px-4 py-3 shadow-sm">
-          <div className="flex items-center gap-1.5">
-            {[1, 2, 3, 4, 5].map((n) => {
-              const filled = (media.user_rating ?? 0) >= n;
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  aria-label={`Rate ${n} star${n > 1 ? "s" : ""}`}
-                  onClick={() => {
-                    void haptic.tap();
-                    void setUserRating(noteId, media.user_rating === n ? null : n);
-                  }}
-                  className="press-bounce p-0.5 active:opacity-70"
-                >
-                  <Star
-                    className={`h-7 w-7 ${filled ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"}`}
-                    strokeWidth={1.75}
-                  />
-                </button>
-              );
-            })}
-          </div>
-          {media.user_rating ? (
-            <button
-              type="button"
-              onClick={() => void setUserRating(noteId, null)}
-              className="rounded-full bg-muted px-3 py-1.5 text-[12px] font-medium text-muted-foreground press-bounce active:opacity-60"
-            >
-              Clear
-            </button>
-          ) : (
-            <span className="text-[12px] text-muted-foreground">Not rated</span>
-          )}
         </div>
       </section>
 
@@ -337,12 +295,9 @@ export function MediaDetail({ noteId, media, onDelete }: { noteId: string; media
                           {s.air_date ? ` · ${s.air_date.slice(0, 4)}` : ""}
                         </p>
                       </div>
-                      <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-muted text-foreground">
-                        <ChevronDown
-                          className={`h-4 w-4 transition-transform ${open ? "rotate-180" : ""}`}
-                          strokeWidth={2.5}
-                        />
-                      </span>
+                      <ChevronDown
+                        className={`h-4 w-4 shrink-0 text-muted-foreground transition-transform ${open ? "rotate-180" : ""}`}
+                      />
                     </button>
                   </div>
                   {open && (

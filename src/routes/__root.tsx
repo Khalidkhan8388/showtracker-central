@@ -13,7 +13,6 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/theme";
-import { ConfirmDialogHost } from "../components/ConfirmDialog";
 
 
 function NotFoundComponent() {
@@ -75,13 +74,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
       { title: "Braintape" },
-      { name: "description", content: "Speak a thought. Braintape transcribes and summarizes it — automatically." },
+      { name: "description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:title", content: "Braintape" },
-      { property: "og:description", content: "Speak a thought. Braintape transcribes and summarizes it — automatically." },
+      { property: "og:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: "Braintape" },
-      { name: "twitter:description", content: "Speak a thought. Braintape transcribes and summarizes it — automatically." },
+      { name: "twitter:description", content: "Speak a thought. Braintape transcribes, summarizes, and pulls out your tasks — automatically." },
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/2e90f16c-5c06-4f6a-b797-0c5bd1842d0a/id-preview-9b3ab55a--edee8366-bd4b-4df7-854a-68818d6e7bcf.lovable.app-1784630431165.png" },
       { name: "theme-color", content: "#ffffff" },
@@ -98,7 +97,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
-      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Geist:wght@100..900&family=Geist+Mono:wght@100..900&display=swap" },
+      { rel: "stylesheet", href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Instrument+Serif&display=swap" },
     ],
 
 
@@ -128,6 +127,9 @@ function RootShell({ children }: { children: ReactNode }) {
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
   useEffect(() => {
+    // Start the reminder scheduler regardless of preview/production so
+    // reminders fire even before the SW is registered.
+    void import("@/lib/reminders").then((m) => m.startReminderScheduler());
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     if (typeof window === "undefined") return;
     // Never register the SW inside Lovable preview / iframe / dev — it keeps
@@ -156,19 +158,49 @@ function RootComponent() {
     }
     navigator.serviceWorker.register("/sw.js").catch(() => {});
 
+    // Ask once for notification permission so the SW can post a background
+    // "Saved to Braintape" status when a share arrives while the app is closed.
+    try {
+      if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission().catch(() => {});
+      }
+    } catch {}
+
+    // Background share intake — when the SW receives a Web Share Target POST
+    // it postMessages us; drain the inbox silently instead of navigating the
+    // user to /share.
+    const onMessage = async (ev: MessageEvent) => {
+      if (ev.data?.type !== "braintape-share-received") return;
+      try {
+        const { drainAndSaveShares } = await import("@/lib/share-inbox");
+        const { toast } = await import("sonner");
+        const n = await drainAndSaveShares();
+        if (n > 0) toast.success(n === 1 ? "Saved to Braintape" : `Saved ${n} items`);
+      } catch {
+        // silent — user will see any failed items on next /share visit
+      }
+    };
+    navigator.serviceWorker.addEventListener("message", onMessage);
+
+    // On startup, drain anything left over from a share that happened while
+    // the app wasn't open.
     (async () => {
+      try {
+        const { drainAndSaveShares } = await import("@/lib/share-inbox");
+        await drainAndSaveShares();
+      } catch {}
       try {
         const { pruneDuplicateNotes } = await import("@/lib/dedupe");
         await pruneDuplicateNotes();
       } catch {}
     })();
-  }, []);
 
+    return () => navigator.serviceWorker.removeEventListener("message", onMessage);
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
         <Outlet />
-        <ConfirmDialogHost />
         <Toaster />
       </ThemeProvider>
     </QueryClientProvider>
