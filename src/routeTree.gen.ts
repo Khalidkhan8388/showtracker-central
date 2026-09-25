@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiAskRouteImport } from './routes/api/ask'
 import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
 import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
@@ -30,6 +31,11 @@ const AuthenticatedRoute = AuthenticatedRouteImport.update({
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiAskRoute = ApiAskRouteImport.update({
+  id: '/api/ask',
+  path: '/api/ask',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
@@ -99,6 +105,7 @@ export interface FileRoutesByFullPath {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/api/ask': typeof ApiAskRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -113,6 +120,7 @@ export interface FileRoutesByTo {
   '/profile': typeof AuthenticatedProfileRoute
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
+  '/api/ask': typeof ApiAskRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -129,6 +137,7 @@ export interface FileRoutesById {
   '/_authenticated/profile': typeof AuthenticatedProfileRoute
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
+  '/api/ask': typeof ApiAskRoute
   '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
@@ -145,6 +154,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/api/ask'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
@@ -159,6 +169,7 @@ export interface FileRouteTypes {
     | '/profile'
     | '/search'
     | '/share'
+    | '/api/ask'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
@@ -174,6 +185,7 @@ export interface FileRouteTypes {
     | '/_authenticated/profile'
     | '/_authenticated/search'
     | '/_authenticated/share'
+    | '/api/ask'
     | '/_authenticated/cast/$personId'
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
@@ -186,6 +198,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRoute: typeof AuthenticatedRouteWithChildren
+  ApiAskRoute: typeof ApiAskRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -202,6 +215,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/ask': {
+      id: '/api/ask'
+      path: '/api/ask'
+      fullPath: '/api/ask'
+      preLoaderRoute: typeof ApiAskRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_authenticated/share': {
@@ -319,6 +339,7 @@ const AuthenticatedRouteWithChildren = AuthenticatedRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRoute: AuthenticatedRouteWithChildren,
+  ApiAskRoute: ApiAskRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
