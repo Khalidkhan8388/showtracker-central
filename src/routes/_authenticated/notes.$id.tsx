@@ -574,6 +574,7 @@ function NoteDetail() {
   const processing = note.status !== "ready" && note.status !== "failed";
   const isVoice = note.duration_seconds != null;
   const isLink = !!note.source_url;
+  const isPdf = !!note.document;
   // A note is only classified as an "image note" when it has no text body.
   // If the user typed a transcript, treat it as a text note and render images
   // strictly where they were placed inline in the body — no auto gallery.
@@ -769,8 +770,8 @@ function NoteDetail() {
           </div>
         ) : (
           <div className="mb-2 inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
-            {isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
-            <span>{isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
+            {isPdf ? <FileText className="h-3 w-3" /> : isVoice ? <Mic className="h-3 w-3" /> : isLink ? <Globe className="h-3 w-3" /> : isImage ? <ImageIcon className="h-3 w-3" /> : <FileText className="h-3 w-3" />}
+            <span>{isPdf ? "PDF" : isVoice ? "Voice" : isLink ? "Web" : isImage ? "Image" : "Note"}</span>
           </div>
         )}
 
@@ -786,6 +787,7 @@ function NoteDetail() {
           {isVoice && note.duration_seconds != null && (
             <> · {formatDuration(note.duration_seconds)}</>
           )}
+          {isPdf && note.document?.pages ? <> · {note.document.pages} {note.document.pages === 1 ? "page" : "pages"}</> : null}
           {isText && readingMinutes > 0 && (
             <> · {readingMinutes} min read</>
           )}
@@ -1262,7 +1264,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isVoice && note.summary && (
+        {(isVoice || isPdf) && note.summary && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Summary
@@ -1271,7 +1273,7 @@ function NoteDetail() {
           </section>
         )}
 
-        {isVoice && note.key_points && note.key_points.length > 0 && (
+        {(isVoice || isPdf) && note.key_points && note.key_points.length > 0 && (
           <section className="mt-6">
             <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
               Key points
@@ -1290,6 +1292,11 @@ function NoteDetail() {
 
         {note.transcript && renderedBody && (
           <section className="mt-6">
+            {isPdf && !isVoice && (
+              <h2 className="mb-2 px-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                Full text
+              </h2>
+            )}
             {isVoice && (
               <div className="mb-2 flex items-center justify-between px-1">
                 <h2 className="text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">

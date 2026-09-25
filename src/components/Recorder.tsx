@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search, MessagesSquare } from "lucide-react";
 import { Link } from "@tanstack/react-router";
-import { createMediaNote, processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
+import { createMediaNote, createPdfNote, processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
 import { toast } from "sonner";
 import { Markdown } from "@/components/Markdown";
@@ -319,8 +319,15 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   }
 
   function onPickImages(e: React.ChangeEvent<HTMLInputElement>) {
-    const files = Array.from(e.target.files ?? []);
+    const all = Array.from(e.target.files ?? []);
     e.target.value = "";
+    const pdfs = all.filter((f) => f.type === "application/pdf" || /\.pdf$/i.test(f.name));
+    const files = all.filter((f) => !pdfs.includes(f));
+    for (const pdf of pdfs) {
+      createPdfNote(pdf)
+        .then(() => toast.success(`Reading "${pdf.name}"…`))
+        .catch((err: any) => toast.error(err?.message ?? "Could not save PDF"));
+    }
     if (files.length === 0) return;
     const next = files.map((f) => ({ file: f, previewUrl: URL.createObjectURL(f) }));
     if (recording) {
@@ -658,7 +665,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         <input
           ref={fileRef}
           type="file"
-          accept="image/*"
+          accept="image/*,application/pdf"
           multiple
           className="hidden"
           onChange={onPickImages}
@@ -671,10 +678,17 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
         >
           <Search className="h-5 w-5" strokeWidth={2} />
         </Link>
+        <Link
+          to="/ask"
+          aria-label="Ask your notes"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+        >
+          <MessagesSquare className="h-5 w-5" strokeWidth={2} />
+        </Link>
         <button
           onClick={() => fileRef.current?.click()}
           disabled={disabled}
-          aria-label="Attach image"
+          aria-label="Attach image or PDF"
           className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
           <ImagePlus className="h-5 w-5" strokeWidth={2} />
