@@ -72,6 +72,13 @@ export type LocalYouTube = {
   captions_available: boolean;
 };
 
+export type LocalDocument = {
+  name: string;
+  path: string; // key into db.files
+  size: number;
+  pages: number | null;
+};
+
 export type LocalNote = {
   id: string;
   user_id: string;
@@ -107,6 +114,8 @@ export type LocalNote = {
   contextual_reminders?: string[];
   /** Metadata for contextual reminders (title + creation time), keyed by id above. */
   contextual_meta?: Record<string, { title: string; created_at: string }>;
+  /** Uploaded PDF document (original kept on device). */
+  document?: LocalDocument | null;
 
 
 
@@ -138,6 +147,7 @@ class BraintapeDB extends Dexie {
   photos!: Table<LocalBlob, string>;
   audios!: Table<LocalBlob, string>;
   collections!: Table<LocalCollection, string>;
+  files!: Table<LocalBlob, string>;
 
   constructor() {
     super("braintape");
@@ -224,6 +234,15 @@ class BraintapeDB extends Dexie {
       photos: "path, cachedAt, size",
       audios: "path, cachedAt, size",
       collections: "id, title, created_at, updated_at",
+    });
+    // v12: local document files (PDFs).
+    this.version(12).stores({
+      notes: "id, user_id, created_at, updated_at, pinned, heading, deleted_at",
+      meta: "key",
+      photos: "path, cachedAt, size",
+      audios: "path, cachedAt, size",
+      collections: "id, title, created_at, updated_at",
+      files: "path, cachedAt, size",
     });
   }
 }
