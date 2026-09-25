@@ -176,6 +176,57 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
   }
 }
 
+// ---------------------------------------------------------------------------
+// PDF documents
+// ---------------------------------------------------------------------------
+
+export const MAX_PDF_BYTES = 20 * 1024 * 1024;
+
+/** Save a PDF locally, create a note, and analyze it in the background. */
+export async function createPdfNote(file: File): Promise<{ noteId: string }> {
+  if (file.size > MAX_PDF_BYTES) throw new Error("PDF is too large (max 20 MB)");
+  const path = `local://files/${crypto.randomUUID()}.pdf`;
+  await db.files.put({
+    path,
+    blob: file,
+    size: file.size,
+    contentType: "application/pdf",
+    cachedAt: Date.now(),
+  });
+  const note = newNote({
+    status: "processing",
+    heading: file.name.replace(/\.pdf$/i, ""),
+    document: { name: file.name, path, size: file.size, pages: null },
+  });
+  await db.notes.put(note);
+  void analyzePdfInBackground(note.id).catch(() => {});
+  return { noteId: note.id };
+}
+
+export async function analyzePdfInBackground(noteId: string): Promise<void> {
+  const note = await getNote(noteId);
+  if (!note?.document) return;
+  try {
+    const row = await db.files.get(note.document.path);
+    if (!row) throw new Error("PDF file is missing on this device");
+    const bytes = new Uint8Array(await row.blob.arrayBuffer());
+    const { analyzePdfFn } = await import("./pdf.functions");
+    const r = await analyzePdfFn({ data: { base64: bytesToBase64(bytes), filename: note.document.name } });
+    await updateNote(noteId, {
+      status: "ready",
+      heading: r.heading,
+      summary: r.summary,
+      key_points: r.key_points,
+      transcript: r.transcript || null,
+      tasks: r.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
+      document: { ...note.document, pages: r.pages },
+      error: null,
+    });
+  } catch (err: any) {
+    await updateNote(noteId, { status: "failed", error: err?.message ?? String(err) });
+  }
+}
+
 /**
  * Silently run OCR on a note's images and store the result hidden by default.
  * User can reveal via the "Show extracted text" button on the note detail.
