@@ -33,6 +33,7 @@ export const Route = createFileRoute("/_authenticated/notes/$id")({
 
 type Note = {
   id: string;
+  document?: import("@/lib/local-db").LocalDocument | null;
   status: "recording" | "uploaded" | "transcribing" | "processing" | "ready" | "failed";
   heading: string | null;
   summary: string | null;
