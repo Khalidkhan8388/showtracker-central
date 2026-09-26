@@ -18,11 +18,13 @@ import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticate
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
 import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
 import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
+import { Route as AuthenticatedAskIndexRouteImport } from './routes/_authenticated/ask.index'
 import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
 import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
 import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
 import { Route as AuthenticatedCastPersonIdRouteImport } from './routes/_authenticated/cast.$personId'
+import { Route as AuthenticatedAskThreadIdRouteImport } from './routes/_authenticated/ask.$threadId'
 
 const AuthenticatedRoute = AuthenticatedRouteImport.update({
   id: '/_authenticated',
@@ -69,6 +71,11 @@ const AuthenticatedCollectionsIndexRoute =
     path: '/collections/',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAskIndexRoute = AuthenticatedAskIndexRouteImport.update({
+  id: '/ask/',
+  path: '/ask/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
 const AuthenticatedTasksReviewRoute =
   AuthenticatedTasksReviewRouteImport.update({
     id: '/tasks/review',
@@ -98,6 +105,12 @@ const AuthenticatedCastPersonIdRoute =
     path: '/cast/$personId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
+const AuthenticatedAskThreadIdRoute =
+  AuthenticatedAskThreadIdRouteImport.update({
+    id: '/ask/$threadId',
+    path: '/ask/$threadId',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -106,11 +119,13 @@ export interface FileRoutesByFullPath {
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/api/ask': typeof ApiAskRoute
+  '/ask/$threadId': typeof AuthenticatedAskThreadIdRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/ask/': typeof AuthenticatedAskIndexRoute
   '/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -121,11 +136,13 @@ export interface FileRoutesByTo {
   '/search': typeof AuthenticatedSearchRoute
   '/share': typeof AuthenticatedShareRoute
   '/api/ask': typeof ApiAskRoute
+  '/ask/$threadId': typeof AuthenticatedAskThreadIdRoute
   '/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/notes/$id': typeof AuthenticatedNotesIdRoute
   '/profile/trash': typeof AuthenticatedProfileTrashRoute
   '/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/ask': typeof AuthenticatedAskIndexRoute
   '/collections': typeof AuthenticatedCollectionsIndexRoute
   '/tasks': typeof AuthenticatedTasksIndexRoute
 }
@@ -138,11 +155,13 @@ export interface FileRoutesById {
   '/_authenticated/search': typeof AuthenticatedSearchRoute
   '/_authenticated/share': typeof AuthenticatedShareRoute
   '/api/ask': typeof ApiAskRoute
+  '/_authenticated/ask/$threadId': typeof AuthenticatedAskThreadIdRoute
   '/_authenticated/cast/$personId': typeof AuthenticatedCastPersonIdRoute
   '/_authenticated/collections/$id': typeof AuthenticatedCollectionsIdRoute
   '/_authenticated/notes/$id': typeof AuthenticatedNotesIdRoute
   '/_authenticated/profile_/trash': typeof AuthenticatedProfileTrashRoute
   '/_authenticated/tasks/review': typeof AuthenticatedTasksReviewRoute
+  '/_authenticated/ask/': typeof AuthenticatedAskIndexRoute
   '/_authenticated/collections/': typeof AuthenticatedCollectionsIndexRoute
   '/_authenticated/tasks/': typeof AuthenticatedTasksIndexRoute
 }
@@ -155,11 +174,13 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/api/ask'
+    | '/ask/$threadId'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
     | '/tasks/review'
+    | '/ask/'
     | '/collections/'
     | '/tasks/'
   fileRoutesByTo: FileRoutesByTo
@@ -170,11 +191,13 @@ export interface FileRouteTypes {
     | '/search'
     | '/share'
     | '/api/ask'
+    | '/ask/$threadId'
     | '/cast/$personId'
     | '/collections/$id'
     | '/notes/$id'
     | '/profile/trash'
     | '/tasks/review'
+    | '/ask'
     | '/collections'
     | '/tasks'
   id:
@@ -186,11 +209,13 @@ export interface FileRouteTypes {
     | '/_authenticated/search'
     | '/_authenticated/share'
     | '/api/ask'
+    | '/_authenticated/ask/$threadId'
     | '/_authenticated/cast/$personId'
     | '/_authenticated/collections/$id'
     | '/_authenticated/notes/$id'
     | '/_authenticated/profile_/trash'
     | '/_authenticated/tasks/review'
+    | '/_authenticated/ask/'
     | '/_authenticated/collections/'
     | '/_authenticated/tasks/'
   fileRoutesById: FileRoutesById
@@ -266,6 +291,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ask/': {
+      id: '/_authenticated/ask/'
+      path: '/ask'
+      fullPath: '/ask/'
+      preLoaderRoute: typeof AuthenticatedAskIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
     '/_authenticated/tasks/review': {
       id: '/_authenticated/tasks/review'
       path: '/tasks/review'
@@ -301,6 +333,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCastPersonIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
+    '/_authenticated/ask/$threadId': {
+      id: '/_authenticated/ask/$threadId'
+      path: '/ask/$threadId'
+      fullPath: '/ask/$threadId'
+      preLoaderRoute: typeof AuthenticatedAskThreadIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
   }
 }
 
@@ -309,11 +348,13 @@ interface AuthenticatedRouteChildren {
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
   AuthenticatedSearchRoute: typeof AuthenticatedSearchRoute
   AuthenticatedShareRoute: typeof AuthenticatedShareRoute
+  AuthenticatedAskThreadIdRoute: typeof AuthenticatedAskThreadIdRoute
   AuthenticatedCastPersonIdRoute: typeof AuthenticatedCastPersonIdRoute
   AuthenticatedCollectionsIdRoute: typeof AuthenticatedCollectionsIdRoute
   AuthenticatedNotesIdRoute: typeof AuthenticatedNotesIdRoute
   AuthenticatedProfileTrashRoute: typeof AuthenticatedProfileTrashRoute
   AuthenticatedTasksReviewRoute: typeof AuthenticatedTasksReviewRoute
+  AuthenticatedAskIndexRoute: typeof AuthenticatedAskIndexRoute
   AuthenticatedCollectionsIndexRoute: typeof AuthenticatedCollectionsIndexRoute
   AuthenticatedTasksIndexRoute: typeof AuthenticatedTasksIndexRoute
 }
@@ -323,11 +364,13 @@ const AuthenticatedRouteChildren: AuthenticatedRouteChildren = {
   AuthenticatedProfileRoute: AuthenticatedProfileRoute,
   AuthenticatedSearchRoute: AuthenticatedSearchRoute,
   AuthenticatedShareRoute: AuthenticatedShareRoute,
+  AuthenticatedAskThreadIdRoute: AuthenticatedAskThreadIdRoute,
   AuthenticatedCastPersonIdRoute: AuthenticatedCastPersonIdRoute,
   AuthenticatedCollectionsIdRoute: AuthenticatedCollectionsIdRoute,
   AuthenticatedNotesIdRoute: AuthenticatedNotesIdRoute,
   AuthenticatedProfileTrashRoute: AuthenticatedProfileTrashRoute,
   AuthenticatedTasksReviewRoute: AuthenticatedTasksReviewRoute,
+  AuthenticatedAskIndexRoute: AuthenticatedAskIndexRoute,
   AuthenticatedCollectionsIndexRoute: AuthenticatedCollectionsIndexRoute,
   AuthenticatedTasksIndexRoute: AuthenticatedTasksIndexRoute,
 }
