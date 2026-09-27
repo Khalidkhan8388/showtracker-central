@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
@@ -14,7 +14,6 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { ReminderHero } from "@/components/ReminderHero";
 
 import { toast } from "sonner";
 import { useReminders } from "@/lib/reminders";
@@ -79,15 +78,9 @@ function Home() {
   const delTasksFn = deleteTasks;
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
-  const [addingTask, setAddingTask] = useState(false);
-  const [newTaskText, setNewTaskText] = useState("");
-  const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
   const allCollections = useCollections();
 
-  useEffect(() => {
-    if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
-  }, [addingTask]);
 
   // Auto-file existing movie/TV notes into their collections (one-time per mount).
   useEffect(() => {
@@ -95,22 +88,6 @@ function Home() {
   }, []);
 
 
-  async function submitNewTask() {
-    const text = newTaskText.trim();
-    if (!text) {
-      setAddingTask(false);
-      return;
-    }
-    setNewTaskText("");
-    setAddingTask(false);
-    try {
-      await addCustomTask({ data: { text } });
-      void resync();
-    } catch {
-      setNewTaskText(text);
-      setAddingTask(true);
-    }
-  }
 
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
