@@ -310,48 +310,36 @@ function Home() {
   const derived = useMemo(() => {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
-    const [latest, ...rest] = displayNotes;
-    // If reminders exist, the reminder hero replaces the latest-note hero,
-    // so the latest note flows into the strip like any other card.
-    const stripSource = hasReminders ? displayNotes : rest;
-    const pinnedRest = stripSource.filter((n) => n.pinned);
-    const unpinnedRest = stripSource.filter((n) => !n.pinned);
-    const stripIds = new Set<string>();
-    const strip: Note[] = [];
-    for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
-      if (!stripIds.has(n.id)) {
-        stripIds.add(n.id);
-        strip.push(n);
-      }
-    }
-    const grid = unpinnedRest.slice(5);
+    const pinned = displayNotes.filter((n) => n.pinned);
+    const rest = displayNotes.filter((n) => !n.pinned);
 
-    const allTasksRaw = notes.flatMap((n) =>
-      (n.tasks ?? []).map((t) => ({
-        ...t,
-        noteId: n.id,
-        noteHeading: n.heading === "__custom__" ? null : n.heading,
-      })),
-    );
-    const suggested = allTasksRaw.filter((t) => t.pending);
-    const allTasks = allTasksRaw.filter((t) => !t.pending);
-    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
-    const openT = allTasks.filter((t) => !t.pinned && !t.done);
-    const doneT = allTasks.filter((t) => t.done);
-    const visible = [...pinnedT, ...openT, ...doneT].slice(0, 3);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+
+    const today: Note[] = [];
+    const week: Note[] = [];
+    const earlier: Note[] = [];
+    for (const n of rest) {
+      const t = new Date(n.created_at).getTime();
+      if (t >= startOfToday) today.push(n);
+      else if (t >= startOfWeek) week.push(n);
+      else earlier.push(n);
+    }
+
+    const groups: Array<{ label: string; items: Note[] }> = [];
+    if (pinned.length) groups.push({ label: "Pinned", items: pinned });
+    if (today.length) groups.push({ label: "Today", items: today });
+    if (week.length) groups.push({ label: "This week", items: week });
+    if (earlier.length) groups.push({ label: "Earlier", items: earlier });
 
     return {
       displayNotes,
-      latest,
-      strip,
-      grid,
-      suggested,
-      allTasks,
-      visible,
-      doneCount: doneT.length,
-      hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
+      groups,
+      hasAnyContent: displayNotes.length > 0,
     };
-  }, [notes, hideMedia, hasReminders]);
+  }, [notes, hideMedia]);
+
 
 
 
