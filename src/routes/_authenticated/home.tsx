@@ -4,7 +4,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Recorder } from "@/components/Recorder";
 import { LogOut, CheckCircle2, Loader2, AlertCircle, Mic, Circle, Trash2, X, Check, ChevronRight, Pin, PinOff, Link2, Image as ImageIcon, Search, Sparkles, Plus, FolderPlus, Folder } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
-import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask, addCustomTask } from "@/lib/notes.functions";
+import { toggleTask, deleteNotes, deleteTasks, pinNote, pinTask } from "@/lib/notes.functions";
 import { Markdown } from "@/components/Markdown";
 import { useTheme } from "@/lib/theme";
 import { getCachedPhotoUrl, getPhotoUrl, warmPhotoCache } from "@/lib/photo-cache";
@@ -14,7 +14,6 @@ import { useCollections, addNotesToCollection, createCollection, backfillMediaCo
 import { MediaCard } from "@/components/MediaCard";
 import { poster as tmdbPoster } from "@/lib/media";
 import { FeedNoteCard as NoteCard } from "@/components/FeedNoteCard";
-import { ReminderHero } from "@/components/ReminderHero";
 
 import { toast } from "sonner";
 import { useReminders } from "@/lib/reminders";
@@ -79,15 +78,9 @@ function Home() {
   const delTasksFn = deleteTasks;
   const pinNoteFn = pinNote;
   const navigate = useNavigate();
-  const [addingTask, setAddingTask] = useState(false);
-  const [newTaskText, setNewTaskText] = useState("");
-  const newTaskInputRef = useRef<HTMLInputElement | null>(null);
   const [showAddToCollection, setShowAddToCollection] = useState(false);
   const allCollections = useCollections();
 
-  useEffect(() => {
-    if (addingTask) requestAnimationFrame(() => newTaskInputRef.current?.focus());
-  }, [addingTask]);
 
   // Auto-file existing movie/TV notes into their collections (one-time per mount).
   useEffect(() => {
@@ -95,22 +88,6 @@ function Home() {
   }, []);
 
 
-  async function submitNewTask() {
-    const text = newTaskText.trim();
-    if (!text) {
-      setAddingTask(false);
-      return;
-    }
-    setNewTaskText("");
-    setAddingTask(false);
-    try {
-      await addCustomTask({ data: { text } });
-      void resync();
-    } catch {
-      setNewTaskText(text);
-      setAddingTask(true);
-    }
-  }
 
   const noteSelectMode = selectedNotes.size > 0;
   const taskSelectMode = selectedTasks.size > 0;
@@ -310,264 +287,144 @@ function Home() {
   const derived = useMemo(() => {
     if (!notes) return null;
     const displayNotes = notes.filter((n) => n.heading !== "__custom__" && (!hideMedia || !(n as any).media));
-    const [latest, ...rest] = displayNotes;
-    // If reminders exist, the reminder hero replaces the latest-note hero,
-    // so the latest note flows into the strip like any other card.
-    const stripSource = hasReminders ? displayNotes : rest;
-    const pinnedRest = stripSource.filter((n) => n.pinned);
-    const unpinnedRest = stripSource.filter((n) => !n.pinned);
-    const stripIds = new Set<string>();
-    const strip: Note[] = [];
-    for (const n of [...pinnedRest, ...unpinnedRest.slice(0, 5)]) {
-      if (!stripIds.has(n.id)) {
-        stripIds.add(n.id);
-        strip.push(n);
-      }
-    }
-    const grid = unpinnedRest.slice(5);
+    const pinned = displayNotes.filter((n) => n.pinned);
+    const rest = displayNotes.filter((n) => !n.pinned);
 
-    const allTasksRaw = notes.flatMap((n) =>
-      (n.tasks ?? []).map((t) => ({
-        ...t,
-        noteId: n.id,
-        noteHeading: n.heading === "__custom__" ? null : n.heading,
-      })),
-    );
-    const suggested = allTasksRaw.filter((t) => t.pending);
-    const allTasks = allTasksRaw.filter((t) => !t.pending);
-    const pinnedT = allTasks.filter((t) => t.pinned && !t.done);
-    const openT = allTasks.filter((t) => !t.pinned && !t.done);
-    const doneT = allTasks.filter((t) => t.done);
-    const visible = [...pinnedT, ...openT, ...doneT].slice(0, 3);
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+    const startOfWeek = startOfToday - 6 * 24 * 60 * 60 * 1000;
+
+    const today: Note[] = [];
+    const week: Note[] = [];
+    const earlier: Note[] = [];
+    for (const n of rest) {
+      const t = new Date(n.created_at).getTime();
+      if (t >= startOfToday) today.push(n);
+      else if (t >= startOfWeek) week.push(n);
+      else earlier.push(n);
+    }
+
+    const groups: Array<{ label: string; items: Note[] }> = [];
+    if (pinned.length) groups.push({ label: "Pinned", items: pinned });
+    if (today.length) groups.push({ label: "Today", items: today });
+    if (week.length) groups.push({ label: "This week", items: week });
+    if (earlier.length) groups.push({ label: "Earlier", items: earlier });
 
     return {
       displayNotes,
-      latest,
-      strip,
-      grid,
-      suggested,
-      allTasks,
-      visible,
-      doneCount: doneT.length,
-      hasAnyContent: displayNotes.length > 0 || allTasks.length > 0,
+      groups,
+      hasAnyContent: displayNotes.length > 0,
     };
-  }, [notes, hideMedia, hasReminders]);
+  }, [notes, hideMedia]);
 
 
+
+
+  const nextReminder = reminders[0];
+  const reminderLabel = nextReminder
+    ? nextReminder.kind === "episode"
+      ? `${nextReminder.seriesTitle} · ${nextReminder.epKey}`
+      : nextReminder.title
+    : null;
+
+  const noteCount = derived?.displayNotes.length ?? 0;
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      {/* iOS large-title header */}
-      <header className="sticky top-0 z-20 border-b border-border/60 bg-background">
-        <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-2">
-          <div className="min-w-0">
-            <h1
-              style={{
-                transform: collapsed ? "scale(0.625)" : "scale(1)",
-                transformOrigin: "left center",
-                willChange: "transform",
-              }}
-              className="font-bold tracking-tight leading-none text-[32px] transition-transform duration-200 ease-out motion-reduce:transition-none"
-            >
-              Braintape
-            </h1>
-            {notes && notes.length > 0 && (
-              <p
-                style={{
-                  opacity: collapsed ? 0 : 1,
-                  height: collapsed ? 0 : "1.25rem",
-                  marginTop: collapsed ? 0 : "0.25rem",
-                  willChange: "opacity",
-                }}
-                className="overflow-hidden text-[13px] text-muted-foreground transition-opacity duration-150 ease-out motion-reduce:transition-none"
-              >
-                {notes.filter((n) => n.heading !== "__custom__").length} notes · {formatDistanceToNow(new Date(notes[0].created_at), { addSuffix: true })}
-              </p>
-            )}
-          </div>
-          <Link
-            to="/profile"
-            className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground text-[14px] font-semibold active:opacity-70"
-            aria-label="Profile"
+      {/* Minimal technical top bar */}
+      <header className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl">
+        <div className="flex items-center justify-between gap-3 px-5 pb-3 pt-3">
+          <h1
+            style={{
+              transform: collapsed ? "scale(0.86)" : "scale(1)",
+              transformOrigin: "left center",
+              willChange: "transform",
+            }}
+            className="text-[15px] font-semibold uppercase tracking-[0.22em] leading-none transition-transform duration-200 ease-out motion-reduce:transition-none"
           >
-            <ProfileInitial />
-          </Link>
+            Braintape
+          </h1>
 
+          <div className="flex items-center gap-1">
+            {noteCount > 0 && (
+              <span className="mr-1 font-mono text-[11px] tabular-nums tracking-[0.1em] text-muted-foreground">
+                {String(noteCount).padStart(3, "0")}
+              </span>
+            )}
+            <Link
+              to="/collections"
+              aria-label="Collections"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground active:opacity-60"
+            >
+              <Folder className="h-[18px] w-[18px]" strokeWidth={1.6} />
+            </Link>
+            <Link
+              to="/profile"
+              aria-label="Profile"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-border/70 text-[12px] font-semibold active:opacity-60"
+            >
+              <ProfileInitial />
+            </Link>
+          </div>
         </div>
-
-
       </header>
 
-      <section className="flex-1 px-4 pb-32 pt-2">
-        <div ref={sentinelRef} aria-hidden="true" className="h-6 -mt-2" />
+      <section className="flex-1 px-5 pb-32 pt-1">
+        <div ref={sentinelRef} aria-hidden="true" className="h-4 -mt-1" />
+
+        {hasReminders && reminderLabel && (
+          <Link
+            to="/notes/$id"
+            params={{ id: nextReminder.noteId }}
+            className="mb-5 flex items-center gap-2 border-b border-border/60 pb-3 active:opacity-60"
+          >
+            <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[#F5C518]" />
+            <span className="truncate text-[13px] text-foreground">{reminderLabel}</span>
+            <span className="ml-auto shrink-0 font-mono text-[10px] uppercase tracking-[0.1em] text-muted-foreground">
+              {reminders.length > 1 ? `+${reminders.length - 1}` : "Due"}
+            </span>
+          </Link>
+        )}
 
         {notes === null ? (
           <div className="flex justify-center py-16">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
-        ) : notes.length === 0 ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
-            <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
-          </div>
         ) : !derived || !derived.hasAnyContent ? (
-          <div className="rounded-2xl bg-card px-6 py-12 text-center shadow-sm">
-            <div className="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <Mic className="h-5 w-5 text-muted-foreground" />
-            </div>
-            <p className="text-[17px] font-semibold text-foreground">No notes yet</p>
+          <div className="px-6 py-20 text-center">
+            <p className="text-[15px] text-foreground">Nothing here yet</p>
             <p className="mt-1 text-[13px] text-muted-foreground">Tap the mic and start talking.</p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {hasReminders ? (
-              <ReminderHero />
-            ) : (
-              derived.latest && (
-                <NoteCard
-                  note={derived.latest}
-                  variant="hero"
-                  thumbUrl={thumbs[derived.latest.id]}
-                  selected={selectedNotes.has(derived.latest.id)}
-                  selectMode={noteSelectMode}
-                  hideYouTubeThumb
-                  onOpen={() => navigate({ to: "/notes/$id", params: { id: derived.latest.id } })}
-                  onLongPress={() => toggleNoteSel(derived.latest.id)}
-                  onToggleSel={() => toggleNoteSel(derived.latest.id)}
-                />
-
-              )
-            )}
-
-
-            {derived.suggested.length > 0 && (
-              <Link
-                to="/tasks/review"
-                className="flex items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
-              >
-                <div className="flex items-center gap-2">
-                  <Sparkles className="h-4 w-4 text-primary-foreground" />
-                  <span className="text-[15px] font-semibold text-primary-foreground">
-                    {derived.suggested.length} suggested task{derived.suggested.length === 1 ? "" : "s"}
-                  </span>
-                </div>
-                <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-              </Link>
-            )}
-
-            {derived.visible.length === 0 && (
-              <>
-                {addingTask ? (
-                  <form
-                    onSubmit={(e) => {
-                      e.preventDefault();
-                      void submitNewTask();
-                    }}
-                    className="flex w-full items-center gap-2 rounded-[28px] bg-primary px-5 py-3.5 shadow-sm"
-                  >
-                    <Plus className="h-4 w-4 shrink-0 text-primary-foreground" />
-                    <input
-                      ref={newTaskInputRef}
-                      value={newTaskText}
-                      onChange={(e) => setNewTaskText(e.target.value)}
-                      onBlur={() => void submitNewTask()}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setNewTaskText("");
-                          setAddingTask(false);
-                        }
-                      }}
-                      placeholder="Add a task"
-                      maxLength={500}
-                      className="flex-1 bg-transparent text-[15px] font-semibold text-primary-foreground outline-none placeholder:text-primary-foreground/60"
-                    />
-                  </form>
-                ) : (
-                  <button
-                    type="button"
-                    onClick={() => setAddingTask(true)}
-                    className="flex w-full items-center justify-between rounded-[28px] bg-primary px-5 py-3.5 shadow-sm active:opacity-80"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Plus className="h-4 w-4 text-primary-foreground" />
-                      <span className="text-[15px] font-semibold text-primary-foreground">Add a task</span>
+          <div className="space-y-8">
+            {derived.groups.map((g) => (
+              <div key={g.label}>
+                <p className="mb-3 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground">
+                  {g.label}
+                </p>
+                <div className="columns-2 gap-3 [column-fill:_balance]">
+                  {g.items.map((n) => (
+                    <div key={n.id} className="mb-3 break-inside-avoid">
+                      <NoteCard
+                        note={n}
+                        variant="masonry"
+                        thumbUrl={thumbs[n.id]}
+                        selected={selectedNotes.has(n.id)}
+                        selectMode={noteSelectMode}
+                        hideYouTubeThumb
+                        onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
+                        onLongPress={() => toggleNoteSel(n.id)}
+                        onToggleSel={() => toggleNoteSel(n.id)}
+                      />
                     </div>
-                    <ChevronRight className="h-5 w-5 text-primary-foreground/80" />
-                  </button>
-                )}
-              </>
-            )}
-
-            {derived.visible.length > 0 && (
-              <div className="rounded-[20px] bg-card px-4 py-3 ring-1 ring-border/60">
-                <div className="mb-2 flex items-center justify-between">
-                  <span className="text-[13px] text-muted-foreground">
-                    {derived.doneCount} of {derived.allTasks.length} completed
-                  </span>
-                  <Link
-                    to="/tasks"
-                    className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-primary text-primary-foreground active:opacity-80"
-                    aria-label="Go to tasks"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
+                  ))}
                 </div>
-                <ul>
-                  {derived.visible.map((t) => {
-                    const key: TaskKey = `${t.noteId}::${t.id}`;
-                    const isSel = selectedTasks.has(key);
-                    return (
-                      <li key={key}>
-                        <TaskRow
-                          selectMode={taskSelectMode}
-                          selected={isSel}
-                          done={t.done}
-                          pinned={Boolean(t.pinned)}
-                          text={t.text}
-                          noteHeading={t.noteHeading}
-                          noteId={t.noteId}
-                          hideNoteHeading
-                          compact
-                          onToggleDone={() => onToggle(t.noteId, t.id)}
-                          onPin={() => onPinTask(t.noteId, t.id, !!t.pinned)}
-                          onLongPress={() => toggleTaskSel(key)}
-                          onSelectTap={() => toggleTaskSel(key)}
-                        />
-                      </li>
-                    );
-                  })}
-                </ul>
               </div>
-            )}
-
-
-            <CollectionsRow notes={localNotes ?? []} />
-
-            {(derived.strip.length > 0 || derived.grid.length > 0) && (
-              <div className="columns-2 gap-3 [column-fill:_balance]">
-                {[...derived.strip, ...derived.grid].map((n) => (
-                  <div key={n.id} className="mb-3 break-inside-avoid">
-                    <NoteCard
-                      note={n}
-                      variant="masonry"
-                      thumbUrl={thumbs[n.id]}
-                      selected={selectedNotes.has(n.id)}
-                      selectMode={noteSelectMode}
-                      hideYouTubeThumb
-                      onOpen={() => navigate({ to: "/notes/$id", params: { id: n.id } })}
-                      onLongPress={() => toggleNoteSel(n.id)}
-                      onToggleSel={() => toggleNoteSel(n.id)}
-                    />
-                  </div>
-                ))}
-              </div>
-            )}
+            ))}
           </div>
         )}
       </section>
+
 
 
 
