@@ -3,7 +3,7 @@
 
 import { db, type LocalNote, type LocalBlob, type MetaRow, type LocalCollection } from "./local-db";
 
-const BACKUP_VERSION = 2;
+const BACKUP_VERSION = 3;
 
 type SerializedBlob = {
   path: string;
@@ -22,6 +22,8 @@ type BackupFile = {
   audios: SerializedBlob[];
   meta: MetaRow[];
   collections?: LocalCollection[];
+  /** PDFs and other uploaded documents. */
+  files?: SerializedBlob[];
 };
 
 function bytesToBase64(bytes: Uint8Array): string {
