@@ -108,6 +108,7 @@ export type ImportSummary = {
   audios: number;
   meta: number;
   collections: number;
+  files: number;
 };
 
 export async function importFromFile(
@@ -128,28 +129,51 @@ export async function importFromFile(
     throw new Error("Backup was made by a newer version of the app.");
   }
 
-  const notes = Array.isArray(parsed.notes) ? parsed.notes : [];
+  const incomingNotes = Array.isArray(parsed.notes) ? parsed.notes : [];
   const photos = (Array.isArray(parsed.photos) ? parsed.photos : []).map(deserializeBlob);
   const audios = (Array.isArray(parsed.audios) ? parsed.audios : []).map(deserializeBlob);
   const meta = Array.isArray(parsed.meta) ? parsed.meta : [];
   const collections = Array.isArray(parsed.collections) ? parsed.collections : [];
+  const files = (Array.isArray(parsed.files) ? parsed.files : []).map(deserializeBlob);
 
-  await db.transaction("rw", db.notes, db.photos, db.audios, db.meta, db.collections, async () => {
-    if (mode === "replace") {
-      await Promise.all([
-        db.notes.clear(),
-        db.photos.clear(),
-        db.audios.clear(),
-        db.meta.clear(),
-        db.collections.clear(),
-      ]);
-    }
-    if (notes.length) await db.notes.bulkPut(notes);
-    if (photos.length) await db.photos.bulkPut(photos);
-    if (audios.length) await db.audios.bulkPut(audios);
-    if (meta.length) await db.meta.bulkPut(meta);
-    if (collections.length) await db.collections.bulkPut(collections);
-  });
+  let notes = incomingNotes;
+
+  await db.transaction(
+    "rw",
+    db.notes,
+    db.photos,
+    db.audios,
+    db.meta,
+    db.collections,
+    db.files,
+    async () => {
+      if (mode === "replace") {
+        await Promise.all([
+          db.notes.clear(),
+          db.photos.clear(),
+          db.audios.clear(),
+          db.meta.clear(),
+          db.collections.clear(),
+          db.files.clear(),
+        ]);
+      } else {
+        // Merge: whichever copy of a note was edited most recently wins,
+        // so nothing on this device is silently overwritten by an older copy.
+        const local = new Map((await db.notes.toArray()).map((n) => [n.id, n]));
+        notes = incomingNotes.filter((n) => {
+          const mine = local.get(n.id);
+          if (!mine) return true;
+          return new Date(n.updated_at).getTime() > new Date(mine.updated_at).getTime();
+        });
+      }
+      if (notes.length) await db.notes.bulkPut(notes);
+      if (photos.length) await db.photos.bulkPut(photos);
+      if (audios.length) await db.audios.bulkPut(audios);
+      if (meta.length) await db.meta.bulkPut(meta);
+      if (collections.length) await db.collections.bulkPut(collections);
+      if (files.length) await db.files.bulkPut(files);
+    },
+  );
 
   return {
     notes: notes.length,
@@ -157,5 +181,6 @@ export async function importFromFile(
     audios: audios.length,
     meta: meta.length,
     collections: collections.length,
+    files: files.length,
   };
 }
