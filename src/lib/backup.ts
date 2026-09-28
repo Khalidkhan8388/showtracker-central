@@ -65,12 +65,13 @@ function deserializeBlob(s: SerializedBlob): LocalBlob {
 }
 
 export async function exportAll(): Promise<Blob> {
-  const [notes, photos, audios, meta, collections] = await Promise.all([
+  const [notes, photos, audios, meta, collections, files] = await Promise.all([
     db.notes.toArray(),
     db.photos.toArray(),
     db.audios.toArray(),
     db.meta.toArray(),
     db.collections.toArray(),
+    db.files.toArray(),
   ]);
   const payload: BackupFile = {
     app: "braintape",
@@ -81,6 +82,7 @@ export async function exportAll(): Promise<Blob> {
     audios: await Promise.all(audios.map(serializeBlob)),
     meta,
     collections,
+    files: await Promise.all(files.map(serializeBlob)),
   };
   return new Blob([JSON.stringify(payload)], { type: "application/json" });
 }
