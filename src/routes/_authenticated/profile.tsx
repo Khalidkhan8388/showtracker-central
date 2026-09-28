@@ -1,8 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
+import {
+  connectGoogle,
+  disconnectGoogle,
+  isConnected as driveConnected,
+  connectedEmail,
+  autoSyncEnabled,
+  setAutoSync,
+  lastBackupAt,
+  restoreFromDrive,
+} from "@/lib/google-drive";
+import { backupNowManual, getSyncState } from "@/lib/gdrive-sync";
 import { useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 
@@ -190,6 +201,10 @@ function ProfilePage() {
 
       </section>
 
+      <GoogleSyncSection />
+
+
+
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
@@ -294,6 +309,197 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
     <h2 className="mb-2 px-1 text-[12px] font-medium uppercase tracking-wider text-muted-foreground">
       {children}
     </h2>
+  );
+}
+
+function relTime(iso: string | null): string {
+  if (!iso) return "never";
+  const diff = Date.now() - new Date(iso).getTime();
+  if (diff < 60_000) return "just now";
+  if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+  if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+  return `${Math.floor(diff / 86_400_000)}d ago`;
+}
+
+function GoogleSyncSection() {
+  const [connected, setConnected] = useState(false);
+  const [email, setEmail] = useState<string | null>(null);
+  const [auto, setAuto] = useState(true);
+  const [last, setLast] = useState<string | null>(null);
+  const [status, setStatus] = useState<string>("idle");
+  const [busy, setBusy] = useState<null | "connect" | "backup" | "restore">(null);
+
+  useEffect(() => {
+    const read = () => {
+      setConnected(driveConnected());
+      setEmail(connectedEmail());
+      setAuto(autoSyncEnabled());
+      setLast(lastBackupAt());
+      setStatus(getSyncState().state);
+    };
+    read();
+    window.addEventListener("braintape:gdrive-changed", read);
+    const t = setInterval(read, 15_000);
+    return () => {
+      window.removeEventListener("braintape:gdrive-changed", read);
+      clearInterval(t);
+    };
+  }, []);
+
+  async function handleConnect() {
+    setBusy("connect");
+    try {
+      const mail = await connectGoogle();
+      toast.success(mail ? `Connected as ${mail}` : "Google connected");
+      await backupNowManual();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Couldn't connect to Google");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleBackup() {
+    setBusy("backup");
+    try {
+      await backupNowManual();
+      toast.success("Backed up to Google Drive");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Backup failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  async function handleRestore() {
+    setBusy("restore");
+    try {
+      const s = await restoreFromDrive("merge");
+      toast.success(`Restored ${s.notes} notes and ${s.photos + s.audios} files`);
+      if (typeof window !== "undefined") window.location.assign("/home");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Restore failed");
+    } finally {
+      setBusy(null);
+    }
+  }
+
+  const statusLabel =
+    status === "syncing"
+      ? "Backing up…"
+      : status === "offline"
+        ? "Offline — will back up later"
+        : status === "error"
+          ? "Last backup failed"
+          : `Backed up ${relTime(last)}`;
+
+  return (
+    <section className="px-4 pt-8">
+      <SectionTitle>Google Drive</SectionTitle>
+
+      {!connected ? (
+        <>
+          <button
+            onClick={handleConnect}
+            disabled={busy === "connect"}
+            className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+          >
+            {busy === "connect" ? (
+              <Loader2 className="h-5 w-5 animate-spin text-foreground/70" />
+            ) : (
+              <Cloud className="h-5 w-5 text-foreground/70" />
+            )}
+            <span className="flex-1 text-[15px]">Connect Google account</span>
+          </button>
+          <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+            Keeps a private copy of every note, photo, voice note and PDF in your own Google Drive.
+            It stays hidden from your Drive files and only Braintape can read it.
+          </p>
+        </>
+      ) : (
+        <>
+          <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+            <div className="flex items-center gap-3 px-4 py-3.5">
+              <Cloud className="h-5 w-5 text-foreground/70" />
+              <div className="min-w-0 flex-1">
+                <div className="truncate text-[15px]">{email ?? "Google account"}</div>
+                <div className="mt-0.5 font-mono text-[11px] text-muted-foreground">
+                  {statusLabel}
+                </div>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setAutoSync(!auto);
+                setAuto(!auto);
+              }}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
+            >
+              <div className="min-w-0 flex-1">
+                <div className="text-[15px]">Automatic backup</div>
+                <div className="mt-0.5 text-[12px] text-muted-foreground">
+                  Saves a few seconds after you change anything.
+                </div>
+              </div>
+              <span
+                role="switch"
+                aria-checked={auto}
+                className={`relative inline-block h-7 w-12 shrink-0 rounded-full transition-colors ${auto ? "bg-primary" : "bg-muted"}`}
+              >
+                <span
+                  className="absolute top-0.5 left-0.5 h-6 w-6 rounded-full bg-white shadow transition-transform"
+                  style={{ transform: auto ? "translateX(20px)" : "translateX(0)" }}
+                />
+              </span>
+            </button>
+
+            <button
+              onClick={handleBackup}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+            >
+              {busy === "backup" ? (
+                <Loader2 className="h-5 w-5 animate-spin text-foreground/70" />
+              ) : (
+                <Upload className="h-5 w-5 text-foreground/70" />
+              )}
+              <span className="flex-1 text-[15px]">Back up now</span>
+            </button>
+
+            <button
+              onClick={handleRestore}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50 disabled:opacity-60"
+            >
+              {busy === "restore" ? (
+                <Loader2 className="h-5 w-5 animate-spin text-foreground/70" />
+              ) : (
+                <RefreshCw className="h-5 w-5 text-foreground/70" />
+              )}
+              <span className="flex-1 text-[15px]">Restore from Google Drive</span>
+            </button>
+
+            <button
+              onClick={() => {
+                disconnectGoogle();
+                toast.success("Google disconnected");
+              }}
+              disabled={busy !== null}
+              className="flex w-full items-center gap-3 px-4 py-3.5 text-left text-destructive active:bg-muted/50 disabled:opacity-60"
+            >
+              <CloudOff className="h-5 w-5" />
+              <span className="flex-1 text-[15px]">Disconnect</span>
+            </button>
+          </div>
+          <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+            Your backup lives in a hidden Braintape folder in your Drive — notes, photos, voice notes
+            and PDFs included. Restoring keeps whichever copy of a note is newer.
+          </p>
+        </>
+      )}
+    </section>
   );
 }
 
