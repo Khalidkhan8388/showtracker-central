@@ -201,6 +201,10 @@ function ProfilePage() {
 
       </section>
 
+      <GoogleSyncSection />
+
+
+
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
