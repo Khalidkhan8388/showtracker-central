@@ -1,8 +1,19 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw } from "lucide-react";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
+import {
+  connectGoogle,
+  disconnectGoogle,
+  isConnected as driveConnected,
+  connectedEmail,
+  autoSyncEnabled,
+  setAutoSync,
+  lastBackupAt,
+  restoreFromDrive,
+} from "@/lib/google-drive";
+import { backupNowManual, getSyncState } from "@/lib/gdrive-sync";
 import { useTheme } from "@/lib/theme";
 import { toast } from "sonner";
 

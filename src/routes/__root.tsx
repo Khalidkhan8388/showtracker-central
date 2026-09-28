@@ -130,6 +130,8 @@ function RootComponent() {
     // Start the reminder scheduler regardless of preview/production so
     // reminders fire even before the SW is registered.
     void import("@/lib/reminders").then((m) => m.startReminderScheduler());
+    // Keep the vault mirrored to Google Drive once the user has connected.
+    void import("@/lib/gdrive-sync").then((m) => m.startDriveAutoSync());
     if (typeof navigator === "undefined" || !("serviceWorker" in navigator)) return;
     if (typeof window === "undefined") return;
     // Never register the SW inside Lovable preview / iframe / dev — it keeps
