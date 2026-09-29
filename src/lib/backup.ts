@@ -140,12 +140,7 @@ export async function importFromFile(
 
   await db.transaction(
     "rw",
-    db.notes,
-    db.photos,
-    db.audios,
-    db.meta,
-    db.collections,
-    db.files,
+    [db.notes, db.photos, db.audios, db.meta, db.collections, db.files],
     async () => {
       if (mode === "replace") {
         await Promise.all([

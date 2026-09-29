@@ -9,6 +9,7 @@ import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea,
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { createThread, getThread, pickCards, saveThreadMessages } from "@/lib/ask-threads";
 import { db } from "@/lib/local-db";
+import { activeKeyChain } from "@/lib/ai-keys";
 
 export const Route = createFileRoute("/_authenticated/ask/$threadId")({
   head: () => ({
@@ -60,7 +61,7 @@ function ChatWindow({ threadId, initial }: { threadId: string; initial: UIMessag
     setText("");
     const notes = await db.notes.orderBy("created_at").reverse().toArray();
     const cards = pickCards(notes, question);
-    sendMessage({ text: question }, { body: { cards } });
+    sendMessage({ text: question }, { body: { cards, keys: activeKeyChain() } });
   };
 
   const onLinkClick = (e: MouseEvent) => {

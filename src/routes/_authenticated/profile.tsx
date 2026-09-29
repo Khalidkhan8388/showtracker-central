@@ -1,6 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw, KeyRound, ArrowUp, ArrowDown, X } from "lucide-react";
+import {
+  PROVIDERS,
+  listKeys,
+  addKey,
+  removeKey,
+  toggleKey,
+  moveKey,
+  maskKey,
+  testKey,
+  type AiKey,
+  type AiProvider,
+} from "@/lib/ai-keys";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import {
@@ -202,6 +214,8 @@ function ProfilePage() {
       </section>
 
       <GoogleSyncSection />
+
+      <AiKeysSection />
 
 
 
@@ -502,6 +516,164 @@ function GoogleSyncSection() {
     </section>
   );
 }
+
+function AiKeysSection() {
+  const [keys, setKeys] = useState<AiKey[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [provider, setProvider] = useState<AiProvider>("gemini");
+  const [value, setValue] = useState("");
+  const [model, setModel] = useState("");
+  const [testingId, setTestingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const read = () => setKeys(listKeys());
+    read();
+    window.addEventListener("braintape:ai-keys-changed", read);
+    return () => window.removeEventListener("braintape:ai-keys-changed", read);
+  }, []);
+
+  function submit() {
+    if (!value.trim()) return;
+    setKeys(addKey(provider, value, model));
+    setValue("");
+    setModel("");
+    setAdding(false);
+    toast.success("Key saved on this device");
+  }
+
+  async function handleTest(k: AiKey) {
+    setTestingId(k.id);
+    try {
+      await testKey(k);
+      toast.success(`${PROVIDERS[k.provider].label} is working`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setTestingId(null);
+    }
+  }
+
+  return (
+    <section className="px-4 pt-8">
+      <SectionTitle>AI keys</SectionTitle>
+
+      <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+        {keys.map((k, i) => (
+          <div key={k.id} className="flex items-center gap-2 px-3 py-3">
+            <div className="flex flex-col">
+              <button
+                aria-label="Move up"
+                disabled={i === 0}
+                onClick={() => setKeys(moveKey(k.id, -1))}
+                className="text-muted-foreground disabled:opacity-25 active:opacity-60"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <button
+                aria-label="Move down"
+                disabled={i === keys.length - 1}
+                onClick={() => setKeys(moveKey(k.id, 1))}
+                className="text-muted-foreground disabled:opacity-25 active:opacity-60"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px]">
+                {i + 1}. {PROVIDERS[k.provider].label}
+                {!k.enabled && <span className="text-muted-foreground"> · off</span>}
+              </div>
+              <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                {maskKey(k.key)} · {k.model || PROVIDERS[k.provider].defaultModel}
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleTest(k)}
+              disabled={testingId === k.id}
+              className="rounded-full bg-muted px-3 py-1.5 text-[12px] active:opacity-70"
+            >
+              {testingId === k.id ? "…" : "Test"}
+            </button>
+            <button
+              aria-label={k.enabled ? "Turn off" : "Turn on"}
+              onClick={() => setKeys(toggleKey(k.id))}
+              className="rounded-full bg-muted px-3 py-1.5 text-[12px] active:opacity-70"
+            >
+              {k.enabled ? "On" : "Off"}
+            </button>
+            <button
+              aria-label="Remove key"
+              onClick={() => setKeys(removeKey(k.id))}
+              className="text-destructive active:opacity-60"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+
+        {!adding ? (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
+          >
+            <KeyRound className="h-5 w-5 text-foreground/70" />
+            <span className="flex-1 text-[15px]">Add AI key</span>
+          </button>
+        ) : (
+          <div className="space-y-2 px-4 py-4">
+            <div className="grid grid-cols-2 gap-2">
+              {(Object.keys(PROVIDERS) as AiProvider[]).map((p) => (
+                <button
+                  key={p}
+                  onClick={() => setProvider(p)}
+                  className={`rounded-xl px-3 py-2 text-[13px] ${provider === p ? "bg-primary text-primary-foreground" : "bg-muted text-foreground/80"}`}
+                >
+                  {PROVIDERS[p].label}
+                </button>
+              ))}
+            </div>
+            <p className="px-1 text-[12px] text-muted-foreground">{PROVIDERS[provider].hint}</p>
+            <input
+              value={value}
+              onChange={(e) => setValue(e.target.value)}
+              placeholder="Paste your key"
+              autoComplete="off"
+              className="w-full rounded-xl bg-muted px-3 py-2.5 font-mono text-[13px] outline-none"
+            />
+            <input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={`Model (default ${PROVIDERS[provider].defaultModel})`}
+              className="w-full rounded-xl bg-muted px-3 py-2.5 font-mono text-[13px] outline-none"
+            />
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setAdding(false)}
+                className="flex-1 rounded-full bg-muted px-4 py-2.5 text-[14px] active:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submit}
+                className="flex-1 rounded-full bg-primary px-4 py-2.5 text-[14px] font-medium text-primary-foreground active:opacity-80"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+        Ask uses these in order — if the first one is out of quota it moves to the next
+        automatically. Keys stay on this device. With no keys, the built-in AI is used.
+      </p>
+    </section>
+  );
+}
+
 
 function ModeChip({
   active,
