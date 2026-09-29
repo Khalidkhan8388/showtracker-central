@@ -60,7 +60,7 @@ function ChatWindow({ threadId, initial }: { threadId: string; initial: UIMessag
     setText("");
     const notes = await db.notes.orderBy("created_at").reverse().toArray();
     const cards = pickCards(notes, question);
-    sendMessage({ text: question }, { body: { cards } });
+    sendMessage({ text: question }, { body: { cards, keys: activeKeyChain() } });
   };
 
   const onLinkClick = (e: MouseEvent) => {
