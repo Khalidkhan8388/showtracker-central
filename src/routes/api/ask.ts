@@ -9,11 +9,26 @@ const CardSchema = z.object({
   text: z.string(),
 });
 
+const KeySchema = z.object({
+  provider: z.enum(["gemini", "groq", "openai", "openrouter"]),
+  key: z.string().min(8),
+  model: z.string().min(1),
+});
+
 const BodySchema = z.object({
   id: z.string().optional(),
   messages: z.array(z.any()).max(200),
   cards: z.array(CardSchema).max(80).default([]),
+  keys: z.array(KeySchema).max(10).default([]),
 });
+
+const BASE_URLS: Record<string, string> = {
+  gemini: "https://generativelanguage.googleapis.com/v1beta/openai",
+  groq: "https://api.groq.com/openai/v1",
+  openai: "https://api.openai.com/v1",
+  openrouter: "https://openrouter.ai/api/v1",
+};
+
 
 const SYSTEM = `You are Braintape, the user's second brain. Answer questions using ONLY the saved cards below (notes, voice notes, PDFs, web links, YouTube videos, movies/TV, tasks).
 - Be conversational, direct and concise. Lead with the answer.
