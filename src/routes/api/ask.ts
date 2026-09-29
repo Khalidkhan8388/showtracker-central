@@ -46,9 +46,8 @@ export const Route = createFileRoute("/api/ask")({
         } catch {
           return new Response("Invalid request", { status: 400 });
         }
-        const { streamText, convertToModelMessages } = await import("ai");
-        const { createGatewayProvider, CHAT_MODEL, RESPONSES_OPTIONS } = await import("@/lib/ai-gateway.server");
-        const { provider } = createGatewayProvider(request.headers.get("X-Lovable-AIG-Run-ID") ?? undefined);
+        const { streamText, convertToModelMessages, generateText } = await import("ai");
+        const { createOpenAI } = await import("@ai-sdk/openai");
 
         const cardsText = body.cards.length
           ? body.cards
@@ -56,23 +55,53 @@ export const Route = createFileRoute("/api/ask")({
               .join("\n\n")
           : "(The user has no saved cards yet.)";
 
+        const system = `${SYSTEM}\n\nToday is ${new Date().toDateString()}.\n\nSAVED CARDS:\n\n${cardsText}`;
+        const messages = await convertToModelMessages(body.messages);
+
+        // 1) Try the user's own keys, in their chosen order.
+        const failures: string[] = [];
+        for (const k of body.keys) {
+          try {
+            const p = createOpenAI({ baseURL: BASE_URLS[k.provider], apiKey: k.key });
+            const model = p.chat(k.model);
+            // Cheap probe so a dead/quota-exhausted key fails before streaming starts.
+            await generateText({ model, prompt: "hi", maxOutputTokens: 1 });
+            const result = streamText({ model, system, messages, abortSignal: request.signal });
+            return result.toUIMessageStreamResponse({
+              originalMessages: body.messages,
+              headers: { "X-Braintape-Provider": `${k.provider}:${k.model}` },
+              onError: () => "Something went wrong while answering. Please try again.",
+            });
+          } catch (e: any) {
+            failures.push(`${k.provider}: ${String(e?.message ?? e).slice(0, 80)}`);
+          }
+        }
+
+        // 2) Fall back to the built-in AI.
+        const { createGatewayProvider, CHAT_MODEL, RESPONSES_OPTIONS } = await import("@/lib/ai-gateway.server");
+        const { provider } = createGatewayProvider(request.headers.get("X-Lovable-AIG-Run-ID") ?? undefined);
+
         const result = streamText({
           model: provider.responses(CHAT_MODEL),
-          system: `${SYSTEM}\n\nToday is ${new Date().toDateString()}.\n\nSAVED CARDS:\n\n${cardsText}`,
-          messages: await convertToModelMessages(body.messages),
+          system,
+          messages,
           abortSignal: request.signal,
           providerOptions: RESPONSES_OPTIONS as any,
         });
         return result.toUIMessageStreamResponse({
           originalMessages: body.messages,
           sendReasoning: true,
+          headers: { "X-Braintape-Provider": "built-in" },
           onError: (err: any) => {
             const msg = String(err?.message ?? err);
-            if (/402|credit/i.test(msg)) return "You're out of AI credits. Add more in Settings → Plans & credits.";
-            if (/429|rate/i.test(msg)) return "Too many requests right now — try again in a moment.";
-            return "Something went wrong while answering. Please try again.";
+            const tail = failures.length ? ` Your own keys also failed — ${failures.join("; ")}.` : "";
+            if (/402|credit/i.test(msg))
+              return `You're out of built-in AI credits. Add your own AI key in Profile.${tail}`;
+            if (/429|rate/i.test(msg)) return `Too many requests right now — try again in a moment.${tail}`;
+            return `Something went wrong while answering. Please try again.${tail}`;
           },
         });
+
       },
     },
   },
