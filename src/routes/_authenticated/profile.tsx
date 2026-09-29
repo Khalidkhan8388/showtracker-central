@@ -215,6 +215,8 @@ function ProfilePage() {
 
       <GoogleSyncSection />
 
+      <AiKeysSection />
+
 
 
       {/* Data */}
