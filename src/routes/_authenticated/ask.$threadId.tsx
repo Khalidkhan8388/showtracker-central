@@ -9,6 +9,7 @@ import { PromptInput, PromptInputFooter, PromptInputSubmit, PromptInputTextarea,
 import { Shimmer } from "@/components/ai-elements/shimmer";
 import { createThread, getThread, pickCards, saveThreadMessages } from "@/lib/ask-threads";
 import { db } from "@/lib/local-db";
+import { activeKeyChain } from "@/lib/ai-keys";
 
 export const Route = createFileRoute("/_authenticated/ask/$threadId")({
   head: () => ({
