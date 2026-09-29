@@ -1,6 +1,18 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw } from "lucide-react";
+import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload, Cloud, CloudOff, RefreshCw, KeyRound, ArrowUp, ArrowDown, X } from "lucide-react";
+import {
+  PROVIDERS,
+  listKeys,
+  addKey,
+  removeKey,
+  toggleKey,
+  moveKey,
+  maskKey,
+  testKey,
+  type AiKey,
+  type AiProvider,
+} from "@/lib/ai-keys";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import {
