@@ -1,9 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 
+const KeysSchema = z
+  .array(z.object({ provider: z.string(), key: z.string(), model: z.string().optional() }))
+  .optional()
+  .default([]);
+
 const Input = z.object({
   base64: z.string().min(1),
   filename: z.string().min(1).max(300),
+  keys: KeysSchema,
 });
 
 const PDF_PROMPT = `You read a PDF document and turn it into a saved note.
@@ -36,24 +42,36 @@ function bullets(block: string): string[] {
 export const analyzePdfFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => Input.parse(d))
   .handler(async ({ data }) => {
-    const { streamText } = await import("ai");
-    const { createGatewayProvider, CHAT_MODEL, RESPONSES_OPTIONS } = await import("./ai-gateway.server");
-    const { provider } = createGatewayProvider();
-    const result = streamText({
-      model: provider.responses(CHAT_MODEL),
-      providerOptions: RESPONSES_OPTIONS as any,
-      messages: [
-        {
-          role: "user",
-          content: [
-            { type: "text", text: PDF_PROMPT },
-            { type: "file", data: data.base64, mediaType: "application/pdf", filename: data.filename },
-          ],
-        },
-      ],
-    });
-    const text = await result.text;
-    if (!text.trim()) throw new Error("The AI couldn't read this PDF.");
+    const { routedPdf, normalizeKeys } = await import("./ai-router.server");
+    const keys = normalizeKeys(data.keys);
+
+    let text: string | null = null;
+    if (keys.length > 0) {
+      text = await routedPdf(keys, data.base64, PDF_PROMPT);
+    }
+
+    if (!text) {
+      // Fallback to gateway if keys missing or failed
+      const { streamText } = await import("ai");
+      const { createGatewayProvider, CHAT_MODEL, RESPONSES_OPTIONS } = await import("./ai-gateway.server");
+      const { provider } = createGatewayProvider();
+      const result = streamText({
+        model: provider.responses(CHAT_MODEL),
+        providerOptions: RESPONSES_OPTIONS as any,
+        messages: [
+          {
+            role: "user",
+            content: [
+              { type: "text", text: PDF_PROMPT },
+              { type: "file", data: data.base64, mediaType: "application/pdf", filename: data.filename },
+            ],
+          },
+        ],
+      });
+      text = await result.text;
+    }
+
+    if (!text || !text.trim()) throw new Error("The AI couldn't read this PDF. Make sure a Gemini key is configured in Profile.");
     const heading = section(text, "HEADING").split("\n")[0]?.replace(/^#+\s*/, "").trim();
     const transcript = section(text, "TRANSCRIPT");
     return {
