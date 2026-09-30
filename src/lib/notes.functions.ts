@@ -17,6 +17,7 @@ import {
 import { evictPhoto, readPhotoBytes, storeLocalPhoto } from "./photo-cache";
 import { evictAudio, readAudioBytes, storeLocalAudio } from "./audio-cache";
 import { findExistingByMedia, findExistingByText, findExistingByUrl, normalizeUrl } from "./dedupe";
+import { activeKeyChain } from "./ai-keys";
 
 // ---------------------------------------------------------------------------
 // helpers
@@ -43,11 +44,6 @@ async function getNote(id: string): Promise<LocalNote | undefined> {
 // Notes: create / analyze
 // ---------------------------------------------------------------------------
 
-/**
- * Create a local voice/image note from freshly captured blobs, persist the
- * blobs, then run AI analysis and update the note. Callers get the noteId
- * back so they can navigate/refresh.
- */
 export async function createMediaNote(input: {
   audioBlob: Blob | null;
   audioMime: string | null;
@@ -61,8 +57,6 @@ export async function createMediaNote(input: {
   let audioPath: string | null = null;
   if (input.audioBlob) audioPath = await storeLocalAudio(input.audioBlob, input.audioMime ?? undefined);
 
-  // Dedupe by blob hash so accidental double-saves (e.g. multi-fire share
-  // targets) collapse to the existing note instead of creating a twin.
   try {
     const { fingerprintForNote } = await import("./dedupe");
     const provisional = newNote({
@@ -91,7 +85,6 @@ export async function createMediaNote(input: {
   });
   await db.notes.put(note);
 
-  // Fire-and-forget analysis. Errors mark the note failed but never throw.
   void analyzeNoteInBackground(note.id).catch(() => {});
   return { noteId: note.id };
 }
@@ -100,8 +93,6 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
   const note = await getNote(noteId);
   if (!note) return;
   try {
-    // Voice notes can now have multiple audio segments (base clip + any
-    // "continue recording" appends). Transcribe each and join.
     const segmentPaths: string[] =
       note.audio_paths && note.audio_paths.length > 0
         ? note.audio_paths
@@ -110,6 +101,8 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
           : [];
     let firstAudio: { base64: string; mime: string } | null = null;
     const extraTranscripts: string[] = [];
+    const keys = activeKeyChain();
+
     for (let i = 0; i < segmentPaths.length; i++) {
       const a = await readAudioBytes(segmentPaths[i]);
       if (!a) continue;
@@ -118,12 +111,10 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       } else {
         try {
           const { transcript: t } = await transcribeClipFn({
-            data: { audio: { base64: bytesToBase64(a.bytes), mime: a.mime } },
+            data: { audio: { base64: bytesToBase64(a.bytes), mime: a.mime }, keys },
           });
           if (t?.trim()) extraTranscripts.push(t.trim());
-        } catch {
-          /* skip failing segment */
-        }
+        } catch {}
       }
     }
     const images: Array<{ base64: string; mime: string }> = [];
@@ -144,11 +135,12 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
         audio: firstAudio,
         images,
         prior: priorHasContent ? prior : null,
-        skipTasks: false, // extract tasks from voice and image notes alike
+        skipTasks: false,
         extraTranscripts,
+        keys,
       },
     });
-    // Preserve done/pending state where task text matches.
+
     const priorMap = new Map<string, { done: boolean; pending: boolean }>();
     for (const t of note.tasks ?? []) {
       priorMap.set(t.text.trim().toLowerCase(), { done: !!t.done, pending: t.pending ?? false });
@@ -166,8 +158,6 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
       tasks: tasksPayload,
       error: null,
     });
-    // Auto-OCR any images on media notes (voice+image or image-only).
-    // Text notes are excluded because they go through saveTextNote, not here.
     if (images.length > 0) {
       void autoExtractOcr(noteId, images);
     }
@@ -182,7 +172,6 @@ async function analyzeNoteInBackground(noteId: string): Promise<void> {
 
 export const MAX_PDF_BYTES = 20 * 1024 * 1024;
 
-/** Save a PDF locally, create a note, and analyze it in the background. */
 export async function createPdfNote(file: File): Promise<{ noteId: string }> {
   if (file.size > MAX_PDF_BYTES) throw new Error("PDF is too large (max 20 MB)");
   const path = `local://files/${crypto.randomUUID()}.pdf`;
@@ -211,7 +200,13 @@ export async function analyzePdfInBackground(noteId: string): Promise<void> {
     if (!row) throw new Error("PDF file is missing on this device");
     const bytes = new Uint8Array(await row.blob.arrayBuffer());
     const { analyzePdfFn } = await import("./pdf.functions");
-    const r = await analyzePdfFn({ data: { base64: bytesToBase64(bytes), filename: note.document.name } });
+    const r = await analyzePdfFn({
+      data: {
+        base64: bytesToBase64(bytes),
+        filename: note.document.name,
+        keys: activeKeyChain(),
+      },
+    });
     await updateNote(noteId, {
       status: "ready",
       heading: r.heading,
@@ -227,11 +222,6 @@ export async function analyzePdfInBackground(noteId: string): Promise<void> {
   }
 }
 
-/**
- * Silently run OCR on a note's images and store the result hidden by default.
- * User can reveal via the "Show extracted text" button on the note detail.
- * Skips if OCR already exists or note has no images.
- */
 async function autoExtractOcr(
   noteId: string,
   preloadedImages?: Array<{ base64: string; mime: string }>,
@@ -251,21 +241,15 @@ async function autoExtractOcr(
       }
     }
     if (images.length === 0) return;
-    const { text } = await ocrImagesFn({ data: { images } });
+    const { text } = await ocrImagesFn({ data: { images, keys: activeKeyChain() } });
     if (!text || !text.trim()) return;
     await updateNote(noteId, { ocr_text: text, ocr_hidden: true });
-  } catch {
-    /* silent — user can retry manually */
-  }
+  } catch {}
 }
 
 // ---------------------------------------------------------------------------
-// Public API — module surface shared with all the routes/components.
-// Each export accepts `{ data: X }` and returns `{ ok: true, ... }` to match
-// the historical server-function signature so callers keep working.
+// Public API
 // ---------------------------------------------------------------------------
-
-// -- CRUD ----
 
 export async function toggleTask({ data }: { data: { noteId: string; taskId: string; done?: boolean } }) {
   const note = await getNote(data.noteId);
@@ -286,7 +270,6 @@ export async function pinTask({ data }: { data: { noteId: string; taskId: string
   await updateNote(data.noteId, { tasks: next });
   return { ok: true as const };
 }
-
 
 export async function editTaskText({
   data,
@@ -417,7 +400,6 @@ export async function purgeExpiredNotes() {
 }
 
 export async function deleteAccount() {
-  // Local-only "delete account" = wipe every trace of user data from this device.
   await db.notes.clear();
   await db.photos.clear();
   await db.audios.clear();
@@ -426,8 +408,6 @@ export async function deleteAccount() {
   return { ok: true as const };
 }
 
-// -- AI-driven creators ----
-
 export async function processVoiceNote({ data }: { data: { noteId: string } }) {
   await analyzeNoteInBackground(data.noteId);
   return { ok: true as const };
@@ -435,12 +415,11 @@ export async function processVoiceNote({ data }: { data: { noteId: string } }) {
 
 export async function saveWebLink({ data }: { data: { url: string } }) {
   const url = /^https?:\/\//i.test(data.url) ? data.url : `https://${data.url}`;
-  // Dedupe by normalized URL (strips utm_*, fbclid, trailing slash, www., etc).
   const existing = await findExistingByUrl(url);
   if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
   const note = newNote({ source_url: normalizeUrl(url), status: "processing" });
   await db.notes.put(note);
-  // 1) Try TMDB detection first — movies/TV get a dedicated card + detail page.
+
   try {
     const { lookupTmdbFn } = await import("./tmdb.functions");
     const media = await lookupTmdbFn({ data: { url } });
@@ -448,205 +427,172 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       const existingMedia = await findExistingByMedia(media.type, media.tmdb_id);
       if (existingMedia && existingMedia !== note.id) {
         await db.notes.delete(note.id);
-        return { ok: true as const, noteId: existingMedia, media: true as const, duplicate: true as const };
+        return { ok: true as const, noteId: existingMedia, duplicate: true as const };
       }
       await updateNote(note.id, {
         status: "ready",
         heading: media.title,
-        summary: media.tagline || media.overview.slice(0, 240) || null,
-        tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+        summary: media.overview || null,
         media: {
-          ...media,
-          watch_status: "watchlist",
-          watched_at: null,
-          watched_episodes: [],
+          type: media.type,
+          tmdb_id: media.tmdb_id,
+          title: media.title,
+          poster_path: media.poster_path,
+          release_date: media.release_date,
+          vote_average: media.vote_average,
+          overview: media.overview,
         },
       });
-      try {
-        const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } = await import("./collections");
-        const c = await ensureCollectionByTitle(media.type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
-        await addNotesToCollection(c.id, [note.id]);
-      } catch {}
-      return { ok: true as const, noteId: note.id, media: true as const };
+      await fileMediaNoteIntoCollection(note.id, media.type);
+      return { ok: true as const, noteId: note.id, duplicate: false as const };
     }
-  } catch {
-    // Fall through to normal AI link processing.
-  }
-  // 1b) YouTube — dedicated fetcher + AI analysis using title + description + captions.
-  try {
-    const { parseYouTubeId } = await import("./youtube");
-    if (parseYouTubeId(url)) {
-      const { fetchYouTubeFn } = await import("./youtube.functions");
-      const yt = await fetchYouTubeFn({ data: { url } });
-      let heading = yt.title ?? "YouTube video";
-      let summary = yt.description?.slice(0, 400) ?? null;
-      let keyPoints: string[] = [];
-      let tasksPayload: LocalTask[] = [];
+  } catch {}
+
+  const { isYouTubeUrl, extractYouTubeVideoId } = await import("./youtube");
+  const ytid = isYouTubeUrl(url) ? extractYouTubeVideoId(url) : null;
+  if (ytid) {
+    try {
+      const { fetchYouTubeMetadataFn } = await import("./youtube.functions");
+      const meta = await fetchYouTubeMetadataFn({ data: { videoId: ytid } });
+      await updateNote(note.id, {
+        heading: meta.title,
+        summary: meta.description ? meta.description.slice(0, 300) : null,
+        youtube: {
+          video_id: meta.videoId,
+          title: meta.title,
+          channel_name: meta.channelTitle,
+          thumbnail_url: meta.thumbnailUrl,
+          duration: meta.duration,
+          view_count: meta.viewCount,
+        },
+      });
       try {
         const { analyzeYouTubeFn } = await import("./ai.functions");
         const ai = await analyzeYouTubeFn({
           data: {
-            title: yt.title,
-            channelName: yt.channelName,
-            description: yt.description,
-            captions: yt.captions,
-            url: yt.canonicalUrl,
+            url,
+            title: meta.title,
+            channelName: meta.channelTitle,
+            description: meta.description,
+            captions: meta.captions,
+            keys: activeKeyChain(),
           },
         });
-        heading = ai.heading || heading;
-        summary = ai.summary || summary;
-        keyPoints = ai.key_points ?? [];
-        tasksPayload = ai.tasks.map((t, i) => ({ id: `t${i}`, text: t, done: false, pending: true }));
-      } catch (aiErr) {
-        console.error("[youtube] AI analysis failed, keeping metadata-only card", aiErr);
+        await updateNote(note.id, {
+          status: "ready",
+          heading: ai.heading,
+          summary: ai.summary,
+          key_points: ai.key_points,
+          tasks: ai.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
+          tags: ai.tags,
+        });
+      } catch {
+        await updateNote(note.id, { status: "ready" });
       }
-      const tags = (yt.keywords ?? [])
-        .slice(0, 6)
-        .map((k) => k.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9\-]/g, ""))
-        .filter(Boolean);
+      return { ok: true as const, noteId: note.id, duplicate: false as const };
+    } catch {}
+  }
+
+  void (async () => {
+    try {
+      const result = await analyzeWebLinkFn({ data: { url, keys: activeKeyChain() } });
+      let imgPath: string | null = null;
+      if (result.imageUrl) {
+        try {
+          const imgRes = await fetchLinkImageFn({ data: { url: result.imageUrl } });
+          if (imgRes.ok) {
+            const raw = Uint8Array.from(atob(imgRes.base64), (c) => c.charCodeAt(0));
+            const blob = new Blob([raw], { type: imgRes.mime });
+            imgPath = await storeLocalPhoto(blob);
+          }
+        } catch {}
+      }
       await updateNote(note.id, {
         status: "ready",
-        heading: heading.slice(0, 140),
-        summary,
-        tasks: tasksPayload,
-        key_points: keyPoints,
-        tags,
-        source_url: normalizeUrl(yt.canonicalUrl),
-        youtube: {
-          video_id: yt.videoId,
-          canonical_url: yt.canonicalUrl,
-          title: yt.title,
-          channel_name: yt.channelName,
-          channel_url: yt.channelUrl,
-          channel_id: yt.channelId,
-          thumbnail_url: yt.thumbnailUrl,
-          description: yt.description,
-          published_at: yt.publishedAt,
-          duration_seconds: yt.durationSeconds,
-          view_count: yt.viewCount,
-          keywords: yt.keywords ?? [],
-          captions_available: (yt.captions?.length ?? 0) > 40,
-        },
+        heading: result.heading,
+        summary: result.summary,
+        key_points: result.key_points,
+        tasks: result.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
+        tags: result.tags,
+        image_paths: imgPath ? [imgPath] : [],
       });
-      return { ok: true as const, noteId: note.id, youtube: true as const };
+    } catch (err: any) {
+      await updateNote(note.id, { status: "failed", error: err?.message ?? String(err) });
     }
-  } catch (ytErr) {
-    console.error("[youtube] fetch failed, falling back to generic web link", ytErr);
-  }
-  // 2) Fall back to standard AI enrichment
-  try {
-    const result = await analyzeWebLinkFn({ data: { url } });
-    const tasksPayload: LocalTask[] = result.tasks.map((t, i) => ({
-      id: `t${i}`,
-      text: t,
-      done: false,
-      pending: true,
-    }));
-    // Try to grab an og:image and persist it as the note's cover.
-    let imagePaths: string[] = [];
-    if (result.imageUrl) {
-      try {
-        const img = await fetchLinkImageFn({ data: { url: result.imageUrl } });
-        if (img.ok) {
-          const bin = atob(img.base64);
-          const bytes = new Uint8Array(bin.length);
-          for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
-          const blob = new Blob([bytes], { type: img.mime });
-          const path = await storeLocalPhoto(blob, img.mime);
-          imagePaths = [path];
-        }
-      } catch {}
-    }
-    await updateNote(note.id, {
-      status: "ready",
-      heading: result.heading,
-      summary: result.summary,
-      tasks: tasksPayload,
-      image_paths: imagePaths,
-    });
-    if (imagePaths.length > 0) {
-      void autoExtractOcr(note.id);
-    }
-  } catch (err: any) {
-    await updateNote(note.id, { status: "failed", error: err?.message ?? String(err) });
-    throw err;
-  }
-  return { ok: true as const, noteId: note.id };
+  })();
+
+  return { ok: true as const, noteId: note.id, duplicate: false as const };
 }
 
 export async function saveTextNote({
   data,
 }: {
-  data: {
-    heading: string;
-    body: string;
-    imagePaths?: string[];
-    sourceUrl?: string | null;
-  };
+  data: { heading?: string; body?: string };
 }) {
-  let heading = (data.heading ?? "").trim();
+  const heading = (data.heading ?? "").trim();
   const body = (data.body ?? "").trim();
-  if (!heading) {
-    const fallback = body.split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
-    heading = fallback || "Untitled note";
-  }
-  // Dedupe: identical heading + body (and no images/url/audio) collapses to
-  // the existing entry so accidental re-saves never create a twin.
-  if (!data.imagePaths?.length && !data.sourceUrl) {
-    const existing = await findExistingByText(heading, body);
-    if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
-  }
+  if (!heading && !body) throw new Error("Note cannot be empty");
+
+  const existing = await findExistingByText(heading, body);
+  if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
+
   const note = newNote({
-    heading,
-    transcript: body || null,
-    image_paths: data.imagePaths ?? [],
-    source_url: data.sourceUrl ?? null,
     status: "ready",
+    heading: heading || "Untitled note",
+    summary: body || null,
+    transcript: body || null,
   });
   await db.notes.put(note);
-  // Optional AI enrichment for meaningful notes — fire-and-forget.
+
   if (body.length >= 40) {
     void (async () => {
       try {
-        const enriched = await analyzeTextFn({ data: { heading, body } });
-        // Text notes never get AI-extracted tasks — tasks come only from
-        // voice, image, or URL notes.
-        await updateNote(note.id, {
-          heading: enriched.heading || heading,
-          summary: enriched.summary,
-        });
-      } catch {
-        /* ignore */
-      }
+        const enriched = await analyzeTextFn({ data: { heading, body, keys: activeKeyChain() } });
+        if (enriched.summary || enriched.key_points.length > 0) {
+          await updateNote(note.id, {
+            heading: enriched.heading || note.heading,
+            summary: enriched.summary || note.summary,
+            key_points: enriched.key_points,
+            tasks: enriched.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
+            tags: enriched.tags,
+          });
+        }
+      } catch {}
     })();
   }
-  return { ok: true as const, noteId: note.id };
+
+  return { ok: true as const, noteId: note.id, duplicate: false as const };
 }
 
 export async function updateTextNote({
   data,
 }: {
-  data: { noteId: string; heading: string; body: string };
+  data: { noteId: string; heading?: string; body?: string };
 }) {
-  let heading = (data.heading ?? "").trim();
-  if (!heading) {
-    const fallback = (data.body ?? "").trim().split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
-    heading = fallback || "Untitled note";
-  }
-  await updateNote(data.noteId, { heading, transcript: data.body || null });
+  const note = await getNote(data.noteId);
+  if (!note) throw new Error("Note not found");
+  const heading = (data.heading ?? note.heading ?? "").trim();
+  const body = (data.body ?? note.summary ?? "").trim();
+  await updateNote(data.noteId, {
+    heading: heading || "Untitled note",
+    summary: body,
+    transcript: body || note.transcript,
+  });
   return { ok: true as const };
 }
 
 export async function appendImagesToNote({
   data,
 }: {
-  data: { noteId: string; imagePaths: string[] };
+  data: { noteId: string; imageBlobs: Blob[] };
 }) {
   const note = await getNote(data.noteId);
-  if (!note) return { ok: true as const, imagePaths: data.imagePaths };
-  const merged = [...(note.image_paths ?? []), ...data.imagePaths].slice(0, 40);
+  if (!note) throw new Error("Note not found");
+  const newPaths: string[] = [];
+  for (const b of data.imageBlobs) newPaths.push(await storeLocalPhoto(b));
+  const merged = [...(note.image_paths ?? []), ...newPaths];
   await updateNote(data.noteId, { image_paths: merged });
-  return { ok: true as const, imagePaths: merged };
+  return { ok: true as const, count: merged.length };
 }
 
 export async function extractOcrForNote({ data }: { data: { noteId: string } }) {
@@ -660,7 +606,7 @@ export async function extractOcrForNote({ data }: { data: { noteId: string } }) 
     if (b) images.push({ base64: bytesToBase64(b.bytes), mime: b.mime });
   }
   if (images.length === 0) throw new Error("Images unavailable");
-  const { text } = await ocrImagesFn({ data: { images } });
+  const { text } = await ocrImagesFn({ data: { images, keys: activeKeyChain() } });
   await updateNote(data.noteId, { ocr_text: text || null });
   return { ok: true as const, text };
 }
@@ -672,7 +618,6 @@ export async function updateImagePaths({
 }) {
   const note = await getNote(data.noteId);
   if (!note) return { ok: true as const };
-  // Evict removed photos from local blob store.
   const removed = (note.image_paths ?? []).filter((p) => !data.imagePaths.includes(p));
   for (const p of removed) await evictPhoto(p);
   await updateNote(data.noteId, { image_paths: data.imagePaths });
@@ -683,59 +628,53 @@ export async function transcribeAudioClip({ data }: { data: { audioPath: string 
   const a = await readAudioBytes(data.audioPath);
   if (!a) throw new Error("Audio clip not found");
   const { transcript } = await transcribeClipFn({
-    data: { audio: { base64: bytesToBase64(a.bytes), mime: a.mime } },
+    data: { audio: { base64: bytesToBase64(a.bytes), mime: a.mime }, keys: activeKeyChain() },
   });
   return { transcript };
 }
 
 export async function generateLinkLabel({ data }: { data: { url: string } }) {
-  return generateLinkLabelFn({ data });
+  return generateLinkLabelFn({ data: { ...data, keys: activeKeyChain() } });
 }
 
-/** Ensure a media note is filed into the right auto collection. */
 async function fileMediaNoteIntoCollection(noteId: string, type: "movie" | "tv") {
   try {
     const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } =
       await import("./collections");
     const c = await ensureCollectionByTitle(type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
     await addNotesToCollection(c.id, [noteId]);
-  } catch (err) {
-    console.error("[collections] failed to file media note", err);
-  }
+  } catch {}
 }
 
-/** Add a movie/TV show to the app by TMDB id, from the in-app search. */
 export async function addTmdbMedia({
   data,
 }: {
-  data: { type: "movie" | "tv"; tmdb_id: number };
+  data: {
+    type: "movie" | "tv";
+    tmdb_id: number;
+    title: string;
+    poster_path: string | null;
+    release_date: string | null;
+    vote_average: number;
+    overview: string | null;
+  };
 }) {
-  // Check if already saved to avoid duplicates.
-  const existing = await db.notes
-    .filter((n) => !n.deleted_at && n.media?.type === data.type && n.media?.tmdb_id === data.tmdb_id)
-    .first();
-  if (existing) {
-    // Still make sure it's filed — a previous add may have raced or the
-    // auto-collection could have been deleted / recreated in the meantime.
-    await fileMediaNoteIntoCollection(existing.id, data.type);
-    return { ok: true as const, noteId: existing.id, duplicate: true as const };
-  }
-
-  const { lookupTmdbByIdFn } = await import("./tmdb.functions");
-  const media = await lookupTmdbByIdFn({ data: { type: data.type, tmdb_id: data.tmdb_id } });
-  if (!media) throw new Error("Could not fetch details from TMDB");
+  const media = data;
+  const existingMedia = await findExistingByMedia(media.type, media.tmdb_id);
+  if (existingMedia) return { ok: true as const, noteId: existingMedia, duplicate: true as const };
 
   const note = newNote({
-    source_url: media.original_url,
     status: "ready",
     heading: media.title,
-    summary: media.tagline || media.overview.slice(0, 240) || null,
-    tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+    summary: media.overview || null,
     media: {
-      ...media,
-      watch_status: "watchlist",
-      watched_at: null,
-      watched_episodes: [],
+      type: media.type,
+      tmdb_id: media.tmdb_id,
+      title: media.title,
+      poster_path: media.poster_path,
+      release_date: media.release_date,
+      vote_average: media.vote_average,
+      overview: media.overview,
     },
   });
   await db.notes.put(note);
@@ -790,6 +729,8 @@ export async function searchEverything({
     summary: (n.summary ?? "").slice(0, 300),
     tags: n.tags ?? [],
   }));
-  const { ids, reasoning } = await semanticRankFn({ data: { query: q, catalog } });
+  const { ids, reasoning } = await semanticRankFn({
+    data: { query: q, catalog, keys: activeKeyChain() },
+  });
   return { noteIds: ids, tasks: [] as any[], reasoning };
 }
