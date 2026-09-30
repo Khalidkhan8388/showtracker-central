@@ -7,50 +7,19 @@ import { z } from "zod";
 // results. Nothing is persisted server-side.
 // -----------------------------------------------------------------------------
 
-const MODEL = "google/gemini-3.5-flash";
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+// Keys the device sends along with each request (user's own provider keys).
+const KeysSchema = z
+  .array(z.object({ provider: z.string(), key: z.string(), model: z.string().optional() }))
+  .optional()
+  .default([]);
+
+async function router() {
+  return await import("./ai-router.server");
+}
 
 const AudioSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 const ImageSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 
-// ---------- shared fetch helper (with timeout) ---------------------------
-
-async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-// ---------- transcription -------------------------------------------------
-
-async function transcribeBytes(base64: string, mime: string, apiKey: string): Promise<string> {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  const ext = ({
-    "audio/webm": "webm",
-    "audio/mp4": "mp4",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/ogg": "ogg",
-  } as Record<string, string>)[mime.split(";")[0]] ?? "webm";
-  const form = new FormData();
-  form.append("model", "openai/gpt-4o-mini-transcribe");
-  form.append("file", new Blob([bytes], { type: mime }), `recording.${ext}`);
-  const res = await fetchWithTimeout(`${GATEWAY}/audio/transcriptions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  }, 90_000);
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Transcription failed (${res.status}): ${body.slice(0, 200)}`);
-  }
-  const data = (await res.json()) as { text?: string };
-  return (data.text ?? "").trim();
-}
 
 function parseTags(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
@@ -107,14 +76,15 @@ const AnalyzeInput = z.object({
     .optional(),
   skipTasks: z.boolean().optional().default(false),
   extraTranscripts: z.array(z.string()).optional().default([]),
+  keys: KeysSchema,
 });
 
 
 export const analyzeMediaFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AnalyzeInput.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, routedTranscribe, parseJsonReply, normalizeKeys } = await router();
+    const keys = normalizeKeys(data.keys);
 
     const images = data.images ?? [];
     const prior = data.prior ?? null;
@@ -124,14 +94,9 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
         ((prior.summary ?? "").trim().length > 0) ||
         ((prior.tasks?.length ?? 0) > 0));
 
-    // Kick off transcription in PARALLEL with structuring (both hit the AI
-    // gateway independently). Structuring uses the transcript once ready.
-    const transcribePromise: Promise<string | null> = data.audio
-      ? transcribeBytes(data.audio.base64, data.audio.mime, apiKey)
-      : Promise.resolve(null);
-
-    // Await transcription before building the structuring prompt (it needs the text).
-    const firstTranscript = await transcribePromise;
+    const firstTranscript = data.audio
+      ? await routedTranscribe(keys, data.audio.base64, data.audio.mime)
+      : null;
     if (data.audio && !firstTranscript) throw new Error("Empty transcription");
     const extras = (data.extraTranscripts ?? []).filter((t) => t && t.trim().length > 0);
     const transcript = [firstTranscript, ...extras].filter(Boolean).join("\n\n") || null;
@@ -158,26 +123,13 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
 
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userBlocks },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`AI failed (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+    const raw = await routedChat(keys, {
+      system: SYSTEM_PROMPT,
+      content: userBlocks,
+      json: true,
+      needsVision: images.length > 0,
+    });
+    const parsed: any = parseJsonReply(raw);
     return {
       transcript,
       heading: String(parsed.heading ?? "Untitled note").slice(0, 120),
@@ -195,13 +147,16 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
 
 // ---------- transcribe a single clip (for append-in-edit) -----------------
 
-const TranscribeClipInput = z.object({ audio: AudioSchema });
+const TranscribeClipInput = z.object({ audio: AudioSchema, keys: KeysSchema });
 export const transcribeClipFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => TranscribeClipInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-    const transcript = await transcribeBytes(data.audio.base64, data.audio.mime, apiKey);
+    const { routedTranscribe, normalizeKeys } = await router();
+    const transcript = await routedTranscribe(
+      normalizeKeys(data.keys),
+      data.audio.base64,
+      data.audio.mime,
+    );
     if (!transcript) throw new Error("Empty transcription");
     return { transcript };
   });
@@ -214,35 +169,23 @@ If multiple images are provided, separate each image's text with a line "--- Ima
 If an image has no legible text, output "(no text)" for that image.
 Return plain text only — no JSON, no code fences.`;
 
-const OcrInput = z.object({ images: z.array(ImageSchema).min(1).max(20) });
+const OcrInput = z.object({ images: z.array(ImageSchema).min(1).max(20), keys: KeysSchema });
 export const ocrImagesFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => OcrInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, normalizeKeys } = await router();
     const userBlocks: Array<Record<string, unknown>> = [
       { type: "text", text: `Extract the text from ${data.images.length === 1 ? "this image" : `these ${data.images.length} images`}.` },
     ];
     for (const img of data.images) {
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: OCR_SYSTEM_PROMPT },
-          { role: "user", content: userBlocks },
-        ],
-      }),
-    }, 90_000);
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`OCR failed (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const text = (j.choices?.[0]?.message?.content ?? "").trim();
+    const text = await routedChat(normalizeKeys(data.keys), {
+      system: OCR_SYSTEM_PROMPT,
+      content: userBlocks,
+      needsVision: true,
+      timeoutMs: 90_000,
+    });
     return { text };
   });
 
