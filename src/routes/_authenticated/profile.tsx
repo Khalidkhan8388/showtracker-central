@@ -1,6 +1,35 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useRef, useState } from "react";
-import { ChevronLeft, Trash2, Sun, Moon, Monitor, Loader2, ChevronRight, Download, Upload } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import {
+  ChevronLeft,
+  Trash2,
+  Sun,
+  Moon,
+  Monitor,
+  Loader2,
+  ChevronRight,
+  Download,
+  Upload,
+  KeyRound,
+  ArrowUp,
+  ArrowDown,
+  X,
+  ExternalLink,
+  HelpCircle,
+} from "lucide-react";
+import {
+  PROVIDERS,
+  listKeys,
+  addKey,
+  removeKey,
+  toggleKey,
+  moveKey,
+  maskKey,
+  testKey,
+  detectProvider,
+  type AiKey,
+  type AiProvider,
+} from "@/lib/ai-keys";
 import { deleteAccount } from "@/lib/notes.functions";
 import { downloadExport, importFromFile, type ImportMode } from "@/lib/backup";
 import { useTheme } from "@/lib/theme";
@@ -10,7 +39,7 @@ export const Route = createFileRoute("/_authenticated/profile")({
   head: () => ({
     meta: [
       { title: "Profile — Braintape" },
-      { name: "description", content: "Appearance and preferences for your local second brain." },
+      { name: "description", content: "Appearance, preferences, and AI keys for your local second brain." },
     ],
   }),
   component: ProfilePage,
@@ -29,19 +58,18 @@ function ProfilePage() {
     if (typeof window === "undefined") return false;
     return localStorage.getItem("hide-media-on-home") === "1";
   });
+
   function toggleHideMedia(next: boolean) {
     setHideMedia(next);
     localStorage.setItem("hide-media-on-home", next ? "1" : "0");
     window.dispatchEvent(new Event("braintape:pref-changed"));
   }
 
-
   async function confirmDelete() {
     setDeleting(true);
     try {
       await deleteAccount();
       toast.success("All data wiped");
-      // full reload to clear any in-memory caches (object URLs, memoized queries)
       if (typeof window !== "undefined") window.location.assign("/home");
       else navigate({ to: "/home" });
     } catch (e) {
@@ -84,7 +112,6 @@ function ProfilePage() {
     }
   }
 
-
   return (
     <div className="mx-auto min-h-screen w-full max-w-md bg-background pb-16">
       <header className="sticky top-0 z-20 flex items-center gap-2 border-b border-border/60 bg-background/95 px-2 py-2 backdrop-blur-xl">
@@ -101,12 +128,9 @@ function ProfilePage() {
       {/* Identity */}
       <section className="px-4 pt-6">
         <div className="flex items-center gap-4">
-          <div
-            className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground"
-          >
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-primary text-2xl font-semibold text-primary-foreground">
             B
           </div>
-
           <div className="min-w-0">
             <div className="truncate text-[20px] font-semibold leading-tight">Local device</div>
             <div className="truncate text-[13px] text-muted-foreground">
@@ -127,9 +151,6 @@ function ProfilePage() {
           </div>
         </div>
       </section>
-
-
-
 
       {/* Component size */}
       <section className="px-4 pt-6">
@@ -161,14 +182,10 @@ function ProfilePage() {
       {/* Home preferences */}
       <section className="px-4 pt-8">
         <SectionTitle>Home page</SectionTitle>
-
-
-
-
         <button
           type="button"
           onClick={() => toggleHideMedia(!hideMedia)}
-          className="mt-3 flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
+          className="flex w-full items-center gap-3 rounded-2xl bg-card px-4 py-3.5 text-left active:bg-muted/50"
         >
           <div className="min-w-0 flex-1">
             <div className="text-[15px]">Hide movies & TV shows</div>
@@ -187,13 +204,14 @@ function ProfilePage() {
             />
           </span>
         </button>
-
       </section>
+
+      {/* AI Keys Section */}
+      <AiKeysSection />
 
       {/* Data */}
       <section className="px-4 pt-8">
         <SectionTitle>Data</SectionTitle>
-
         <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
           <button
             onClick={handleExport}
@@ -297,6 +315,213 @@ function SectionTitle({ children }: { children: React.ReactNode }) {
   );
 }
 
+function AiKeysSection() {
+  const [keys, setKeys] = useState<AiKey[]>([]);
+  const [adding, setAdding] = useState(false);
+  const [value, setValue] = useState("");
+  const [provider, setProvider] = useState<AiProvider>("groq");
+  const [model, setModel] = useState("");
+  const [testingId, setTestingId] = useState<string | null>(null);
+  const [showGuide, setShowGuide] = useState(false);
+
+  useEffect(() => {
+    const read = () => setKeys(listKeys());
+    read();
+    window.addEventListener("braintape:ai-keys-changed", read);
+    return () => window.removeEventListener("braintape:ai-keys-changed", read);
+  }, []);
+
+  function onPasteOrType(val: string) {
+    setValue(val);
+    const detected = detectProvider(val);
+    setProvider(detected);
+  }
+
+  function submit() {
+    if (!value.trim()) return;
+    setKeys(addKey(provider, value, model));
+    setValue("");
+    setModel("");
+    setAdding(false);
+    toast.success(`${PROVIDERS[provider].label} key saved`);
+  }
+
+  async function handleTest(k: AiKey) {
+    setTestingId(k.id);
+    try {
+      await testKey(k);
+      toast.success(`${PROVIDERS[k.provider].label} is working!`);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Test failed");
+    } finally {
+      setTestingId(null);
+    }
+  }
+
+  return (
+    <section className="px-4 pt-8">
+      <div className="flex items-center justify-between mb-2">
+        <SectionTitle>AI Keys & Fallback</SectionTitle>
+        <button
+          type="button"
+          onClick={() => setShowGuide(!showGuide)}
+          className="flex items-center gap-1 text-[12px] text-muted-foreground hover:text-foreground"
+        >
+          <HelpCircle className="h-3.5 w-3.5" />
+          <span>{showGuide ? "Hide free guide" : "Get free keys"}</span>
+        </button>
+      </div>
+
+      {showGuide && (
+        <div className="mb-3 space-y-2 rounded-2xl bg-muted/60 p-3.5 text-[12px]">
+          <p className="font-medium text-foreground">How to get free API keys:</p>
+          <div className="space-y-1.5 text-muted-foreground">
+            <div className="flex items-center justify-between">
+              <span>1. <strong>Groq</strong> (Free Whisper audio + fast Llama text)</span>
+              <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-primary hover:underline">
+                console.groq.com <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+            <div className="flex items-center justify-between">
+              <span>2. <strong>Gemini</strong> (Free high-quota vision & PDFs)</span>
+              <a href="https://aistudio.google.com/apikey" target="_blank" rel="noreferrer" className="flex items-center gap-0.5 text-primary hover:underline">
+                aistudio.google.com <ExternalLink className="h-3 w-3" />
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div className="overflow-hidden rounded-2xl bg-card divide-y divide-border/60">
+        {keys.map((k, i) => (
+          <div key={k.id} className="flex items-center gap-2 px-3 py-3">
+            <div className="flex flex-col">
+              <button
+                aria-label="Move up"
+                disabled={i === 0}
+                onClick={() => setKeys(moveKey(k.id, -1))}
+                className="text-muted-foreground disabled:opacity-25 active:opacity-60"
+              >
+                <ArrowUp className="h-4 w-4" />
+              </button>
+              <button
+                aria-label="Move down"
+                disabled={i === keys.length - 1}
+                onClick={() => setKeys(moveKey(k.id, 1))}
+                className="text-muted-foreground disabled:opacity-25 active:opacity-60"
+              >
+                <ArrowDown className="h-4 w-4" />
+              </button>
+            </div>
+
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[15px]">
+                {i + 1}. {PROVIDERS[k.provider].label}
+                {!k.enabled && <span className="text-muted-foreground"> · off</span>}
+              </div>
+              <div className="mt-0.5 truncate font-mono text-[11px] text-muted-foreground">
+                {maskKey(k.key)} · {k.model || PROVIDERS[k.provider].defaultModel}
+              </div>
+            </div>
+
+            <button
+              onClick={() => handleTest(k)}
+              disabled={testingId === k.id}
+              className="rounded-full bg-muted px-3 py-1.5 text-[12px] active:opacity-70"
+            >
+              {testingId === k.id ? "…" : "Test"}
+            </button>
+            <button
+              aria-label={k.enabled ? "Turn off" : "Turn on"}
+              onClick={() => setKeys(toggleKey(k.id))}
+              className="rounded-full bg-muted px-3 py-1.5 text-[12px] active:opacity-70"
+            >
+              {k.enabled ? "On" : "Off"}
+            </button>
+            <button
+              aria-label="Remove key"
+              onClick={() => setKeys(removeKey(k.id))}
+              className="text-destructive active:opacity-60"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
+
+        {!adding ? (
+          <button
+            onClick={() => setAdding(true)}
+            className="flex w-full items-center gap-3 px-4 py-3.5 text-left active:bg-muted/50"
+          >
+            <KeyRound className="h-5 w-5 text-foreground/70" />
+            <span className="flex-1 text-[15px]">Add AI key</span>
+          </button>
+        ) : (
+          <div className="space-y-2.5 px-4 py-4">
+            <div>
+              <input
+                value={value}
+                onChange={(e) => onPasteOrType(e.target.value)}
+                placeholder="Paste any key (Groq, Gemini, OpenAI...)"
+                autoComplete="off"
+                className="w-full rounded-xl bg-muted px-3 py-2.5 font-mono text-[13px] outline-none"
+              />
+              {value && (
+                <div className="mt-1.5 flex items-center justify-between px-1 text-[11px] text-muted-foreground">
+                  <span>Detected: <strong>{PROVIDERS[provider].label}</strong></span>
+                  <span>Model: {model || PROVIDERS[provider].defaultModel}</span>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-1.5 pt-1">
+              {(Object.keys(PROVIDERS) as AiProvider[]).map((p) => (
+                <button
+                  key={p}
+                  type="button"
+                  onClick={() => setProvider(p)}
+                  className={`rounded-xl px-2.5 py-1.5 text-[12px] transition-colors ${
+                    provider === p ? "bg-primary text-primary-foreground font-medium" : "bg-muted text-muted-foreground"
+                  }`}
+                >
+                  {PROVIDERS[p].label.split(" ")[0]}
+                </button>
+              ))}
+            </div>
+
+            <input
+              value={model}
+              onChange={(e) => setModel(e.target.value)}
+              placeholder={`Custom model override (optional, default: ${PROVIDERS[provider].defaultModel})`}
+              className="w-full rounded-xl bg-muted px-3 py-2 font-mono text-[12px] outline-none"
+            />
+
+            <div className="flex gap-2 pt-1">
+              <button
+                onClick={() => setAdding(false)}
+                className="flex-1 rounded-full bg-muted px-4 py-2.5 text-[14px] active:opacity-70"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={submit}
+                disabled={!value.trim()}
+                className="flex-1 rounded-full bg-primary px-4 py-2.5 text-[14px] font-medium text-primary-foreground disabled:opacity-50 active:opacity-80"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <p className="mt-2 px-1 text-[12px] text-muted-foreground">
+        Keys stay strictly on this device. If one key runs out of quota, Braintape automatically falls back to the next enabled key.
+      </p>
+    </section>
+  );
+}
+
 function ModeChip({
   active,
   onClick,
@@ -310,13 +535,14 @@ function ModeChip({
 }) {
   return (
     <button
+      type="button"
       onClick={onClick}
-      className={`flex flex-col items-center gap-1 rounded-xl py-3 text-[12px] transition-colors ${
-        active ? "bg-primary text-primary-foreground" : "text-foreground/70 active:bg-muted/50"
+      className={`flex items-center justify-center gap-1.5 rounded-xl py-2 text-[13px] font-medium transition-colors ${
+        active ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
       }`}
     >
       {icon}
-      <span className="font-medium">{label}</span>
+      <span>{label}</span>
     </button>
   );
 }
