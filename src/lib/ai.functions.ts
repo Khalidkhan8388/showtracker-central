@@ -7,90 +7,36 @@ import { z } from "zod";
 // results. Nothing is persisted server-side.
 // -----------------------------------------------------------------------------
 
-const MODEL = "google/gemini-3.5-flash";
-const GATEWAY = "https://ai.gateway.lovable.dev/v1";
+// Keys the device sends along with each request (user's own provider keys).
+const KeysSchema = z
+  .array(z.object({ provider: z.string(), key: z.string(), model: z.string().optional() }))
+  .optional()
+  .default([]);
+
+async function router() {
+  return await import("./ai-router.server");
+}
 
 const AudioSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 const ImageSchema = z.object({ base64: z.string().min(1), mime: z.string().min(1) });
 
-// ---------- shared fetch helper (with timeout) ---------------------------
 
-async function fetchWithTimeout(url: string, init: RequestInit, ms: number): Promise<Response> {
-  const controller = new AbortController();
-  const t = setTimeout(() => controller.abort(), ms);
-  try {
-    return await fetch(url, { ...init, signal: controller.signal });
-  } finally {
-    clearTimeout(t);
-  }
-}
-
-// ---------- transcription -------------------------------------------------
-
-async function transcribeBytes(base64: string, mime: string, apiKey: string): Promise<string> {
-  const bytes = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
-  const ext = ({
-    "audio/webm": "webm",
-    "audio/mp4": "mp4",
-    "audio/mpeg": "mp3",
-    "audio/wav": "wav",
-    "audio/ogg": "ogg",
-  } as Record<string, string>)[mime.split(";")[0]] ?? "webm";
-  const form = new FormData();
-  form.append("model", "openai/gpt-4o-mini-transcribe");
-  form.append("file", new Blob([bytes], { type: mime }), `recording.${ext}`);
-  const res = await fetchWithTimeout(`${GATEWAY}/audio/transcriptions`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${apiKey}` },
-    body: form,
-  }, 90_000);
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`Transcription failed (${res.status}): ${body.slice(0, 200)}`);
-  }
-  const data = (await res.json()) as { text?: string };
-  return (data.text ?? "").trim();
-}
-
-function parseTags(input: unknown): string[] {
+function keyPointsFromRaw(input: unknown, max: number): string[] {
   if (!Array.isArray(input)) return [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of input) {
-    const s = String(raw ?? "")
-      .toLowerCase()
-      .trim()
-      .replace(/^#+/, "")
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9\-]/g, "")
-      .slice(0, 32);
-    if (!s || seen.has(s)) continue;
-    seen.add(s);
-    out.push(s);
-    if (out.length >= 8) break;
-  }
-  return out;
-}
-
-function tasksFromRaw(input: unknown): string[] {
-  const arr = Array.isArray(input) ? input : [];
-  return arr
-    .map((t: unknown) =>
-      typeof t === "string" ? t : typeof t === "object" && t && "text" in (t as any) ? String((t as any).text) : "",
-    )
-    .filter((t: string) => t.trim().length > 0)
-    .slice(0, 20);
+  return input
+    .map((k: unknown) => String(k ?? "").trim())
+    .filter((k: string) => k.length > 0)
+    .slice(0, max);
 }
 
 // ---------- media analysis -------------------------------------------------
 
 const SYSTEM_PROMPT = `You turn raw voice notes and/or attached images into a structured note.
-Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation.
 - summary: 2-4 sentences. If images are attached, describe what's visible and weave that into the summary.
 - key_points: array of 3-6 short bullets (max ~12 words each) capturing the most important ideas, decisions, or facts. Return [] only if there's truly nothing to bullet.
-- tasks: array of clear, actionable to-dos (imperative voice, include names/dates/amounts). Skip pure musings. Cap at 8. Return [] if nothing is genuinely actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -101,37 +47,33 @@ const AnalyzeInput = z.object({
     .object({
       heading: z.string().nullable().optional(),
       summary: z.string().nullable().optional(),
+      // Legacy fields: accepted so older callers still validate, but ignored.
       tasks: z.array(z.string()).optional(),
     })
     .nullable()
     .optional(),
   skipTasks: z.boolean().optional().default(false),
   extraTranscripts: z.array(z.string()).optional().default([]),
+  keys: KeysSchema,
 });
 
 
 export const analyzeMediaFn = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => AnalyzeInput.parse(data))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, routedTranscribe, parseJsonReply, normalizeKeys } = await router();
+    const keys = normalizeKeys(data.keys);
 
     const images = data.images ?? [];
     const prior = data.prior ?? null;
     const priorHasContent =
       !!prior &&
       (((prior.heading ?? "").trim().length > 0) ||
-        ((prior.summary ?? "").trim().length > 0) ||
-        ((prior.tasks?.length ?? 0) > 0));
+        ((prior.summary ?? "").trim().length > 0));
 
-    // Kick off transcription in PARALLEL with structuring (both hit the AI
-    // gateway independently). Structuring uses the transcript once ready.
-    const transcribePromise: Promise<string | null> = data.audio
-      ? transcribeBytes(data.audio.base64, data.audio.mime, apiKey)
-      : Promise.resolve(null);
-
-    // Await transcription before building the structuring prompt (it needs the text).
-    const firstTranscript = await transcribePromise;
+    const firstTranscript = data.audio
+      ? await routedTranscribe(keys, data.audio.base64, data.audio.mime)
+      : null;
     if (data.audio && !firstTranscript) throw new Error("Empty transcription");
     const extras = (data.extraTranscripts ?? []).filter((t) => t && t.trim().length > 0);
     const transcript = [firstTranscript, ...extras].filter(Boolean).join("\n\n") || null;
@@ -143,9 +85,8 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
         text:
           `EXISTING NOTE (merge with new content into ONE cohesive note):\n` +
           `- Heading: ${prior?.heading || "(none)"}\n` +
-          `- Summary: ${prior?.summary || "(none)"}\n` +
-          `- Tasks:\n${(prior?.tasks ?? []).map((t) => `  • ${t}`).join("\n") || "  (none)"}\n\n` +
-          `Produce ONE unified heading, ONE cohesive summary weaving old + new, and a merged, de-duplicated task list.`,
+          `- Summary: ${prior?.summary || "(none)"}\n\n` +
+          `Produce ONE unified heading, ONE cohesive summary weaving old + new, and merged, de-duplicated key points.`,
       });
     }
     const intro = transcript
@@ -158,26 +99,13 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
 
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: SYSTEM_PROMPT },
-          { role: "user", content: userBlocks },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`AI failed (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+    const raw = await routedChat(keys, {
+      system: SYSTEM_PROMPT,
+      content: userBlocks,
+      json: true,
+      needsVision: images.length > 0,
+    });
+    const parsed: any = parseJsonReply(raw);
     return {
       transcript,
       heading: String(parsed.heading ?? "Untitled note").slice(0, 120),
@@ -188,20 +116,23 @@ export const analyzeMediaFn = createServerFn({ method: "POST" })
             .filter((k: string) => k.length > 0)
             .slice(0, 6)
         : [],
-      tasks: data.skipTasks ? [] : tasksFromRaw(parsed.tasks),
+      tasks: [] as string[],
       tags: [] as string[],
     };
   });
 
 // ---------- transcribe a single clip (for append-in-edit) -----------------
 
-const TranscribeClipInput = z.object({ audio: AudioSchema });
+const TranscribeClipInput = z.object({ audio: AudioSchema, keys: KeysSchema });
 export const transcribeClipFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => TranscribeClipInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-    const transcript = await transcribeBytes(data.audio.base64, data.audio.mime, apiKey);
+    const { routedTranscribe, normalizeKeys } = await router();
+    const transcript = await routedTranscribe(
+      normalizeKeys(data.keys),
+      data.audio.base64,
+      data.audio.mime,
+    );
     if (!transcript) throw new Error("Empty transcription");
     return { transcript };
   });
@@ -214,35 +145,23 @@ If multiple images are provided, separate each image's text with a line "--- Ima
 If an image has no legible text, output "(no text)" for that image.
 Return plain text only — no JSON, no code fences.`;
 
-const OcrInput = z.object({ images: z.array(ImageSchema).min(1).max(20) });
+const OcrInput = z.object({ images: z.array(ImageSchema).min(1).max(20), keys: KeysSchema });
 export const ocrImagesFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => OcrInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, normalizeKeys } = await router();
     const userBlocks: Array<Record<string, unknown>> = [
       { type: "text", text: `Extract the text from ${data.images.length === 1 ? "this image" : `these ${data.images.length} images`}.` },
     ];
     for (const img of data.images) {
       userBlocks.push({ type: "image_url", image_url: { url: `data:${img.mime};base64,${img.base64}` } });
     }
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: OCR_SYSTEM_PROMPT },
-          { role: "user", content: userBlocks },
-        ],
-      }),
-    }, 90_000);
-    if (!res.ok) {
-      const body = await res.text().catch(() => "");
-      throw new Error(`OCR failed (${res.status}): ${body.slice(0, 200)}`);
-    }
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const text = (j.choices?.[0]?.message?.content ?? "").trim();
+    const text = await routedChat(normalizeKeys(data.keys), {
+      system: OCR_SYSTEM_PROMPT,
+      content: userBlocks,
+      needsVision: true,
+      timeoutMs: 90_000,
+    });
     return { text };
   });
 
@@ -250,11 +169,11 @@ export const ocrImagesFn = createServerFn({ method: "POST" })
 // ---------- web link ------------------------------------------------------
 
 const WEB_SYSTEM_PROMPT = `You turn a web page into a structured saved note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
 
 - heading: short (max ~8 words), title case, no trailing punctuation. Prefer the page's own concise title.
 - summary: 2-5 sentences capturing the key takeaways.
-- tasks: concrete, actionable to-dos plausibly triggered by saving this page. Skip "Read this later". Cap at 8. Return [] if nothing is actionable.
+- key_points: array of 3-6 short bullets (max ~14 words each) with the most important facts or ideas. Return [] if the page is too thin.
 
 Respond with ONLY the JSON object.`;
 
@@ -264,8 +183,8 @@ function absoluteUrl(base: string, maybe: string | null | undefined): string | n
 }
 
 async function fetchWebPage(url: string): Promise<{ title: string | null; text: string; imageUrl: string | null }> {
-  const lovableKey = process.env.LOVABLE_API_KEY;
-  const fcKey = process.env.FIRECRAWL_API_KEY;
+  const lovableKey = process.env["LOVABLE_API_KEY"];
+  const fcKey = process.env["FIRECRAWL_API_KEY"];
   if (lovableKey && fcKey) {
     try {
       const res = await fetch("https://connector-gateway.lovable.dev/firecrawl/v2/scrape", {
@@ -308,37 +227,27 @@ async function fetchWebPage(url: string): Promise<{ title: string | null; text: 
   return { title: null, text: "", imageUrl: null };
 }
 
-const WebLinkInput = z.object({ url: z.string().trim().url().max(2000) });
+const WebLinkInput = z.object({ url: z.string().trim().url().max(2000), keys: KeysSchema });
 export const analyzeWebLinkFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => WebLinkInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, normalizeKeys, parseJsonReply } = await router();
+    const keys = normalizeKeys(data.keys);
     const { title, text, imageUrl } = await fetchWebPage(data.url);
     const effective = text && text.length >= 30
       ? text
       : `Title: ${title ?? "(none)"}\nURL: ${data.url}\n(The page had no readable content; summarize from the URL and title.)`;
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: WEB_SYSTEM_PROMPT },
-          { role: "user", content: `URL: ${data.url}\n${title ? `Title: ${title}\n` : ""}\nContent:\n${effective}` },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) throw new Error(`AI failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
+    const raw = await routedChat(keys, {
+      system: WEB_SYSTEM_PROMPT,
+      content: `URL: ${data.url}\n${title ? `Title: ${title}\n` : ""}\nContent:\n${effective}`,
+      json: true,
+    });
+    const parsed: any = parseJsonReply(raw);
     return {
       heading: String(parsed.heading ?? title ?? "Saved link").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
-      tasks: tasksFromRaw(parsed.tasks),
+      key_points: keyPointsFromRaw(parsed.key_points, 6),
+      tasks: [] as string[],
       tags: [] as string[],
       imageUrl: imageUrl ?? null,
     };
@@ -363,7 +272,7 @@ export const fetchLinkImageFn = createServerFn({ method: "POST" })
       if (buf.byteLength === 0 || buf.byteLength > 8 * 1024 * 1024) return { ok: false as const };
       // Base64 encode
       let bin = "";
-      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]);
+      for (let i = 0; i < buf.length; i++) bin += String.fromCharCode(buf[i]!);
       const base64 = btoa(bin);
       return { ok: true as const, mime, base64 };
     } catch {
@@ -374,50 +283,47 @@ export const fetchLinkImageFn = createServerFn({ method: "POST" })
 // ---------- text note enrichment ------------------------------------------
 
 const TEXT_SYSTEM_PROMPT = `You analyze a user's written note.
-Return ONE JSON object with keys: heading, summary, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
 
 - heading: short (max ~8 words), title case. If a heading is provided, refine it rather than replacing.
 - summary: 1-3 sentence recap. Leave "" if too short.
-- tasks: clear actionable to-dos. Cap at 8. Return [] if nothing actionable.
+- key_points: array of 0-5 short bullets (max ~12 words each). Return [] if the note is too short to bullet.
 
 Respond with ONLY the JSON object.`;
 
 const TextInput = z.object({
   heading: z.string().trim().max(200).optional().default(""),
   body: z.string().trim().max(50000).optional().default(""),
+  keys: KeysSchema,
 });
 export const analyzeTextFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => TextInput.parse(d))
   .handler(async ({ data }) => {
-    if (!data.body || data.body.trim().length < 20) {
-      return { heading: data.heading, summary: "", tasks: [] as string[], tags: [] as string[] };
-    }
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const empty = {
+      heading: data.heading,
+      summary: "",
+      key_points: [] as string[],
+      tasks: [] as string[],
+      tags: [] as string[],
+    };
+    if (!data.body || data.body.trim().length < 20) return empty;
+    const { routedChat, normalizeKeys, parseJsonReply } = await router();
+    const keys = normalizeKeys(data.keys);
     const content = data.heading
       ? `Title: ${data.heading}\n\nNote:\n${data.body}`
       : `Note:\n${data.body}\n\n(No title — generate one.)`;
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: TEXT_SYSTEM_PROMPT },
-          { role: "user", content },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) return { heading: data.heading, summary: "", tasks: [], tags: [] };
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    let raw: string;
+    try {
+      raw = await routedChat(keys, { system: TEXT_SYSTEM_PROMPT, content, json: true });
+    } catch {
+      return empty;
+    }
+    const parsed: any = parseJsonReply(raw);
     return {
       heading: String(parsed.heading ?? data.heading ?? "").slice(0, 120),
       summary: String(parsed.summary ?? "").slice(0, 2000),
-      tasks: tasksFromRaw(parsed.tasks),
+      key_points: keyPointsFromRaw(parsed.key_points, 5),
+      tasks: [] as string[],
       tags: [] as string[],
     };
   });
@@ -425,12 +331,11 @@ export const analyzeTextFn = createServerFn({ method: "POST" })
 // ---------- youtube -------------------------------------------------------
 
 const YT_SYSTEM_PROMPT = `You turn YouTube video metadata into a structured saved note.
-Return ONE JSON object with keys: heading, summary, key_points, tasks. No prose, no code fences.
+Return ONE JSON object with keys: heading, summary, key_points. No prose, no code fences.
 
 - heading: short (max ~10 words), title case. Prefer the actual video title lightly refined; NEVER include the channel name or timestamps.
 - summary: 3-6 sentences distilling what the video is actually about — the argument, story, or steps — using the captions as the primary source of truth. Do NOT restate the title. Do NOT say "in this video".
 - key_points: 3-7 concrete takeaways as short bullet strings. Each ≤ 120 chars. Return [] if the source is too thin.
-- tasks: concrete, actionable to-dos plausibly triggered by watching this. Skip "Watch this later". Cap at 6. Return [] if nothing is actionable.
 
 Respond with ONLY the JSON object.`;
 
@@ -440,13 +345,14 @@ const YouTubeAnalyzeInput = z.object({
   description: z.string().trim().max(20000).nullable().optional(),
   captions: z.string().trim().max(60000).nullable().optional(),
   url: z.string().trim().url().max(2000),
+  keys: KeysSchema,
 });
 
 export const analyzeYouTubeFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => YouTubeAnalyzeInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, normalizeKeys, parseJsonReply } = await router();
+    const keys = normalizeKeys(data.keys);
     const parts: string[] = [`URL: ${data.url}`];
     if (data.title) parts.push(`Title: ${data.title}`);
     if (data.channelName) parts.push(`Channel: ${data.channelName}`);
@@ -456,38 +362,24 @@ export const analyzeYouTubeFn = createServerFn({ method: "POST" })
     } else {
       parts.push(`(No captions available — rely on title + description.)`);
     }
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: YT_SYSTEM_PROMPT },
-          { role: "user", content: parts.join("\n\n") },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) throw new Error(`AI failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = JSON.parse(raw.replace(/```json|```/g, "").trim()); }
-    const keyPoints: string[] = Array.isArray(parsed.key_points)
-      ? parsed.key_points.map((s: unknown) => String(s ?? "").trim()).filter(Boolean).slice(0, 7)
-      : [];
+    const raw = await routedChat(keys, {
+      system: YT_SYSTEM_PROMPT,
+      content: parts.join("\n\n"),
+      json: true,
+    });
+    const parsed: any = parseJsonReply(raw);
     return {
       heading: String(parsed.heading ?? data.title ?? "YouTube video").slice(0, 140),
       summary: String(parsed.summary ?? "").slice(0, 2400),
-      key_points: keyPoints,
-      tasks: tasksFromRaw(parsed.tasks),
+      key_points: keyPointsFromRaw(parsed.key_points, 7),
+      tasks: [] as string[],
     };
   });
 
 
 // ---------- link label ----------------------------------------------------
 
-const LabelInput = z.object({ url: z.string().trim().url().max(2000) });
+const LabelInput = z.object({ url: z.string().trim().url().max(2000), keys: KeysSchema });
 export const generateLinkLabelFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => LabelInput.parse(d))
   .handler(async ({ data }) => {
@@ -518,6 +410,24 @@ export const generateLinkLabelFn = createServerFn({ method: "POST" })
         }
       }
     } catch {}
+
+    // No page title could be read (blocked, JS-only, etc.). If the user has
+    // their own AI key, ask the model for a short label based on the URL alone.
+    try {
+      const { routedChat, normalizeKeys, parseJsonReply } = await router();
+      const keys = normalizeKeys(data.keys);
+      if (keys.length > 0) {
+        const raw = await routedChat(keys, {
+          system:
+            'You write a short, human-readable label (max 8 words, title case, no trailing punctuation) for a saved web link, inferred from its URL. Return ONE JSON object: { "label": string }. No prose, no code fences.',
+          content: `URL: ${url}`,
+          json: true,
+          timeoutMs: 15_000,
+        });
+        const label = String(parseJsonReply(raw).label ?? "").replace(/\s+/g, " ").trim().slice(0, 120);
+        if (label) return { label, hostname };
+      }
+    } catch {}
     return { label: hostname || url, hostname };
   });
 
@@ -535,33 +445,23 @@ const RankInput = z.object({
       }),
     )
     .max(200),
+  keys: KeysSchema,
 });
 export const semanticRankFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => RankInput.parse(d))
   .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
+    const { routedChat, normalizeKeys, parseJsonReply } = await router();
+    const keys = normalizeKeys(data.keys);
     const sys = `You are a semantic search assistant over the user's personal notes.
 Given a query and a JSON catalog of notes (id, heading, summary, tags), return the most relevant note ids ordered by relevance.
 Only include notes that are genuinely relevant. If nothing fits, return [].
 Return ONE JSON object: { "ids": string[], "reasoning": string }. Reasoning is one short sentence.`;
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: `Query: ${data.query}\n\nNotes:\n${JSON.stringify(data.catalog)}` },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 120_000);
-    if (!res.ok) throw new Error(`Search failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
+    const raw = await routedChat(keys, {
+      system: sys,
+      content: `Query: ${data.query}\n\nNotes:\n${JSON.stringify(data.catalog)}`,
+      json: true,
+    });
+    const parsed: any = parseJsonReply(raw);
     const valid = new Set(data.catalog.map((c) => c.id));
     const ids: string[] = (Array.isArray(parsed.ids) ? parsed.ids : [])
       .map((x: unknown) => String(x))
@@ -607,201 +507,38 @@ export const fetchReaderViewFn = createServerFn({ method: "POST" })
     }
   });
 
-// ---------- reminder verification ----------------------------------------
+// ---------- reminders (deprecated) ----------------------------------------
+// Tasks & Reminders were removed from the app. These stay exported so any
+// stale caller keeps compiling, but they never touch the AI.
 
 const VerifyRemindersInput = z.object({
-  text: z.string().max(20000),
-  nowIso: z.string(),
-  candidates: z
-    .array(z.object({ iso: z.string(), title: z.string().optional() }))
-    .max(20),
-  existing: z.array(z.string()).max(50).optional().default([]),
+  text: z.string().max(20000).optional(),
+  nowIso: z.string().optional(),
+  candidates: z.array(z.object({ iso: z.string(), title: z.string().optional() })).max(20).optional(),
+  existing: z.array(z.string()).max(50).optional(),
 });
 
+/** @deprecated Reminders were removed. Always returns an empty list. */
 export const verifyRemindersFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => VerifyRemindersInput.parse(d))
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-    if (data.candidates.length === 0) return { reminders: [] as Array<{ iso: string; title: string }> };
-
-    const sys = `You verify reminder suggestions parsed from a user's note.
-
-For each candidate, decide if the date/time is a genuine future reminder the user would want, then return a clean, complete task title.
-
-Rules:
-- Drop candidates that are not real reminders (metadata, quoted dates, past events, ambiguous references, or duplicates of another candidate that refer to the same event).
-- Drop candidates whose date is essentially the same as an item in "existing" (same event, same time).
-- Titles MUST be full, human-readable task phrases (e.g. "Call Sarah about the brief", "Submit tax return"). Never use ellipses (no "…"), never truncate mid-word, never leave dangling prepositions. If you can't derive a clear title from the note, use a short natural phrase describing the event (e.g. "Meeting", "Deadline", "Reminder").
-- Preserve the exact ISO date from the candidate — do NOT change the time.
-- Return items in chronological order. Max 6 items.
-
-Return ONE JSON object: { "reminders": [ { "iso": string, "title": string } ] }. No prose, no code fences.`;
-
-    const user = `Now: ${data.nowIso}
-
-Existing reminders on this note (skip anything that duplicates these):
-${data.existing.length ? data.existing.join("\n") : "(none)"}
-
-Note text:
-"""
-${data.text}
-"""
-
-Candidates parsed locally:
-${JSON.stringify(data.candidates)}`;
-
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 30_000);
-    if (!res.ok) throw new Error(`Verify failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
-    const allowedIsos = new Set(data.candidates.map((c) => c.iso));
-    const existingKeys = new Set(
-      data.existing
-        .map((iso) => new Date(iso).getTime())
-        .filter((t) => !isNaN(t))
-        .map((t) => Math.floor(t / 60000) * 60000),
-    );
-    const seen = new Set<number>();
-    const out: Array<{ iso: string; title: string }> = [];
-    const items: any[] = Array.isArray(parsed.reminders) ? parsed.reminders : [];
-    for (const r of items) {
-      const iso = String(r?.iso ?? "");
-      if (!allowedIsos.has(iso)) continue;
-      const t = new Date(iso).getTime();
-      if (isNaN(t)) continue;
-      const key = Math.floor(t / 60000) * 60000;
-      if (existingKeys.has(key) || seen.has(key)) continue;
-      let title = String(r?.title ?? "").replace(/[…]+/g, "").replace(/\s+/g, " ").trim();
-      if (!title) title = "Reminder";
-      if (title.length > 80) title = title.slice(0, 80).trim();
-      seen.add(key);
-      out.push({ iso, title });
-      if (out.length >= 6) break;
-    }
-    out.sort((a, b) => new Date(a.iso).getTime() - new Date(b.iso).getTime());
-    return { reminders: out };
+  .handler(async () => {
+    return { reminders: [] as Array<{ iso: string; title: string }> };
   });
-
-// ---------- smart reminder time suggestions -------------------------------
 
 const SmartTimesInput = z.object({
-  text: z.string().max(6000),
-  nowIso: z.string(),
-  timeZone: z.string().max(80).optional().default("UTC"),
-  profileSummary: z.string().max(600),
-  avoidWeekends: z.boolean().optional().default(true),
-  existing: z.array(z.string()).max(30).optional().default([]),
+  text: z.string().max(6000).optional(),
+  nowIso: z.string().optional(),
+  timeZone: z.string().max(80).optional(),
+  profileSummary: z.string().max(600).optional(),
+  avoidWeekends: z.boolean().optional(),
+  existing: z.array(z.string()).max(30).optional(),
 });
 
+/** @deprecated Reminders were removed. Always returns an empty list. */
 export const suggestSmartTimesFn = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => SmartTimesInput.parse(d))
-  .handler(async ({ data }) => {
-    const apiKey = process.env.LOVABLE_API_KEY;
-    if (!apiKey) throw new Error("Missing LOVABLE_API_KEY");
-
-    const sys = `You suggest smart reminder times based on the user's note and their behavioral profile.
-
-Return 3 candidate reminder times that respect the user's typical active hours and avoid quiet windows (late night, and weekends unless the profile says otherwise).
-
-Rules:
-- Times must be in the FUTURE relative to "now".
-- Prefer times within the user's active window; never propose times outside their wake window.
-- Vary the horizons: one soon (later today or tomorrow), one in a few days, one longer-term — but every one must fit the note's apparent urgency.
-- Skip times that duplicate an existing reminder (same day + hour).
-- Each suggestion has:
-  - iso: full ISO 8601 timestamp WITH timezone offset matching the user's timezone
-  - label: short friendly label ("Tomorrow morning", "Sunday evening", "Next Tuesday")
-  - reason: one short sentence explaining WHY this time fits (e.g. "You're usually free around 9am on weekdays")
-- Also return ONE optional contextual suggestion with iso set to null and id set to "next-open" meaning "the next time you open the app during your active hours". Include it only if the note isn't strongly tied to a specific date.
-
-Return ONE JSON object: { "suggestions": [ { "iso": string|null, "id": string|null, "label": string, "reason": string } ] }.
-Max 4 items. No prose, no code fences.`;
-
-    const user = `Now: ${data.nowIso}
-User timezone: ${data.timeZone}
-Behavioral profile: ${data.profileSummary}
-Avoid weekends by default: ${data.avoidWeekends}
-
-Existing reminders on this note (skip duplicates):
-${data.existing.length ? data.existing.join("\n") : "(none)"}
-
-Note content:
-"""
-${data.text}
-"""`;
-
-    const res = await fetchWithTimeout(`${GATEWAY}/chat/completions`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${apiKey}` },
-      body: JSON.stringify({
-        model: MODEL,
-        messages: [
-          { role: "system", content: sys },
-          { role: "user", content: user },
-        ],
-        response_format: { type: "json_object" },
-      }),
-    }, 30_000);
-    if (!res.ok) throw new Error(`Smart times failed (${res.status})`);
-    const j = (await res.json()) as { choices?: Array<{ message?: { content?: string } }> };
-    const raw = j.choices?.[0]?.message?.content ?? "{}";
-    let parsed: any;
-    try { parsed = JSON.parse(raw); } catch { parsed = {}; }
-
-    const nowMs = new Date(data.nowIso).getTime();
-    const existingKeys = new Set(
-      data.existing
-        .map((iso) => new Date(iso).getTime())
-        .filter((t) => !isNaN(t))
-        .map((t) => Math.floor(t / (30 * 60 * 1000))),
-    );
-
-    const out: Array<{ iso: string | null; id: string | null; label: string; reason: string }> = [];
-    const items: any[] = Array.isArray(parsed.suggestions) ? parsed.suggestions : [];
-    const seenKeys = new Set<number>();
-    let seenNextOpen = false;
-
-    for (const it of items) {
-      const label = String(it?.label ?? "").replace(/\s+/g, " ").trim().slice(0, 60);
-      const reason = String(it?.reason ?? "").replace(/\s+/g, " ").trim().slice(0, 140);
-      if (!label) continue;
-
-      const rawId = typeof it?.id === "string" ? it.id.trim() : "";
-      const isoRaw = it?.iso;
-
-      if (rawId === "next-open" || (isoRaw == null && !seenNextOpen)) {
-        if (seenNextOpen) continue;
-        seenNextOpen = true;
-        out.push({ iso: null, id: "next-open", label: label || "Next time you open the app", reason });
-        continue;
-      }
-
-      if (typeof isoRaw !== "string") continue;
-      const t = new Date(isoRaw).getTime();
-      if (isNaN(t) || t <= nowMs + 60 * 1000) continue;
-      if (t > nowMs + 365 * 24 * 3600 * 1000) continue;
-      const key = Math.floor(t / (30 * 60 * 1000));
-      if (existingKeys.has(key) || seenKeys.has(key)) continue;
-      seenKeys.add(key);
-      out.push({ iso: new Date(t).toISOString(), id: null, label, reason });
-      if (out.length >= 4) break;
-    }
-
-    return { suggestions: out };
+  .handler(async () => {
+    return {
+      suggestions: [] as Array<{ iso: string | null; id: string | null; label: string; reason: string }>,
+    };
   });
-
-
