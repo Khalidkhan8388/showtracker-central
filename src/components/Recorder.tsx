@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search, MessagesSquare } from "lucide-react";
+import { Mic, Square, Loader2, ImagePlus, X, Link2, FileText, Search, MessagesSquare, Plus } from "lucide-react";
 import { Link } from "@tanstack/react-router";
 import { createMediaNote, createPdfNote, processVoiceNote, saveWebLink, saveTextNote, generateLinkLabel } from "@/lib/notes.functions";
 import { storeLocalPhoto, getPhotoUrl } from "@/lib/photo-cache";
@@ -27,6 +27,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [busy, setBusy] = useState(false);
   const [pending, setPending] = useState<PendingImage[]>([]);
   const [shrunk, setShrunk] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuWrapRef = useRef<HTMLDivElement | null>(null);
   const pendingRef = useRef<PendingImage[]>([]);
   const recRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
@@ -46,6 +48,27 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const [inlineLinkUrl, setInlineLinkUrl] = useState("");
   const textFileRef = useRef<HTMLInputElement | null>(null);
   const textAreaRef = useRef<HTMLTextAreaElement | null>(null);
+
+
+  // Speed-dial: close on outside press / Escape, and whenever recording starts or the scroll-shrink kicks in.
+  useEffect(() => {
+    if (!menuOpen) return;
+    const onDown = (e: PointerEvent) => {
+      if (menuWrapRef.current && !menuWrapRef.current.contains(e.target as Node)) setMenuOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuOpen]);
+  useEffect(() => {
+    if (recording || shrunk) setMenuOpen(false);
+  }, [recording, shrunk]);
 
   const processFn = processVoiceNote;
   const saveLinkFn = saveWebLink;
@@ -404,8 +427,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
   const label = busy
     ? "Saving…"
     : recording
-      ? `Recording ${mmss}${pending.length > 0 ? ` · ${pending.length} 📷` : ""}`
-      : "Tap to record";
+      ? `${mmss}${pending.length > 0 ? ` · ${pending.length} 📷` : ""}`
+      : "Record";
 
 
   const showSpinner = busy;
@@ -645,7 +668,7 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
 
       </div>
 
-      {/* Main pill — fixed position, only resizes */}
+      {/* Capsule pill — 3 zones: navigate | add (speed-dial) | voice record */}
       <div className="pointer-events-none absolute inset-x-0 bottom-10 flex justify-center px-5">
       <div
         role="toolbar"
@@ -655,13 +678,8 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           transformOrigin: "bottom center",
           willChange: "transform",
         }}
-        className={`pointer-events-auto inline-flex items-center gap-1 rounded-full p-1.5 shadow-2xl ring-1 transition-transform duration-200 ease-out motion-reduce:transition-none ${
-          recording
-            ? "bg-destructive/85 ring-destructive/30 animate-pulse"
-            : "bg-white/95 ring-black/10 dark:bg-neutral-900/95 dark:ring-white/10"
-        }`}
+        className="pointer-events-auto inline-flex items-center gap-1 rounded-full bg-white/90 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-md transition-transform duration-200 ease-out motion-reduce:transition-none dark:bg-neutral-900/90 dark:ring-white/10"
       >
-
         <input
           ref={fileRef}
           type="file"
@@ -670,66 +688,119 @@ export function Recorder({ onNoteReady }: { onNoteReady?: () => void } = {}) {
           className="hidden"
           onChange={onPickImages}
         />
+
+        {/* Left zone — navigation */}
         <Link
           to="/search"
           search={{ tab: "memories" as const }}
           aria-label="Search"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 transition-transform hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
           <Search className="h-5 w-5" strokeWidth={2} />
         </Link>
         <Link
           to="/ask"
           aria-label="Ask your notes"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
+          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 transition-transform hover:bg-black/5 hover:text-neutral-900 active:scale-90 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
         >
           <MessagesSquare className="h-5 w-5" strokeWidth={2} />
         </Link>
-        <button
-          onClick={() => fileRef.current?.click()}
-          disabled={disabled}
-          aria-label="Attach image or PDF"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <ImagePlus className="h-5 w-5" strokeWidth={2} />
-        </button>
-        <button
-          onClick={() => setTextOpen(true)}
-          disabled={disabled || recording}
-          aria-label="Write text note"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <FileText className="h-5 w-5" strokeWidth={2} />
-        </button>
-        <button
-          onClick={() => setLinkOpen(true)}
-          disabled={disabled || recording}
-          aria-label="Save web link"
-          className="inline-flex h-11 w-11 items-center justify-center rounded-full text-neutral-600 hover:bg-black/5 hover:text-neutral-900 active:scale-90 disabled:opacity-50 dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white"
-        >
-          <Link2 className="h-5 w-5" strokeWidth={2} />
-        </button>
 
-        <div className="mx-1 h-6 w-px bg-black/10 dark:bg-white/10" />
+        <div className="mx-0.5 h-6 w-px bg-black/10 dark:bg-white/10" />
 
+        {/* Center zone — [+] speed-dial */}
+        <div ref={menuWrapRef} className="relative">
+          <div
+            role="menu"
+            aria-label="Add to Braintape"
+            aria-hidden={!menuOpen}
+            className={`absolute bottom-full left-1/2 mb-3 w-52 -translate-x-1/2 origin-bottom rounded-2xl bg-white/95 p-1.5 shadow-2xl ring-1 ring-black/10 backdrop-blur-md transition-all duration-150 ease-out motion-reduce:transition-none dark:bg-neutral-900/95 dark:ring-white/10 ${
+              menuOpen ? "translate-y-0 scale-100 opacity-100" : "pointer-events-none translate-y-2 scale-95 opacity-0"
+            }`}
+          >
+            <button
+              role="menuitem"
+              tabIndex={menuOpen ? 0 : -1}
+              disabled={disabled || recording}
+              onClick={() => {
+                setMenuOpen(false);
+                setTextOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-900 transition-transform hover:bg-black/5 active:scale-[0.97] disabled:opacity-40 dark:text-white dark:hover:bg-white/10"
+            >
+              <FileText className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+              Write Note
+            </button>
+            <button
+              role="menuitem"
+              tabIndex={menuOpen ? 0 : -1}
+              disabled={disabled}
+              onClick={() => {
+                setMenuOpen(false);
+                fileRef.current?.click();
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-900 transition-transform hover:bg-black/5 active:scale-[0.97] disabled:opacity-40 dark:text-white dark:hover:bg-white/10"
+            >
+              <ImagePlus className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+              Photo / PDF
+            </button>
+            <button
+              role="menuitem"
+              tabIndex={menuOpen ? 0 : -1}
+              disabled={disabled || recording}
+              onClick={() => {
+                setMenuOpen(false);
+                setLinkOpen(true);
+              }}
+              className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-neutral-900 transition-transform hover:bg-black/5 active:scale-[0.97] disabled:opacity-40 dark:text-white dark:hover:bg-white/10"
+            >
+              <Link2 className="h-[18px] w-[18px] shrink-0" strokeWidth={2} />
+              Web Link
+            </button>
+          </div>
+          <button
+            onClick={() => setMenuOpen((v) => !v)}
+            disabled={disabled}
+            aria-label={menuOpen ? "Close add menu" : "Add note, photo or link"}
+            aria-haspopup="menu"
+            aria-expanded={menuOpen}
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-neutral-900 text-white transition-transform hover:bg-neutral-700 active:scale-90 disabled:opacity-50 dark:bg-white dark:text-neutral-900 dark:hover:bg-white/85"
+          >
+            <Plus
+              className={`h-5 w-5 transition-transform duration-200 motion-reduce:transition-none ${menuOpen ? "rotate-45" : "rotate-0"}`}
+              strokeWidth={2.25}
+            />
+          </button>
+        </div>
+
+        <div className="mx-0.5 h-6 w-px bg-black/10 dark:bg-white/10" />
+
+        {/* Right zone — voice record */}
         <button
           onClick={recording ? stop : start}
           disabled={disabled}
           aria-label={recording ? "Stop recording" : "Start recording"}
-          className="group inline-flex items-center gap-2.5 rounded-full bg-black/5 py-2 pl-3 pr-5 text-neutral-900 hover:bg-black/10 active:scale-[0.97] disabled:cursor-default dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+          className={`group inline-flex items-center gap-2.5 rounded-full py-2 pl-3 pr-5 transition-transform active:scale-[0.97] disabled:cursor-default ${
+            recording
+              ? "bg-[#D71921]/15 text-neutral-900 hover:bg-[#D71921]/25 dark:bg-[#D71921]/25 dark:text-white dark:hover:bg-[#D71921]/35"
+              : "bg-black/5 text-neutral-900 hover:bg-black/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
+          }`}
         >
-
-
           <span className="relative flex items-center justify-center">
-            {!recording && !showSpinner && (
-              <span className="absolute -right-0.5 -top-0.5 h-2 w-2 rounded-full bg-primary ring-1 ring-foreground" />
-            )}
             {showSpinner ? (
               <Loader2 className="h-5 w-5 animate-spin" />
             ) : recording ? (
               <Square className="h-4 w-4" fill="currentColor" />
             ) : (
               <Mic className="h-5 w-5" strokeWidth={2} />
+            )}
+            {!showSpinner && (
+              <span className="absolute -right-1 -top-1 flex h-2.5 w-2.5">
+                {recording && (
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[#D71921] opacity-75 motion-reduce:animate-none" />
+                )}
+                <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-[#D71921]" />
+              </span>
             )}
           </span>
           <span className="text-sm font-semibold tracking-tight tabular-nums">{label}</span>

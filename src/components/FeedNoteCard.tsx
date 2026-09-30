@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { formatDistanceToNow } from "date-fns";
-import { CheckCircle2, Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
+import { Pin, Link2, Mic, Image as ImageIcon, Check } from "lucide-react";
 import { Markdown } from "@/components/Markdown";
 import { MediaCard } from "@/components/MediaCard";
 import { YouTubeCard } from "@/components/YouTubeCard";
@@ -314,12 +314,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             )}
             <div className={`mt-1 flex items-center gap-2 text-[11px] ${isDark ? "text-white/60" : "text-neutral-500"}`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
             </div>
           </div>
         </>
@@ -376,12 +370,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
             <div className={`${isHero ? "mt-3" : "mt-2"} flex items-center gap-3 text-[11px] text-muted-foreground`}>
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && <span>{formatDur(note.duration_seconds)}</span>}
-              {note.tasks && note.tasks.length > 0 && (
-                <span className="flex items-center gap-1">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {note.tasks.filter((t) => t.done).length}/{note.tasks.length}
-                </span>
-              )}
               {imageCount > 0 && !isLink && (
                 <span className="flex items-center gap-1"><ImageIcon className="h-3 w-3" />{imageCount}</span>
               )}
@@ -443,12 +431,6 @@ export const FeedNoteCard = memo(function FeedNoteCard({
               </h3>
             )}
 
-            {note.tasks && note.tasks.length > 0 && (
-              <span className="flex items-center gap-1">
-                <CheckCircle2 className="h-3 w-3" />
-                {note.tasks.filter((t) => t.done).length}/{note.tasks.length} tasks
-              </span>
-            )}
             <div className="flex items-center gap-2">
               <span>{formatDistanceToNow(new Date(note.created_at), { addSuffix: true })}</span>
               {note.duration_seconds != null && (
