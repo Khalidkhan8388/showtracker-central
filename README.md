@@ -4,7 +4,7 @@ Mobile based web application where I can track my media like movies , tv shows ,
 
 This project was built with [Lovable](https://lovable.dev).
 
-**Live app**: https://showtracker-central.lovable.app
+**Live app**: https://braintape.lovable.app
 
 ## Build with Lovable
 
