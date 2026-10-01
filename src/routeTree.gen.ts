@@ -9,45 +9,35 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as ApiAskRouteImport } from './routes/api/ask'
-import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
-import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
-import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedRouteImport } from './routes/_authenticated'
 import { Route as AuthenticatedHomeRouteImport } from './routes/_authenticated/home'
-import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
-import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
+import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
+import { Route as AuthenticatedSearchRouteImport } from './routes/_authenticated/search'
+import { Route as AuthenticatedShareRouteImport } from './routes/_authenticated/share'
+import { Route as ApiAskRouteImport } from './routes/api/ask'
 import { Route as AuthenticatedAskIndexRouteImport } from './routes/_authenticated/ask.index'
-import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
-import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
-import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
-import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
-import { Route as AuthenticatedCastPersonIdRouteImport } from './routes/_authenticated/cast.$personId'
 import { Route as AuthenticatedAskThreadIdRouteImport } from './routes/_authenticated/ask.$threadId'
+import { Route as AuthenticatedCastPersonIdRouteImport } from './routes/_authenticated/cast.$personId'
+import { Route as AuthenticatedCollectionsIndexRouteImport } from './routes/_authenticated/collections.index'
+import { Route as AuthenticatedCollectionsIdRouteImport } from './routes/_authenticated/collections.$id'
+import { Route as AuthenticatedNotesIdRouteImport } from './routes/_authenticated/notes.$id'
+import { Route as AuthenticatedProfileTrashRouteImport } from './routes/_authenticated/profile_.trash'
+import { Route as AuthenticatedTasksIndexRouteImport } from './routes/_authenticated/tasks.index'
+import { Route as AuthenticatedTasksReviewRouteImport } from './routes/_authenticated/tasks.review'
 
-const AuthenticatedRoute = AuthenticatedRouteImport.update({
-  id: '/_authenticated',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiAskRoute = ApiAskRouteImport.update({
-  id: '/api/ask',
-  path: '/api/ask',
+const AuthenticatedRoute = AuthenticatedRouteImport.update({
+  id: '/_authenticated',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
-  id: '/share',
-  path: '/share',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
-  id: '/search',
-  path: '/search',
+const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
+  id: '/home',
+  path: '/home',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
 const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
@@ -55,48 +45,30 @@ const AuthenticatedProfileRoute = AuthenticatedProfileRouteImport.update({
   path: '/profile',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedHomeRoute = AuthenticatedHomeRouteImport.update({
-  id: '/home',
-  path: '/home',
+const AuthenticatedSearchRoute = AuthenticatedSearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
-  id: '/tasks/',
-  path: '/tasks/',
+const AuthenticatedShareRoute = AuthenticatedShareRouteImport.update({
+  id: '/share',
+  path: '/share',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedCollectionsIndexRoute =
-  AuthenticatedCollectionsIndexRouteImport.update({
-    id: '/collections/',
-    path: '/collections/',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
+const ApiAskRoute = ApiAskRouteImport.update({
+  id: '/api/ask',
+  path: '/api/ask',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthenticatedAskIndexRoute = AuthenticatedAskIndexRouteImport.update({
   id: '/ask/',
   path: '/ask/',
   getParentRoute: () => AuthenticatedRoute,
 } as any)
-const AuthenticatedTasksReviewRoute =
-  AuthenticatedTasksReviewRouteImport.update({
-    id: '/tasks/review',
-    path: '/tasks/review',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedProfileTrashRoute =
-  AuthenticatedProfileTrashRouteImport.update({
-    id: '/profile_/trash',
-    path: '/profile/trash',
-    getParentRoute: () => AuthenticatedRoute,
-  } as any)
-const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
-  id: '/notes/$id',
-  path: '/notes/$id',
-  getParentRoute: () => AuthenticatedRoute,
-} as any)
-const AuthenticatedCollectionsIdRoute =
-  AuthenticatedCollectionsIdRouteImport.update({
-    id: '/collections/$id',
-    path: '/collections/$id',
+const AuthenticatedAskThreadIdRoute =
+  AuthenticatedAskThreadIdRouteImport.update({
+    id: '/ask/$threadId',
+    path: '/ask/$threadId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 const AuthenticatedCastPersonIdRoute =
@@ -105,10 +77,38 @@ const AuthenticatedCastPersonIdRoute =
     path: '/cast/$personId',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
-const AuthenticatedAskThreadIdRoute =
-  AuthenticatedAskThreadIdRouteImport.update({
-    id: '/ask/$threadId',
-    path: '/ask/$threadId',
+const AuthenticatedCollectionsIndexRoute =
+  AuthenticatedCollectionsIndexRouteImport.update({
+    id: '/collections/',
+    path: '/collections/',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedCollectionsIdRoute =
+  AuthenticatedCollectionsIdRouteImport.update({
+    id: '/collections/$id',
+    path: '/collections/$id',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedNotesIdRoute = AuthenticatedNotesIdRouteImport.update({
+  id: '/notes/$id',
+  path: '/notes/$id',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedProfileTrashRoute =
+  AuthenticatedProfileTrashRouteImport.update({
+    id: '/profile_/trash',
+    path: '/profile/trash',
+    getParentRoute: () => AuthenticatedRoute,
+  } as any)
+const AuthenticatedTasksIndexRoute = AuthenticatedTasksIndexRouteImport.update({
+  id: '/tasks/',
+  path: '/tasks/',
+  getParentRoute: () => AuthenticatedRoute,
+} as any)
+const AuthenticatedTasksReviewRoute =
+  AuthenticatedTasksReviewRouteImport.update({
+    id: '/tasks/review',
+    path: '/tasks/review',
     getParentRoute: () => AuthenticatedRoute,
   } as any)
 
@@ -228,13 +228,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/_authenticated': {
-      id: '/_authenticated'
-      path: ''
-      fullPath: '/'
-      preLoaderRoute: typeof AuthenticatedRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/': {
       id: '/'
       path: '/'
@@ -242,25 +235,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/ask': {
-      id: '/api/ask'
-      path: '/api/ask'
-      fullPath: '/api/ask'
-      preLoaderRoute: typeof ApiAskRouteImport
+    '/_authenticated': {
+      id: '/_authenticated'
+      path: ''
+      fullPath: '/'
+      preLoaderRoute: typeof AuthenticatedRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authenticated/share': {
-      id: '/_authenticated/share'
-      path: '/share'
-      fullPath: '/share'
-      preLoaderRoute: typeof AuthenticatedShareRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/search': {
-      id: '/_authenticated/search'
-      path: '/search'
-      fullPath: '/search'
-      preLoaderRoute: typeof AuthenticatedSearchRouteImport
+    '/_authenticated/home': {
+      id: '/_authenticated/home'
+      path: '/home'
+      fullPath: '/home'
+      preLoaderRoute: typeof AuthenticatedHomeRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/profile': {
@@ -270,26 +256,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedProfileRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/home': {
-      id: '/_authenticated/home'
-      path: '/home'
-      fullPath: '/home'
-      preLoaderRoute: typeof AuthenticatedHomeRouteImport
+    '/_authenticated/search': {
+      id: '/_authenticated/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof AuthenticatedSearchRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/tasks/': {
-      id: '/_authenticated/tasks/'
-      path: '/tasks'
-      fullPath: '/tasks/'
-      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
+    '/_authenticated/share': {
+      id: '/_authenticated/share'
+      path: '/share'
+      fullPath: '/share'
+      preLoaderRoute: typeof AuthenticatedShareRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/collections/': {
-      id: '/_authenticated/collections/'
-      path: '/collections'
-      fullPath: '/collections/'
-      preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
-      parentRoute: typeof AuthenticatedRoute
+    '/api/ask': {
+      id: '/api/ask'
+      path: '/api/ask'
+      fullPath: '/api/ask'
+      preLoaderRoute: typeof ApiAskRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/ask/': {
       id: '/_authenticated/ask/'
@@ -298,32 +284,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAskIndexRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/tasks/review': {
-      id: '/_authenticated/tasks/review'
-      path: '/tasks/review'
-      fullPath: '/tasks/review'
-      preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/profile_/trash': {
-      id: '/_authenticated/profile_/trash'
-      path: '/profile/trash'
-      fullPath: '/profile/trash'
-      preLoaderRoute: typeof AuthenticatedProfileTrashRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/notes/$id': {
-      id: '/_authenticated/notes/$id'
-      path: '/notes/$id'
-      fullPath: '/notes/$id'
-      preLoaderRoute: typeof AuthenticatedNotesIdRouteImport
-      parentRoute: typeof AuthenticatedRoute
-    }
-    '/_authenticated/collections/$id': {
-      id: '/_authenticated/collections/$id'
-      path: '/collections/$id'
-      fullPath: '/collections/$id'
-      preLoaderRoute: typeof AuthenticatedCollectionsIdRouteImport
+    '/_authenticated/ask/$threadId': {
+      id: '/_authenticated/ask/$threadId'
+      path: '/ask/$threadId'
+      fullPath: '/ask/$threadId'
+      preLoaderRoute: typeof AuthenticatedAskThreadIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
     '/_authenticated/cast/$personId': {
@@ -333,11 +298,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCastPersonIdRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
-    '/_authenticated/ask/$threadId': {
-      id: '/_authenticated/ask/$threadId'
-      path: '/ask/$threadId'
-      fullPath: '/ask/$threadId'
-      preLoaderRoute: typeof AuthenticatedAskThreadIdRouteImport
+    '/_authenticated/collections/': {
+      id: '/_authenticated/collections/'
+      path: '/collections'
+      fullPath: '/collections/'
+      preLoaderRoute: typeof AuthenticatedCollectionsIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/collections/$id': {
+      id: '/_authenticated/collections/$id'
+      path: '/collections/$id'
+      fullPath: '/collections/$id'
+      preLoaderRoute: typeof AuthenticatedCollectionsIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/notes/$id': {
+      id: '/_authenticated/notes/$id'
+      path: '/notes/$id'
+      fullPath: '/notes/$id'
+      preLoaderRoute: typeof AuthenticatedNotesIdRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/profile_/trash': {
+      id: '/_authenticated/profile_/trash'
+      path: '/profile/trash'
+      fullPath: '/profile/trash'
+      preLoaderRoute: typeof AuthenticatedProfileTrashRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/tasks/': {
+      id: '/_authenticated/tasks/'
+      path: '/tasks'
+      fullPath: '/tasks/'
+      preLoaderRoute: typeof AuthenticatedTasksIndexRouteImport
+      parentRoute: typeof AuthenticatedRoute
+    }
+    '/_authenticated/tasks/review': {
+      id: '/_authenticated/tasks/review'
+      path: '/tasks/review'
+      fullPath: '/tasks/review'
+      preLoaderRoute: typeof AuthenticatedTasksReviewRouteImport
       parentRoute: typeof AuthenticatedRoute
     }
   }
