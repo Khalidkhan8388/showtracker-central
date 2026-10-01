@@ -432,67 +432,72 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       await updateNote(note.id, {
         status: "ready",
         heading: media.title,
-        summary: media.overview || null,
-        media: (() => {
-          const { original_url: _o, ...rest } = media;
-          return { ...rest, watch_status: null, watched_at: null, watched_episodes: [] };
-        })(),
+        summary: media.tagline || media.overview.slice(0, 240) || null,
+        tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+        media: {
+          ...media,
+          watch_status: "watchlist",
+          watched_at: null,
+          watched_episodes: [],
+        },
       });
-      await fileMediaNoteIntoCollection(note.id, media.type);
+      try {
+        const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } = await import("./collections");
+        const c = await ensureCollectionByTitle(media.type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
+        await addNotesToCollection(c.id, [note.id]);
+      } catch {}
       return { ok: true as const, noteId: note.id, duplicate: false as const };
     }
   } catch {}
 
-  const { isYouTubeUrl, parseYouTubeId } = await import("./youtube");
-  const ytid = isYouTubeUrl(url) ? parseYouTubeId(url) : null;
-  if (ytid) {
-    try {
+  try {
+    const { parseYouTubeId } = await import("./youtube");
+    if (parseYouTubeId(url)) {
       const { fetchYouTubeFn } = await import("./youtube.functions");
-      const meta = await fetchYouTubeFn({ data: { url } });
-      await updateNote(note.id, {
-        heading: meta.title ?? undefined,
-        summary: meta.description ? meta.description.slice(0, 300) : null,
-        youtube: {
-          video_id: meta.videoId,
-          canonical_url: meta.canonicalUrl,
-          title: meta.title,
-          channel_name: meta.channelName,
-          channel_url: meta.channelUrl,
-          channel_id: meta.channelId ?? null,
-          thumbnail_url: meta.thumbnailUrl,
-          description: meta.description ?? null,
-          published_at: meta.publishedAt ?? null,
-          duration_seconds: meta.durationSeconds ?? null,
-          view_count: meta.viewCount ?? null,
-          keywords: meta.keywords ?? [],
-          captions_available: !!meta.captions,
-        },
-      });
+      const yt = await fetchYouTubeFn({ data: { url } });
+      let heading = yt.title ?? "YouTube video";
+      let summary = yt.description?.slice(0, 400) ?? null;
+      let keyPoints: string[] = [];
+      let tasksPayload: LocalTask[] = [];
+
       try {
         const { analyzeYouTubeFn } = await import("./ai.functions");
         const ai = await analyzeYouTubeFn({
           data: {
             url,
-            title: meta.title,
-            channelName: meta.channelName ?? undefined,
-            description: meta.description,
-            captions: meta.captions,
+            title: yt.title ?? "",
+            channelName: yt.channel_title ?? "",
+            description: yt.description ?? "",
+            captions: yt.captions ?? "",
             keys: activeKeyChain(),
           },
         });
-        await updateNote(note.id, {
-          status: "ready",
-          heading: ai.heading,
-          summary: ai.summary,
-          key_points: ai.key_points,
-          tasks: ai.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
-        });
-      } catch {
-        await updateNote(note.id, { status: "ready" });
-      }
+        heading = ai.heading || heading;
+        summary = ai.summary || summary;
+        keyPoints = ai.key_points || [];
+        tasksPayload = ai.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true }));
+      } catch {}
+
+      await updateNote(note.id, {
+        status: "ready",
+        heading,
+        summary,
+        key_points: keyPoints,
+        tasks: tasksPayload,
+        youtube: {
+          video_id: yt.videoId,
+          title: yt.title,
+          channel_title: yt.channel_title,
+          channel_id: yt.channel_id,
+          thumbnail_url: yt.thumbnail_url,
+          duration_seconds: yt.duration_seconds,
+          published_at: yt.published_at,
+          captions: yt.captions,
+        },
+      });
       return { ok: true as const, noteId: note.id, duplicate: false as const };
-    } catch {}
-  }
+    }
+  } catch {}
 
   void (async () => {
     try {
@@ -528,20 +533,29 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
 export async function saveTextNote({
   data,
 }: {
-  data: { heading?: string; body?: string };
+  data: {
+    heading: string;
+    body: string;
+    imagePaths?: string[];
+    sourceUrl?: string | null;
+  };
 }) {
-  const heading = (data.heading ?? "").trim();
+  let heading = (data.heading ?? "").trim();
   const body = (data.body ?? "").trim();
-  if (!heading && !body) throw new Error("Note cannot be empty");
-
-  const existing = await findExistingByText(heading, body);
-  if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
-
+  if (!heading) {
+    const fallback = body.split(/\r?\n/)[0]?.replace(/^#+\s*/, "").slice(0, 80);
+    heading = fallback || "Untitled note";
+  }
+  if (!data.imagePaths?.length && !data.sourceUrl) {
+    const existing = await findExistingByText(heading, body);
+    if (existing) return { ok: true as const, noteId: existing, duplicate: true as const };
+  }
   const note = newNote({
-    status: "ready",
-    heading: heading || "Untitled note",
-    summary: body || null,
+    heading,
     transcript: body || null,
+    image_paths: data.imagePaths ?? [],
+    source_url: data.sourceUrl ?? null,
+    status: "ready",
   });
   await db.notes.put(note);
 
@@ -559,7 +573,7 @@ export async function saveTextNote({
           });
         }
       } catch {}
-    })();
+    });
   }
 
   return { ok: true as const, noteId: note.id, duplicate: false as const };
@@ -585,15 +599,13 @@ export async function updateTextNote({
 export async function appendImagesToNote({
   data,
 }: {
-  data: { noteId: string; imageBlobs: Blob[] };
+  data: { noteId: string; imagePaths: string[] };
 }) {
   const note = await getNote(data.noteId);
-  if (!note) throw new Error("Note not found");
-  const newPaths: string[] = [];
-  for (const b of data.imageBlobs) newPaths.push(await storeLocalPhoto(b));
-  const merged = [...(note.image_paths ?? []), ...newPaths];
+  if (!note) return { ok: true as const, imagePaths: data.imagePaths };
+  const merged = [...(note.image_paths ?? []), ...data.imagePaths].slice(0, 40);
   await updateNote(data.noteId, { image_paths: merged });
-  return { ok: true as const, count: merged.length };
+  return { ok: true as const, imagePaths: merged };
 }
 
 export async function extractOcrForNote({ data }: { data: { noteId: string } }) {
@@ -638,6 +650,41 @@ export async function generateLinkLabel({ data }: { data: { url: string } }) {
   return generateLinkLabelFn({ data: { ...data, keys: activeKeyChain() } });
 }
 
+export async function addTmdbMedia({
+  data,
+}: {
+  data: { type: "movie" | "tv"; tmdb_id: number };
+}) {
+  const existing = await db.notes
+    .filter((n) => !n.deleted_at && n.media?.type === data.type && n.media?.tmdb_id === data.tmdb_id)
+    .first();
+  if (existing) {
+    await fileMediaNoteIntoCollection(existing.id, data.type);
+    return { ok: true as const, noteId: existing.id, duplicate: true as const };
+  }
+
+  const { lookupTmdbByIdFn } = await import("./tmdb.functions");
+  const media = await lookupTmdbByIdFn({ data: { type: data.type, tmdb_id: data.tmdb_id } });
+  if (!media) throw new Error("Could not fetch details from TMDB");
+
+  const note = newNote({
+    source_url: media.original_url,
+    status: "ready",
+    heading: media.title,
+    summary: media.tagline || media.overview.slice(0, 240) || null,
+    tags: media.genres.slice(0, 6).map((g) => g.toLowerCase().replace(/\s+/g, "-")),
+    media: {
+      ...media,
+      watch_status: "watchlist",
+      watched_at: null,
+      watched_episodes: [],
+    },
+  });
+  await db.notes.put(note);
+  await fileMediaNoteIntoCollection(note.id, data.type);
+  return { ok: true as const, noteId: note.id, duplicate: false as const };
+}
+
 async function fileMediaNoteIntoCollection(noteId: string, type: "movie" | "tv") {
   try {
     const { ensureCollectionByTitle, addNotesToCollection, MOVIES_COLLECTION, TV_COLLECTION } =
@@ -645,51 +692,6 @@ async function fileMediaNoteIntoCollection(noteId: string, type: "movie" | "tv")
     const c = await ensureCollectionByTitle(type === "tv" ? TV_COLLECTION : MOVIES_COLLECTION);
     await addNotesToCollection(c.id, [noteId]);
   } catch {}
-}
-
-export async function addTmdbMedia({
-  data,
-}: {
-  data: {
-    type: "movie" | "tv";
-    tmdb_id: number;
-    title: string;
-    poster_path: string | null;
-    release_date: string | null;
-    vote_average: number;
-    overview: string | null;
-  };
-}) {
-  const media = data;
-  const existingMedia = await findExistingByMedia(media.type, media.tmdb_id);
-  if (existingMedia) return { ok: true as const, noteId: existingMedia, duplicate: true as const };
-
-  const note = newNote({
-    status: "ready",
-    heading: media.title,
-    summary: media.overview || null,
-    media: {
-      type: media.type,
-      tmdb_id: media.tmdb_id,
-      title: media.title,
-      poster_path: media.poster_path,
-      release_date: media.release_date,
-      vote_average: media.vote_average,
-      overview: media.overview ?? "",
-      imdb_id: null,
-      tagline: null,
-      backdrop_path: null,
-      runtime: null,
-      genres: [],
-      homepage: null,
-      watch_status: null,
-      watched_at: null,
-      watched_episodes: [],
-    },
-  });
-  await db.notes.put(note);
-  await fileMediaNoteIntoCollection(note.id, media.type);
-  return { ok: true as const, noteId: note.id, duplicate: false as const };
 }
 
 export async function searchEverything({
