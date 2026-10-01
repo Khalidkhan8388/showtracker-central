@@ -433,37 +433,39 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
         status: "ready",
         heading: media.title,
         summary: media.overview || null,
-        media: {
-          type: media.type,
-          tmdb_id: media.tmdb_id,
-          title: media.title,
-          poster_path: media.poster_path,
-          release_date: media.release_date,
-          vote_average: media.vote_average,
-          overview: media.overview,
-        },
+        media: (() => {
+          const { original_url: _o, ...rest } = media;
+          return { ...rest, watch_status: null, watched_at: null, watched_episodes: [] };
+        })(),
       });
       await fileMediaNoteIntoCollection(note.id, media.type);
       return { ok: true as const, noteId: note.id, duplicate: false as const };
     }
   } catch {}
 
-  const { isYouTubeUrl, extractYouTubeVideoId } = await import("./youtube");
-  const ytid = isYouTubeUrl(url) ? extractYouTubeVideoId(url) : null;
+  const { isYouTubeUrl, parseYouTubeId } = await import("./youtube");
+  const ytid = isYouTubeUrl(url) ? parseYouTubeId(url) : null;
   if (ytid) {
     try {
-      const { fetchYouTubeMetadataFn } = await import("./youtube.functions");
-      const meta = await fetchYouTubeMetadataFn({ data: { videoId: ytid } });
+      const { fetchYouTubeFn } = await import("./youtube.functions");
+      const meta = await fetchYouTubeFn({ data: { url } });
       await updateNote(note.id, {
-        heading: meta.title,
+        heading: meta.title ?? undefined,
         summary: meta.description ? meta.description.slice(0, 300) : null,
         youtube: {
           video_id: meta.videoId,
+          canonical_url: meta.canonicalUrl,
           title: meta.title,
-          channel_name: meta.channelTitle,
+          channel_name: meta.channelName,
+          channel_url: meta.channelUrl,
+          channel_id: meta.channelId ?? null,
           thumbnail_url: meta.thumbnailUrl,
-          duration: meta.duration,
-          view_count: meta.viewCount,
+          description: meta.description ?? null,
+          published_at: meta.publishedAt ?? null,
+          duration_seconds: meta.durationSeconds ?? null,
+          view_count: meta.viewCount ?? null,
+          keywords: meta.keywords ?? [],
+          captions_available: !!meta.captions,
         },
       });
       try {
@@ -472,7 +474,7 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           data: {
             url,
             title: meta.title,
-            channelName: meta.channelTitle,
+            channelName: meta.channelName ?? undefined,
             description: meta.description,
             captions: meta.captions,
             keys: activeKeyChain(),
