@@ -486,7 +486,6 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
           summary: ai.summary,
           key_points: ai.key_points,
           tasks: ai.tasks.map((text, i) => ({ id: `t${i}`, text, done: false, pending: true })),
-          tags: ai.tags,
         });
       } catch {
         await updateNote(note.id, { status: "ready" });
@@ -676,7 +675,16 @@ export async function addTmdbMedia({
       poster_path: media.poster_path,
       release_date: media.release_date,
       vote_average: media.vote_average,
-      overview: media.overview,
+      overview: media.overview ?? "",
+      imdb_id: null,
+      tagline: null,
+      backdrop_path: null,
+      runtime: null,
+      genres: [],
+      homepage: null,
+      watch_status: null,
+      watched_at: null,
+      watched_episodes: [],
     },
   });
   await db.notes.put(note);
