@@ -1,27 +1,21 @@
 import {
   Outlet,
+  Link,
   ScrollRestoration,
   createRootRouteWithContext,
   useRouter,
   useRouterState,
+  HeadContent,
+  Scripts,
   type ErrorComponentProps,
 } from "@tanstack/react-router";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import {
-  Outlet,
-  Link,
-  createRootRouteWithContext,
-  useRouter,
-  HeadContent,
-  Scripts,
-} from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "../components/ui/sonner";
 import { ThemeProvider, THEME_BOOT_SCRIPT } from "../lib/theme";
-
 
 function NotFoundComponent() {
   return (
@@ -37,6 +31,14 @@ function NotFoundComponent() {
             to="/"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
           >
+            Go home
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ErrorComponent({ error, reset }: ErrorComponentProps) {
   console.error(error);
   const router = useRouter();
@@ -56,8 +58,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold tracking-tight text-foreground">This page didn't load</h1>
         <p className="mt-2 text-sm text-muted-foreground">Something went wrong. Try again or head home.</p>
-        
-        {/* Shows the exact error so you can diagnose without guesswork */}
+
         <pre className="mt-4 max-h-48 overflow-auto rounded bg-muted p-2 text-left font-mono text-xs text-muted-foreground">
           {errorMessage}
         </pre>
@@ -70,7 +71,7 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
             Try again
           </button>
           <a
-            href="/home"
+            href="/"
             className="inline-flex items-center justify-center rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
           >
             Go home
@@ -80,6 +81,8 @@ function ErrorComponent({ error, reset }: ErrorComponentProps) {
     </div>
   );
 }
+export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
+...
 
           <button
             onClick={() => { router.invalidate(); reset(); }}
