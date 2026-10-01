@@ -459,14 +459,13 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
       let summary = yt.description?.slice(0, 400) ?? null;
       let keyPoints: string[] = [];
       let tasksPayload: LocalTask[] = [];
-
       try {
         const { analyzeYouTubeFn } = await import("./ai.functions");
         const ai = await analyzeYouTubeFn({
           data: {
             url,
             title: yt.title ?? "",
-            channelName: yt.channel_title ?? "",
+            channelName: yt.channelName ?? "",
             description: yt.description ?? "",
             captions: yt.captions ?? "",
             keys: activeKeyChain(),
@@ -486,16 +485,22 @@ export async function saveWebLink({ data }: { data: { url: string } }) {
         tasks: tasksPayload,
         youtube: {
           video_id: yt.videoId,
+          canonical_url: yt.canonicalUrl,
           title: yt.title,
-          channel_title: yt.channel_title,
-          channel_id: yt.channel_id,
-          thumbnail_url: yt.thumbnail_url,
-          duration_seconds: yt.duration_seconds,
-          published_at: yt.published_at,
-          captions: yt.captions,
+          channel_name: yt.channelName,
+          channel_url: yt.channelUrl,
+          channel_id: yt.channelId,
+          thumbnail_url: yt.thumbnailUrl,
+          description: yt.description,
+          duration_seconds: yt.durationSeconds,
+          published_at: yt.publishedAt,
+          view_count: yt.viewCount,
+          keywords: yt.keywords,
+          captions_available: Boolean(yt.captions),
         },
       });
       return { ok: true as const, noteId: note.id, duplicate: false as const };
+
     }
   } catch {}
 
