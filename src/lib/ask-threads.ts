@@ -64,8 +64,8 @@ function toCard(n: LocalNote, long: boolean): AskCard {
   const parts: string[] = [];
   if (n.media) {
     const m = n.media;
-    parts.push(`${m.title} (${m.release_date?.slice(0, 4) ?? "?"}) — status: ${m.watch_status ?? "none"}. Genres: ${m.genres.join(", ")}. ${m.overview}`);
-    if (m.type === "tv") parts.push(`Episodes watched: ${m.watched_episodes.length}/${m.number_of_episodes ?? "?"}`);
+    parts.push(`${m.title} (${m.release_date?.slice(0, 4) ?? "?"}) — status: ${m.watch_status ?? "none"}. Genres: ${(m.genres ?? []).join(", ")}. ${m.overview}`);
+    if (m.type === "tv") parts.push(`Episodes watched: ${m.watched_episodes?.length ?? 0}/${m.number_of_episodes ?? "?"}`);
   }
   if (n.youtube) parts.push(`YouTube by ${n.youtube.channel_name ?? "?"}`);
   if (n.source_url) parts.push(`URL: ${n.source_url}`);
