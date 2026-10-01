@@ -14,11 +14,11 @@ export const epKey = (s: number, e: number) => `S${s}E${e}`;
 
 export function totalEpisodes(m: LocalMedia): number {
   if (m.type !== "tv") return 0;
-  return (m.seasons ?? []).reduce((n, s) => n + s.episodes.length, 0);
+  return (m.seasons ?? []).reduce((n, s) => n + (s?.episodes?.length ?? 0), 0);
 }
 
 export function watchedCount(m: LocalMedia): number {
-  return m.watched_episodes.length;
+  return (m.watched_episodes ?? []).length;
 }
 
 export const WATCH_LABEL: Record<WatchStatus, string> = {
@@ -55,7 +55,7 @@ export async function toggleEpisodeWatched(noteId: string, season: number, episo
   const n = await db.notes.get(noteId);
   if (!n?.media) return;
   const key = epKey(season, episode);
-  const set = new Set(n.media.watched_episodes);
+  const set = new Set(n.media.watched_episodes ?? []);
   const shouldBe = watched ?? !set.has(key);
   if (shouldBe) set.add(key);
   else set.delete(key);
@@ -78,7 +78,7 @@ export async function toggleSeasonWatched(noteId: string, season: number, watche
   if (!n?.media) return;
   const s = (n.media.seasons ?? []).find((x) => x.season_number === season);
   if (!s) return;
-  const set = new Set(n.media.watched_episodes);
+  const set = new Set(n.media.watched_episodes ?? []);
   for (const ep of s.episodes) {
     const k = epKey(season, ep.episode_number);
     if (watched) set.add(k);
